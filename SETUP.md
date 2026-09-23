@@ -21,7 +21,7 @@ title:               "Your Course Title"          # Tên khóa học của bạn
 description:         'Your Course Description'    # Mô tả khóa học
 url:                 https://your-username.github.io
 baseurl:             '/your-repo-name'            # Tên repository của bạn
-imgurl:              https://your-username.github.io/your-repo-name/img
+imgurl:              /your-repo-name/img          # site-relative; do not use a full Pages URL (it 404s)
 
 # Language-specific configurations
 t:

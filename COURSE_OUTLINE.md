@@ -25,7 +25,7 @@
 | 09 | Capstone: Mezon noise suppression | Capstone: Mezon noise suppression | 5 |
 | 10 | References & further paths | Tài liệu tham khảo & hướng đi tiếp | 3 |
 
-**Total EN lesson stubs:** 53 (×2 with VI ≈ 106 lesson files)
+**Total:** 53 EN lessons paired with 53 VI lessons (106 files). These are full self-study articles (objectives, teaching prose, figures, mini-labs, exercises with hints), not stubs.
 
 ## Chapter 00: Introduction & problem framing / Giới thiệu & định khung bài toán
 
@@ -221,8 +221,9 @@
 
 ## Advisor notes
 
-- **Priority to flesh out first:** Chapter **01** (Fourier deep), **02** (audio pipeline / STFT), then **04** (DeepFilterNet), **05–07** (realtime → product), then **09** (capstone).
-- Chapters 01–02 are intentionally heavier (7 stubs each); do not collapse them back into a light “DSP mention.”
-- Cite only well-known sources: DeepFilterNet family, DNS Challenge, WebRTC APM, SpeexDSP, RNNoise, SI-SDR, DNSMOS, ORT/tract; named survey pointers only.
-- Teach techniques; npm wrapper is a vehicle, not the syllabus.
-- Do not modify `mezon-noise-suppression` product code from course tasks.
+- Chapters **01** and **02** stay heavy (7 lessons each). Do not collapse them into a light “DSP mention.”
+- Cite only well-known sources: DeepFilterNet / DeepFilterNet2 / DeepFilterNet3, DNS Challenge, WebRTC APM, SpeexDSP, RNNoise, SI-SDR, DNSMOS, ORT/tract; named survey pointers only (DPDFNet, DeepFilterGAN, HDF-Net, FastEnhancer, μNet, Fast-ULCNet, GTCRN).
+- Teach techniques. The npm package `deepfilternet3-noise-filter` **1.3.0** is a vehicle: `DeepFilterNet3Core`, `DeepFilterNoiseFilterProcessor` (LiveKit `TrackProcessor`), `setSuppressionLevel` (0–100), optional `assetConfig.cdnUrl` (example `https://cdn.mezon.ai/AI/models/datas/noise_suppression/deepfilternet3`). For package ≥ 1.2.0, including 1.3.0, the client adds a `v2/` prefix itself (`{cdnUrl}/v2/pkg/df_bg.wasm`, `{cdnUrl}/v2/models/DeepFilterNet3_onnx.tar.gz`). Do not put `v2` inside `cdnUrl`. LiveKit entry points are `DeepFilterNoiseFilterProcessor` and `DeepFilterNoiseFilter` (`audioTrack.setProcessor`). The non-LiveKit core is `DeepFilterNet3Core` (`initialize`, `createAudioWorkletNode`, `setSuppressionLevel`, `destroy`). Examples use sample rate 48000. The model line is Rikorose DeepFilterNet.
+- Figures: `img/generated/*.png`, embedded as `{{ site.imgurl }}/generated/<name>.png`. `imgurl` is `/audio-processing-self-learning/img`.
+- Local preview: `bundle install && bundle exec jekyll serve` → http://127.0.0.1:4000/audio-processing-self-learning/
+- Do not modify `mezon-noise-suppression` product code from course tasks. Instructor checkout (optional): `/Users/nguyenlelinh/ncc/mezon-noise-suppression`.

@@ -11,130 +11,115 @@ lesson_type: required
 draft: false
 ---
 
-Research and product teams both need a **suite**, not a single number. The Microsoft **DNS Challenge** tradition is the template most DeepFilterNet-related papers and industrial evals echo: synthetic mixtures with intrusive metrics, real recordings with non-intrusive predictors, plus human listening. This lesson turns that tradition into a reproducible harness outline and a capstone reporting template.
+A single SI-SDR mean is how enhancement papers get quoted and how products get surprised. The Microsoft DNS Challenge ([microsoft/DNS-Challenge](https://github.com/microsoft/DNS-Challenge)) is the public pattern this course copies in miniature: synthetic pairs where intrusive metrics are legal, real recordings where they are not, a listening slice, and a systems column so realtime software cannot hide behind a quality table. Challenge editions change their metric menus. Pin the year or the paper you follow. Do not claim you “beat the DNS Challenge” unless you ran that year’s blind set with that year’s protocol.
 
-## 60-minute teaching plan
+![Evaluation map: intrusive SI-SDR, non-intrusive DNSMOS, and listening tests]({{ site.imgurl }}/generated/eval-metric-map.png)
 
-- 0–10 min: Why suites beat single metrics.
-- 10–25 min: Typical DNS-style tracks (synthetic / real / listening).
-- 25–40 min: Minimal reproducible harness architecture.
-- 40–50 min: Optional ASR WER downstream metric.
-- 50–60 min: Fill the capstone reporting template.
+*Figure. A suite is the whole map, not one box. SI-SDR, DNSMOS, listening, and RTF answer different questions. Empty cells are written `n/a`, not imputed.*
 
-## Learning objectives
+## What you should be able to do
 
-By the end of this lesson, you can:
+You should be able to lay out a six-column score sheet with one row per clip, run a checker that rejects a missing column, and explain which cells must be `n/a`. You should also separate a lab regression epsilon from any number that appears in a paper.
 
-- List typical tracks/metrics used in DNS-style evals.
-- Build a minimal reproducible eval harness outline.
-- Avoid overfitting to a single synthetic set.
-- Produce a product-facing eval report section.
+## Tracks worth keeping
 
-## Typical tracks in a DNS-style suite
+| Track | Material | Legal metrics |
+|-------|----------|----------------|
+| Synthetic | Noisy/clean pairs you generated | SI-SDR, optional PESQ/STOI, delta versus bypass |
+| Real | Meeting-like recordings, no clean file | DNSMOS if the checkpoint is pinned, else `n/a` |
+| Listening | The same conditions, short clips | AB note: win, loss, or tie |
+| Systems | The machine that will demo | RTF p95, plus init or fallback if you measured it |
+| Optional downstream | Fixed ASR build | WER or CER delta, never as a MOS substitute |
 
-| Track | Material | Metrics |
-|-------|----------|---------|
-| Synthetic blind | noisy/clean pairs | SI-SDR, (PESQ/STOI if you choose), Δ vs baseline |
-| Real recordings | no clean ref | DNSMOS (version pinned), optional other predictors |
-| Listening | curated subset | AB / MUSHRA-like |
-| Stress / systems | long streams, device matrix | RTF p95, glitches, init failure rate |
-| Optional downstream | enhanced speech → ASR | WER / CER delta |
+Synthetic data gives you SNR knobs and a reference. It also lies when the noise bank is cleaner than a real room. Real data is the product and refuses SI-SDR. The rule is to tune on neither column alone. Freeze a final listening subset that you do not open while you are still changing levels.
 
-Challenge editions vary — **pin** the challenge year or paper when you claim "DNS metrics".
+## Harness layout
 
-## Synthetic vs real
-
-**Synthetic pros:** controllable SNR, reproducible, intrusive metrics.  
-**Synthetic cons:** ISM reverberation and noise banks can mismatch real rooms (see also training-data discussions in DeepFilterNet follow-ons).
-
-**Real pros:** product truth.  
-**Real cons:** no SI-SDR; harder to automate.
-
-**Rule:** never tune only on synthetic SI-SDR; always keep a frozen real set + listening subsample.
-
-## Minimal harness outline
+Keep the harness in your own directory or fork. Do not put it inside the shared product tree `mezonai/mezon-noise-suppression`, and do not require the instructor checkout at `/Users/nguyenlelinh/ncc/mezon-noise-suppression`.
 
 ```text
 eval/
-  datasets/
-    synthetic/  # clean/, noisy/, meta.csv
-    real/       # wavs + notes
-  baselines/
-    raw/        # copy of noisy or bypass
-    apm/        # optional browser APM capture
-  systems/
-    df3_level80/
-    df3_level60/
-  scripts/
-    run_enhance.py
-    compute_si_sdr.py
-    compute_dnsmos.py
-    make_tables.py
-  reports/
-    YYYY-MM-DD_capstone.md
+  datasets/synthetic/   # clean/, noisy/, meta.csv
+  datasets/real/
+  systems/bypass/
+  systems/level60/
+  systems/level80/
+  scripts/compute_si_sdr.py
+  reports/YYYY-MM-DD.md
 ```
 
-Reproducibility checklist:
+`meta.csv` needs at least `clip_id,condition,snr_db,clean_path,noisy_path`. Real rows leave `clean_path` empty. Reproducibility is a header on the report: package version (npm `deepfilternet3-noise-filter` 1.3.0 if that is what you ran), model archive name `DeepFilterNet3_onnx.tar.gz`, DNSMOS checkpoint name or `not run`, OS, and the device you used for RTF. If enhancement is deterministic, say so. If it is not, record the seed.
 
-- Package version + git commit of enhancer
-- Model archive hash
-- DNSMOS model version
-- Machine / OS for RTF
-- Random seeds if any stochastic stage exists
+There is no official SI-SDR or DNSMOS cutoff to copy into CI. You may choose a lab epsilon after you have a baseline on this exact set, and you must label it as local. A paper’s table is not that epsilon.
 
-## Optional ASR WER
+Optional ASR: pick one engine version, transcribe noisy and enhanced with the same settings, and report the delta. Enhancement that helps DNSMOS and hurts WER is a product fact, not a contradiction to hide.
 
-Enhancement that pleases MOS but hurts ASR (or vice versa) happens. If your product feeds captions/bots:
-
-1. Pick a fixed ASR engine/version.
-2. Transcribe clean (if any), noisy, enhanced.
-3. Report WER delta on the same utterances.
-
-Do not treat WER as a MOS substitute.
-
-## What to report in a product eval (template)
+## Report skeleton
 
 ```markdown
 ## NS eval — <date>
-- System: deepfilternet3-noise-filter <ver> / level <n>
-- Devices: <list>; RTF p50/p95: <…>
+- System: deepfilternet3-noise-filter <version>, setSuppressionLevel <n>
+- RTF p95: <number and device> or n/a
 
-### Synthetic
-| Condition | ΔSI-SDR | notes |
-| Real (DNSMOS <ver>)
-| Condition | mean | n |
-### Listening (AB, N raters)
-| Condition | new win% |
+### Per clip
+(the six-column table from the mini-lab)
+
 ### Decision
-Ship / no-ship / ship behind flag — rationale
+Ship, no-ship, or ship behind a flag — and which column forced it.
+
 ### Limits
-…
+Languages, devices, and metrics you did not run.
 ```
 
-## Overfitting defenses
+Overfitting shows up as a suite that only contains your own voice, one café, and a mean with no per-condition rows. Re-run after a WASM or SIMD change. Sample equality rarely survives a runtime swap, so the metrics must move with the binary.
 
-1. Hold out a **final** listening set untouched during tuning.
-2. Separate noise types; ban cherry-picking one café clip.
-3. Track regressions on clean speech.
-4. Re-run after WASM/SIMD upgrades (bit-exactness rarely holds — watch metrics).
+## Mini-lab
 
-## Common pitfalls
+Create `suite.md` with a markdown table of **six data rows**. The header must contain these columns: clip id, condition, SI-SDR or `n/a`, DNSMOS or `n/a`, listening note, RTF p95. Use `n/a` when the metric is illegal or not run. At least one row must be a real clip (`n/a` SI-SDR) and at least one row must be synthetic. Listening notes are short (`new`, `old`, `tie`, or `not listened`). RTF p95 is a number you measured or `n/a` if you did not.
 
-1. "We beat DNS Challenge winner" without same test set / protocol.
-2. Mixing DNSMOS versions in one chart.
-3. No systems metrics in a realtime product report.
-4. Harness that only the author can run.
+Checker `check_suite.py`:
+
+```python
+from pathlib import Path
+lines = Path("suite.md").read_text().splitlines()
+tables = [ln for ln in lines if ln.strip().startswith("|")]
+header = tables[0].lower()
+need = ["clip id", "condition", "si-sdr", "dnsmos", "listening note", "rtf p95"]
+missing = [n for n in need if n not in header]
+data = [ln for ln in tables[2:] if ln.strip().strip("|").strip()]
+print("missing", missing or "none")
+print("data_rows", len(data))
+```
+
+Expected output:
+
+```text
+missing none
+data_rows 6
+```
+
+Shape example (your six rows must be your own clips; this single row only shows the cells):
+
+```markdown
+| clip id | condition | SI-SDR or n/a | DNSMOS or n/a | listening note | RTF p95 |
+| --- | --- | --- | --- | --- | --- |
+| syn_fan_01 | synthetic fan, 10 dB | 13.80 | n/a | tie | 0.35 |
+```
+
+The 13.80 here is the lesson 08-01 lab float, pasted so the column type is obvious. It is not a measurement of DeepFilterNet. Failure modes: a header that says “quality” instead of the six names; five rows; a real recording with a made-up SI-SDR; one RTF number copied onto every row without saying it is a session-level figure; an official-looking threshold such as “DNSMOS must exceed 3.5.”
 
 ## Exercises
 
-1. Fill the template using hypothetical but consistent numbers for level 60 vs 80.
-2. Write `meta.csv` column schema for synthetic clips.
-3. Propose ε thresholds for CI fail on DNSMOS and ΔSI-SDR.
-4. List two ways your suite could overfit Mezon meeting audio — and mitigations.
+1. Fill all six rows for a mix of synthetic and real conditions. Run the checker until it prints `data_rows 6`.
+2. Write the `meta.csv` header and one synthetic row and one real row.
+3. Propose a CI fail rule that does not pretend to be an official DNSMOS threshold.
+4. Name two ways a suite overfits Mezon meeting audio, and the holdout that blocks each.
+5. Add an ASR column as optional. State why it must not replace the listening note.
 
-## Further reading
+### Answer hints
 
-- Microsoft DNS Challenge overview papers and baseline reports (by year).
-- SI-SDR + DNSMOS combination practices in DeepFilterNet2/3 papers.
-- Course 08-01…08-03; Capstone 09-04/09-05.
-- LiveKit/WebRTC integration lessons for systems metrics context (Chapter 07).
+1. Real rows: SI-SDR is `n/a`. Rows without a DNSMOS run: DNSMOS is `n/a`.
+2. Real row: empty clean path. Do not invent a reference file.
+3. Example policy: “on this 12-clip golden set, fail if the per-condition DNSMOS mean drops by more than the epsilon written in the report.” The epsilon is yours.
+4. Only the author’s voice; only café. Hold out other talkers and a keyboard or fan condition you do not tune on.
+5. WER can rise when the suppressor damages consonants the metric likes. Keep the listening note.

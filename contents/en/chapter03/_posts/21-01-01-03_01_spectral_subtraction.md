@@ -126,7 +126,11 @@ Bins 1–2 illustrate why flooring matters: without it you would clip to zero an
 - **SpeexDSP preprocessor** and similar VoIP stacks: spectral subtraction / noise gating as part of a broader AGC + VAD + NS chain.
 - **Hybrid pipelines** where a classical block removes stationary HVAC hum and a neural model cleans residual non-stationary noise (see Chapter 04 hybrids).
 
-For Mezon-class full-band real-time NS, subtraction alone is not enough—but understanding it makes DeepFilterNet’s “learned filter / mask” behavior much less mysterious.
+For Mezon-class full-band real-time NS, subtraction alone is not enough—but understanding it makes DeepFilterNet’s “learned filter / mask” behavior much less mysterious. The left panel of the figure is this rule in the power domain: blue bars are \(|Y|^2\), the orange line is the noise floor, and the green bars are what survives the floor. The right panel is not subtraction; it is the soft Wiener gain of the next lesson.
+
+![Power-domain spectral subtraction per bin, next to a Wiener gain curve that this lesson does not yet apply]({{ site.imgurl }}/generated/spectral-subtraction-wiener.png)
+
+*Figure. Spectral subtraction (left) removes a noise floor and then floors the remainder; the smooth curve on the right is the Wiener gain you get once subtraction becomes an SNR.*
 
 ## Pitfalls
 
@@ -136,12 +140,41 @@ For Mezon-class full-band real-time NS, subtraction alone is not enough—but un
 - Ignoring OLA window normalization → gain errors that sound like pumping.
 - Expecting subtraction to fix echo (that is AEC, lesson 03-04) or directional interferers (beamforming, 03-05).
 
+## Mini-lab
+
+**Goal.** Run magnitude spectral subtraction on eight bins and print which bins hit the floor.
+
+```python
+import numpy as np
+
+magY = np.array([1.2, 3.5, 0.8, 4.0, 2.2, 1.1, 0.5, 2.8])
+Nhat = np.array([1.0, 1.0, 0.9, 1.1, 1.0, 0.8, 0.7, 1.0])
+alpha, beta = 2.0, 0.1
+raw = magY - alpha * Nhat
+magS = np.maximum(raw, beta * magY)
+clipped = np.where(raw < beta * magY)[0]
+print("raw", np.round(raw, 2))
+print("magS", np.round(magS, 2))
+print("clipped bins", clipped.tolist())
+```
+
+**Expected.** `raw` is `[-0.8, 1.5, -1.0, 1.8, 0.2, -0.5, -0.9, 0.8]`. After the floor, `magS` is `[0.12, 1.5, 0.08, 1.8, 0.22, 0.11, 0.05, 0.8]`. Clipped bins are `[0, 2, 4, 5, 6]`. Bins 1, 3, and 7 pass through unclipped.
+
+**Failure modes.** Using power \(|Y|^2\) with these magnitude numbers, or forgetting `beta * magY`, changes both the clipped set and the floor values. A clip test written as `raw < 0` misses bin 4, where the raw remainder is positive but still under the floor. `alpha=1` clips fewer bins and hides the over-subtraction the example is about.
+
 ## Exercises
 
 1. **Derive the floor case.** Show that if $$|Y| < \alpha\widehat{|N|}$$, the floored rule returns $$\beta|Y|$$. Interpret $$\beta$$ as a residual noise fraction.
 2. **Implement (offline).** In Python/NumPy, run magnitude spectral subtraction on a 16 kHz clip with a known stationary noise. Sweep $$\alpha\in\{1.0,1.5,2.0\}$$ and $$\beta\in\{0.01,0.1,0.2\}$$; note musical noise vs residual noise.
 3. **Non-stationary stress test.** Replace stationary noise with keyboard bursts. Explain why a fixed $$\widehat{|N|}$$ fails; propose a VAD-gated update rule.
 4. **Product judgment.** Write five bullets arguing when you would keep SpeexDSP-style subtraction as a pre-stage in front of a DeepFilterNet3 WASM path versus disabling it entirely.
+
+### Answer hints
+
+1. The `max` returns the second argument exactly when the first is smaller; \(\beta|Y|\) is a fraction of the noisy magnitude you refuse to erase.
+2. Hold the noise estimate fixed from a leading noise-only region, then listen to noise-only tails as \(\alpha\) grows and \(\beta\) shrinks.
+3. A burst above the frozen floor is under-subtracted; the frames after it are over-subtracted. Update \(\widehat{|N|}\) only when a VAD says noise.
+4. Keep a cheap stationary front-end when the neural model is the expensive stage and the hum is steady; disable it when it already punches holes that the 48 kHz model then treats as speech structure.
 
 ## Further reading
 

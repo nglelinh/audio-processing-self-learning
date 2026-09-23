@@ -11,7 +11,13 @@ lesson_type: required
 draft: false
 ---
 
-Spectral subtraction quyết định “trừ rồi sàn”; **bộ lọc Wiener** chọn gain liên tục theo từng bin từ ước lượng tỉ số tín hiệu–nhiễu. Đây là cầu nối giữa subtractor cổ điển và enhancer neural dựa trên mask: họ DeepFilterNet có thể đọc như họ hàng học được của gain Wiener thời–tần, với đặc trưng phong phú hơn và bộ lọc đa khung. Bài này xây trực giác MMSE, SNR tiên nghiệm / hậu nghiệm, theo dõi decision-directed, và biến thể Wiener tiếng nói trong stack VoIP.
+Spectral subtraction quyết định “trừ rồi sàn”; **bộ lọc Wiener** chọn gain liên tục theo từng bin từ ước lượng tỉ số tín hiệu–nhiễu. Đường bên phải của hình là gain đó; các cột bên trái là subtractor mà nó thay.
+
+![Gain Wiener theo SNR tiên nghiệm, cạnh các cột spectral subtraction mà nó làm mềm]({{ site.imgurl }}/generated/spectral-subtraction-wiener.png)
+
+*Hình. Gain Wiener bằng \(1/2\) (\(-6\,\mathrm{dB}\)) khi công suất tiếng nói và nhiễu bằng nhau, và nó không thành các hố cứng của cột trừ phổ bên trái.*
+
+Đây là cầu nối giữa subtractor cổ điển và enhancer neural dựa trên mask: họ DeepFilterNet có thể đọc như họ hàng học được của gain Wiener thời–tần, với đặc trưng phong phú hơn và bộ lọc đa khung. Bài này xây trực giác MMSE, SNR tiên nghiệm / hậu nghiệm, theo dõi decision-directed, và biến thể Wiener tiếng nói trong stack VoIP.
 
 ## Mục tiêu học tập
 
@@ -96,6 +102,24 @@ for each frame ell:
 - Wiener sau AGC phi tuyến mà không cập nhật PSD nhiễu.
 - Nhầm **echo** (có tham chiếu) với **nhiễu** (mù)—Wiener NS không phải AEC.
 
+## Mini-lab
+
+**Mục tiêu.** Tính gain Wiener tại SNR tiên nghiệm \(-10\), \(0\) và \(+10\,\mathrm{dB}\).
+
+```python
+import numpy as np
+
+for snr_db in (-10, 0, 10):
+    xi = 10 ** (snr_db / 10.0)
+    G = xi / (xi + 1.0)
+    print(snr_db, "xi", round(float(xi), 4), "G", round(float(G), 3),
+          "G_dB", round(float(20 * np.log10(G)), 2))
+```
+
+**Kỳ vọng.** \(-10\,\mathrm{dB}\) → \(\xi=0.1\), \(G\approx 0.091\) (\(-20.83\,\mathrm{dB}\)). \(0\,\mathrm{dB}\) → \(\xi=1\), \(G=0.5\) (\(-6.02\,\mathrm{dB}\)). \(+10\,\mathrm{dB}\) → \(\xi=10\), \(G\approx 0.909\) (\(-0.83\,\mathrm{dB}\)). Hàng giữa là điểm đánh dấu trên hình.
+
+**Khi hỏng.** Đưa decibel thẳng vào \(\xi/(\xi+1)\) (quên \(10^{\mathrm{SNR}/10}\)) làm gain ở \(-10\,\mathrm{dB}\) lớn hơn gain ở \(+10\,\mathrm{dB}\), tức đường cong bị lộn. Dùng \(20\log_{10}\) để đổi SNR sang \(\xi\), hoặc báo \(10\log_{10} G\) thay vì \(20\log_{10} G\), sẽ lệch cột decibel khoảng một hệ số hai. \(\gamma/(\gamma+1)\) là plug-in khác; lab này không ước lượng \(\gamma\).
+
 ## Bài tập
 
 1. Chứng minh $$G=\xi/(\xi+1)=1-1/(\xi+1)$$; diễn giải $$1-G$$.
@@ -103,9 +127,17 @@ for each frame ell:
 3. Cài decision-directed Wiener; vẽ bản đồ $$G(k,\ell)$$; so musical noise với 03-01.
 4. Hai đoạn văn: vì sao ước lượng IRM neural thắng Wiener decision-directed trên nhiễu không dừng mà vẫn giữ trực giác $$\xi/(\xi+1)$$.
 
+### Gợi ý đáp án
+
+1. Trừ hai dạng; \(1-G=1/(\xi+1)\) là phần của \(Y\) bạn gán cho nhiễu.
+2. \(G=1/2\) (tức \(-6\,\mathrm{dB}\)) khi \(\xi=1\). Ba gain được hỏi khoảng \(0.091\), \(0.5\) và \(0.909\).
+3. Vẽ \(G\), không vẽ \(|Y|\). \(\eta\) giật thì ảnh lốm đốm; spectral subtraction trông như các hố.
+4. Mạng vẫn nhắm một tỉ số công suất. Nó thắng vì ước lượng tỉ số đó từ nhiều ngữ cảnh hơn một vòng đệ quy decision-directed, không phải vì bịa một dạng gain khác.
+
 ## Đọc thêm
 
 - N. Wiener — nền tảng lọc tối ưu.
 - Ephraim & Malah, *IEEE TASSP*, 1984.
+- P. Scalart và J. V. Filho, “Speech enhancement based on a priori signal to noise estimation,” *ICASSP*, 1996 — dạng SNR tiên nghiệm dùng trong Wiener tiếng nói.
 - Loizou, *Speech Enhancement: Theory and Practice*.
 - SpeexDSP / WebRTC APM — hiện thực kỹ thuật.

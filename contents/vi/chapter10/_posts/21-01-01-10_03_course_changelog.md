@@ -11,84 +11,118 @@ lesson_type: required
 draft: false
 ---
 
-Khóa học “thối” khi API đổi. Bề mặt npm Mezon, layout CDN `v2/`, weights DeepFilterNet, và API processor LiveKit sẽ thay đổi. Bài này là sổ tay maintainer: giữ EN/VI đồng bộ, publish GitHub Pages, và **không** coi bài tập khóa là giấy phép sửa product repo tùy tiện.
+Khóa này là bộ bài tiếng Anh và tiếng Việt đầy đủ từ chương 00 đến 10. API vẫn dịch chuyển. Gói npm, bố trí CDN `v2/`, weight DeepFilterNet, và móc TrackProcessor của LiveKit sẽ trôi, và bài trích chúng sẽ trôi theo. Người giữ khóa sửa cặp ngôn ngữ trong cùng một thay đổi, sinh lại hình thay vì sửa PNG bằng tay, và coi repo sản phẩm chung là tài liệu upstream để đọc, không phải cây bài tập.
 
-## Kế hoạch giảng 60 phút
+![Hình trực giác Fourier dùng làm ví dụ cho người giữ khóa]({{ site.imgurl }}/generated/fourier-intuition.png)
 
-- 0–15 phút: Cái gì gãy khi dependency đổi.
-- 15–30 phút: Quy trình đồng bộ EN/VI.
-- 30–45 phút: Checklist Jekyll / GitHub Pages.
-- 45–55 phút: Vòng `AGENTS.md` + `COURSE_OUTLINE.md` với advisor.
-- 55–60 phút: Mẫu issue bảo trì.
+*Hình. Tổng các tone theo thời gian thành các vạch theo tần số. Người giữ khóa sinh lại PNG này, và mọi hình khác của khóa, bằng `python3 scripts/generate_course_figures.py`. Đầu ra vào `img/generated/`. Bài nhúng bằng `{{ site.imgurl }}/generated/fourier-intuition.png`.*
 
-## Mục tiêu học tập
+## Bạn làm được gì sau bài này
 
-Cuối bài, bạn có thể:
+Bạn vá được bài khi `deepfilternet3-noise-filter` hoặc bố trí CDN đổi, cập nhật bản tiếng Việt trong cùng pull request, thêm hình mà không gãy `baseurl`, và mở phiếu bảo trì liệt kê cả hai file ngôn ngữ. Bạn cũng build site tại máy và gọi tên lỗi nếu `bundle exec jekyll build` cảnh báo.
 
-- Cập nhật bài khi API Mezon hoặc weights DF đổi.
-- Giữ cặp EN/VI đồng bộ.
-- Ghi feedback advisor vào `COURSE_OUTLINE.md`.
-- Publish mà không gãy link `baseurl`.
+## Cần theo dõi gì
 
-## Theo dõi upstream
+| Upstream | Cái gì gãy | Sửa đâu |
+|----------|------------|---------|
+| npm `deepfilternet3-noise-filter` trên 1.3.0 | Tên công khai hoặc tiền tố `v2/` tự thêm | Chương 07 và 09, cả hai ngôn ngữ |
+| CDN rời `v2/` | URL `{cdnUrl}/v2/pkg/df_bg.wasm` và `{cdnUrl}/v2/models/DeepFilterNet3_onnx.tar.gz` | 07-03 và 09-01 |
+| LiveKit `setProcessor` | Đường publish ở 09-01 | Đọc lại [docs.livekit.io](https://docs.livekit.io/) và trích phiên bản |
+| Tên archive ONNX mới | Câu asset ở 09 và 10 | Chỉ tên file, sau khi bạn thấy nó |
+| Checkpoint DNSMOS | Bảng chương 08 | Ghim tên mới; đừng so điểm cũ như một chuỗi |
 
-| Upstream | Triệu chứng trong khóa | Hành động |
-|----------|------------------------|-----------|
-| Major `deepfilternet3-noise-filter` | Đổi tên API | Sửa snippet Ch 07 + ghi phiên bản |
-| CDN `v2` → `v3` | Sai path 07-03 | Cập nhật bảng; thêm changelog |
-| LiveKit SDK | Đổi `setProcessor` | Đối chiếu docs hiện tại |
-| Model DeepFilterNet | Đổi tên tar | Sửa link 07/09/10 |
-| Phiên bản DNSMOS | Điểm không so được | Pin trong Ch 08 |
+Tên công khai giữ cho đến khi chính README đổi: `DeepFilterNet3Core`, `DeepFilterNoiseFilterProcessor`, `setProcessor`, `setSuppressionLevel(0–100)`, `setEnabled`, `assetConfig.cdnUrl`. Đừng mô tả lớp riêng cho có vẻ chính xác.
 
-## Quy tắc đồng bộ EN/VI
+## Kỷ luật changelog
 
-1. Cùng `chapter`, `order`, stem tên file.  
-2. Đổi một ngôn ngữ rồi merge cặp trong một PR khi có thể.  
-3. Code/URL giống nhau; văn xuôi tiếng Việt thật, không dump máy chưa biên tập.  
-4. Công thức KaTeX giống nhau giữa hai ngôn ngữ.
+Khi bạn sửa bài tiếng Anh, cập nhật bản tiếng Việt trong cùng pull request. Cùng `chapter`, cùng `order`, cùng thân tên file, `lang: en` một bên và `lang: vi` bên kia. Khối mã, URL, và float lab đã in (13.80 và −10.67, danh sách mixer `[1.237, -0.237, -0.763, 0.263]`) giữ nguyên. Văn là tiếng Việt tự nhiên. Giữ thuật ngữ tiếng Anh SI-SDR, DNSMOS, RTF, và TrackProcessor.
 
-## Checklist Jekyll / Pages
+Khi thêm hình, đặt PNG trong `img/generated/` và tham chiếu bằng `{{ site.imgurl }}`. Đừng dán ảnh chụp một lần vào thư mục mới. Lệnh sinh:
 
-```text
-bundle install
-bundle exec jekyll build
-# baseurl: /audio-noise-suppression-self-learning
-# soi chương 07–10 local
-# commit; chỉ push khi chủ đích (task này: commit local OK)
+```bash
+python3 scripts/generate_course_figures.py
 ```
 
-Site: `https://nglelinh.github.io/audio-noise-suppression-self-learning/`
+Lệnh đó viết lại PNG trong `img/generated/`, gồm `fourier-intuition.png`, `eval-metric-map.png`, `livekit-trackprocessor.png`, `deepfilternet-erb.png`, `onnx-wasm-path.png`, và `rtf-audioworklet.png`. Commit PNG vừa sinh cùng bài nhúng nó. Nếu chỉ đổi chú thích, không cần sinh lại.
 
-## Ranh giới product repo
+Một dòng có ngày thuộc thân PR, không chỉ trong chat:
 
-Bài tập khóa: **đọc** README/API Mezon; thử trên fork cá nhân / rust sibling / harness.  
-**Không** sửa `/Users/nguyenlelinh/ncc/mezon-noise-suppression` như một phần homework trừ khi được chỉ thị ngoài khóa này.
+```text
+2026-09-23 — Chương 08–10 EN và VI: hình, mini-lab, gợi ý đáp án.
+             Bản VI cập nhật trong cùng thay đổi. Không sửa repo sản phẩm.
+```
+
+## Build site
+
+`_config.yml` đặt `baseurl: /audio-processing-self-learning` và `imgurl: /audio-processing-self-learning/img`. Xem tại máy:
+
+```bash
+bundle install
+bundle exec jekyll serve
+# http://127.0.0.1:4000/audio-processing-self-learning/
+bundle exec jekyll build
+```
+
+Site đã xuất bản là `https://nglelinh.github.io/audio-processing-self-learning/`. Hình dùng đường tương đối mà không qua `site.imgurl` sẽ chạy trên một host và 404 trên host kia. Sau build, mở một trang chương 08 và một trang chương 10 và xác nhận URL ảnh chứa `/audio-processing-self-learning/img/generated/`.
+
+## Vòng advisor và ranh giới sản phẩm
+
+Ghi yêu cầu giáo trình vào `COURSE_OUTLINE.md`. Luật trích dẫn nằm ở `AGENTS.md`: DeepFilterNet cùng DeepFilterNet2/3, DNS Challenge, WebRTC APM, SpeexDSP, RNNoise, SI-SDR, DNSMOS, ONNX Runtime, và tract. Tên khảo sát giữ là tên. Bài khóa đọc [mezonai/mezon-noise-suppression](https://github.com/mezonai/mezon-noise-suppression). Chúng không bắt `/Users/nguyenlelinh/ncc/mezon-noise-suppression`, và không nhận patch ở đó. Học viên thí nghiệm trong fork cá nhân hoặc trong `capstone/`.
 
 ## Mẫu issue bảo trì
 
 ```markdown
-Title: [course] Cập nhật path CDN Ch07 cho gói x.y.z
-- Phiên bản upstream:
-- Bài bị gãy:
-- File EN / VI:
-- Đã verify local: yes/no
+Title: [course] Update Ch09 CDN paths for package x.y.z
+- Upstream version:
+- Broken lesson paths:
+- EN files:
+- VI files:
+- Figure touched (img/generated name) or none:
+- jekyll build: pass/fail
+- Verified image URL contains site imgurl: yes/no
 ```
 
-## Kỷ luật changelog
+Chỉ mở issue khi cả hai file ngôn ngữ được liệt kê. Bản sửa chỉ rơi tiếng Anh là chưa xong.
 
-Khi mở rộng stub hoặc sửa API, thêm bullet có ngày, ví dụ:
+## Mini-lab
 
-- `2026-09-22` — Mở rộng đầy đủ chương 07–10 EN/VI.
+Từ gốc repo, xác nhận script sinh hình còn đó và mọi bài tiếng Anh chương 08–10 vẫn nhúng hình qua `site.imgurl`:
+
+```bash
+test -f scripts/generate_course_figures.py && echo script_ok
+python3 - << 'PY'
+from pathlib import Path
+bad = []
+paths = list(Path("contents/en").glob("chapter0[89]/_posts/*.md"))
+paths += list(Path("contents/en").glob("chapter10/_posts/*.md"))
+for p in paths:
+    if "site.imgurl" not in p.read_text():
+        bad.append(p.name)
+print("bad", bad or "none")
+PY
+```
+
+Đầu ra kỳ vọng:
+
+```text
+script_ok
+bad none
+```
+
+Kiểu hỏng: sửa PNG trong trình ảnh rồi bỏ script, lần sinh sau sẽ xóa chỉnh đó; đổi float lab tiếng Anh mà để bản tiếng Việt ở số cũ; `baseurl` chép từ tên repo khác nên mọi ảnh 404; pull request “sửa” bài bằng cách sửa repo sản phẩm.
 
 ## Bài tập
 
-1. Diff README npm vs Ch 07-04; liệt kê rủi ro lệch.  
-2. Sửa một typo EN và phản chiếu VI.  
-3. Chạy `jekyll build` và ghi warning.  
-4. Mở issue bảo trì theo mẫu (dù draft).
+1. So README npm với bài 09-01 và liệt kê một rủi ro trôi.
+2. Tạo một lỗi chính tả một từ tiếng Anh trên nhánh cục bộ, sửa, và chiếu sửa sang file tiếng Việt trong cùng commit. Đừng push trừ khi bạn đang trực giữ khóa.
+3. Chạy `bundle exec jekyll build` và chép cảnh báo nào nhắc chương 08–10.
+4. Điền mẫu issue cho bản 1.4.0 giả định bỏ tiền tố `v2/`. Ghi cả file EN và VI.
+5. Gọi lệnh sinh hình và hai luật đường dẫn cho một hình mới.
 
-## Đọc thêm
+### Gợi ý đáp án
 
-- `AGENTS.md`, `README.md`, `CONTRIBUTING.md`  
-- Template: `course-self-learning-template`  
-- `DEPLOYMENT.md` / `GITHUB_SETUP.md`
+1. Trôi hay gặp: thêm phương thức công khai, hoặc đổi tiền tố CDN. Trích dòng README bạn thấy.
+2. Một PR, hai file. `lang` trong front matter giữ nguyên.
+3. Nếu chưa cài build, ghi “jekyll not run” thay vì bịa log sạch.
+4. Cả đường EN và VI. Dòng hình là “none” trừ khi sơ đồ đổi.
+5. `python3 scripts/generate_course_figures.py` ghi `img/generated/<name>.png`. Bài dùng `{{ site.imgurl }}/generated/<name>.png`.

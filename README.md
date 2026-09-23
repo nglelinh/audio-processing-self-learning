@@ -27,7 +27,13 @@ Capstone aligns with [mezonai/mezon-noise-suppression](https://github.com/mezona
 | 09 | Capstone: Mezon NS | Capstone: Mezon NS |
 | 10 | References & further paths | Tài liệu & hướng đi tiếp |
 
-Chapters **01** and **02** have 7 stub lessons each (continuous FT → sampling/Nyquist → DTFT/DFS/DFT → FFT → realtime framing; then PCM → frames/OLA → windowing → STFT/ISTFT → filtering → spectrograms → latency budgets).
+Lessons are full bilingual articles (53 EN + 53 VI), not stubs. Chapters **01** (Fourier) and **02** (audio pipeline) are first-class modules: continuous FT, sampling/Nyquist, DTFT/DFS/DFT, FFT, realtime framing, then PCM, frames/OLA, windowing, STFT/ISTFT, filtering, spectrograms, and latency budgets.
+
+## Figures
+
+Teaching diagrams live in [`img/generated/`](img/generated/) (Fourier intuition, sampling/Nyquist, STFT/OLA, spectral subtraction/Wiener, DeepFilterNet ERB + deep filter, RTF/AudioWorklet, LiveKit TrackProcessor, evaluation map, and related pipeline figures). Lessons embed them with `{{ site.imgurl }}/generated/...`.
+
+`imgurl` in `_config.yml` is site-relative (`/audio-processing-self-learning/img`) so the same path works for local `jekyll serve` and GitHub Pages. Regenerate PNGs with `python3 scripts/generate_course_figures.py`.
 
 ## Run locally (Jekyll)
 
@@ -42,7 +48,7 @@ Docker: `docker-compose up` (if present). Restart Jekyll after `_config.yml` cha
 ## Product context (do not modify from this course)
 
 - GitHub: `mezonai/mezon-noise-suppression`
-- npm: `deepfilternet3-noise-filter`
+- npm: `deepfilternet3-noise-filter` **1.3.0** (`DeepFilterNet3Core`, `DeepFilterNoiseFilterProcessor`, `setSuppressionLevel`, optional `assetConfig.cdnUrl`)
 - Local Mac (instructor): `/Users/nguyenlelinh/ncc/mezon-noise-suppression`
 
 ## License

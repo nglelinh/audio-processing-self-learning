@@ -45,6 +45,20 @@ $$
 
 If $$\hat{h}\approx h$$ and the path is linear and slowly varying, $$e\approx s+n$$—then a **noise suppressor** can focus on $$n$$ without fighting a loud echo replica.
 
+```text
+far-end x ──► loudspeaker ──► room h ──► mic y
+near-end s ────────────────────────────► mic y
+ambient n  ────────────────────────────► mic y
+AEC:  e = y − ĥ ∗ x
+NS:   operates on e, not on raw y
+```
+
+The residual after that subtraction is what a later suppressor actually hears. When the canceller is doing its job, \(e\) looks like the additive mixture in the figure: near-end speech plus whatever did not cancel (ambient noise, and a smaller leftover echo). The figure is not a drawing of the room path.
+
+![Clean speech, additive noise, and their sum — the shape of a residual after echo has been subtracted]({{ site.imgurl }}/generated/noise-mixture.png)
+
+*Figure. After a linear AEC, the residual is an additive mixture of near-end speech and whatever the canceller did not remove; this cartoon is that mixture, not the echo path itself.*
+
 ### Adaptive filter intuition (NLMS sketch)
 
 In the time domain, an FIR echo path $$\mathbf{h}$$ of length $$L$$ is updated with a normalized LMS-style rule:
@@ -110,12 +124,39 @@ Hybrid research (ULCNet + adaptive filter, etc.) trains a small network on the *
 - Placing AGC before AEC so gains modulate the echo path and confuse adaptation.
 - Confusing **acoustic** echo with **line** echo in telephony gateways.
 
+## Mini-lab
+
+**Goal.** A numeric cartoon of residual echo power versus the error you actually measure, and what one double-talk frame does. This is not a WebRTC build and it does not call the Audio Processing Module.
+
+```python
+import numpy as np
+
+far = np.array([0.0, 0.2, 1.0, 1.0, 0.3, 1.2])
+near = np.array([0.0, 0.0, 0.0, 0.8, 0.0, 0.0])  # double-talk only on frame 3
+h, hhat = 0.5, 0.45
+residual_echo = (h - hhat) * far
+err = near + residual_echo
+print("residual echo power", np.round(residual_echo ** 2, 4))
+print("measured error power", np.round(err ** 2, 4))
+```
+
+**Expected.** Residual echo power stays small: `[0, 0.0001, 0.0025, 0.0025, 0.0002, 0.0036]`. Measured error power matches it on every frame except frame 3, where near-end speech pushes it to about `0.7225` while the true leftover echo is still `0.0025`. Adapting \(\hat{h}\) on that frame would treat the talker as echo.
+
+**Failure modes.** If frame 3’s two powers match, `near` was left at zero and you are not in double-talk. If residual echo power is large on every voiced far-end frame, \(\hat{h}\) is far from \(h\) (try swapping 0.5 and 0.45). Interpreting the error power as a noise floor and feeding it to a Wiener gain will suppress the near-end talker. Nothing here instantiates WebRTC AEC.
+
 ## Exercises
 
 1. **Signal-flow diagram.** Draw capture, render, $$\hat{h}$$, error $$e$$, and NS. Mark where AudioWorklet neural NS would sit in a web app.
 2. **Delay lab.** Explain what happens to NLMS if the reference is 40 ms early vs 40 ms late relative to the mic echo.
 3. **APM config reading.** Skim current WebRTC APM docs; list the toggle names for NS level and AEC; note defaults.
 4. **Triage table.** Write a support playbook: symptom → likely AEC vs NS vs AGC cause → first diagnostic step.
+
+### Answer hints
+
+1. Neural NS sits on \(e\), after \(\hat{h}\). In a browser graph that is often after the platform AEC and before the encoder.
+2. A reference that is 40 ms early or late misses the taps that actually hold \(h\), so \(e\) still contains echo and the filter adapts on the wrong lag.
+3. Look for the NS level and AEC enable on `AudioProcessing`; names move between releases, so quote the revision you read.
+4. Far-end playback with no near-end talker is the AEC test. Near-end talker in noise, far-end silent, is the NS test. A level jump when either party pauses is often AGC.
 
 ## Further reading
 

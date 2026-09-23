@@ -13,6 +13,10 @@ draft: false
 
 Shipping noise suppression is less about peak MOS on a leaderboard and more about surviving the audio thread. This lesson defines latency and RTF precisely, explains causal / streaming constraints, and lists failure modes you will debug in Mezon-like integrations.
 
+![The same suppressor drawn as an offline batch job and as a causal streaming block]({{ site.imgurl }}/generated/realtime-vs-offline.png)
+
+*Figure. Offline look-ahead and a streaming hop are different delays: the picture is the split you have to budget, not a second algorithm.*
+
 ## Learning objectives
 
 1. Define algorithmic latency, buffering latency, and real-time factor (RTF).
@@ -50,6 +54,10 @@ $$
 If you process 20 ms of audio in 5 ms wall-clock, \(\mathrm{RTF}=0.25\). Streaming systems need **headroom**: mean RTF of 0.9 still fails when a GC pause or thermal throttle spikes a frame to RTF 2.0.
 
 **Worked example.** Hop \(R = 480\) samples at \(f_s = 48\,\mathrm{kHz}\) → \(T_{\mathrm{audio}} = 10\,\mathrm{ms}\). Budget RTF \(\le 0.5\) ⇒ \(T_{\mathrm{proc}} \le 5\,\mathrm{ms}\) for that hop’s STFT + model + ISTFT path (amortized).
+
+**A healthy mean can still glitch.** Suppose 100 hops of 10 ms: 99 of them finish in 3 ms and one finishes in 15 ms. The mean processing time is \((99\times 3+15)/100=3.12\,\mathrm{ms}\), so mean RTF is \(0.312\). The slow hop has RTF \(15/10=1.5\) and misses the callback. Quote p95 or p99 next to the mean, or the average will green-wash an underrun.
+
+**Quanta are not hops.** A browser render quantum of 128 samples at 48 kHz lasts \(128/48000\approx 2.67\,\mathrm{ms}\). A 480-sample hop is \(480/128=3.75\) quanta. The processor has to accumulate partial quanta in a ring buffer; it cannot assume the audio callback and the STFT hop are the same object. DeepFilterNet3 (arXiv:2305.08227) is the real-time member of that family; an offline checkpoint with hundreds of milliseconds of look-ahead does not become causal because you wrapped it in `DeepFilterNoiseFilterProcessor`.
 
 ### Causal vs offline
 
@@ -107,6 +115,26 @@ A DeepFilterNet-class streaming model with small hop and RTF \(\sim 0.2\)–\(0.
 4. Measuring latency with `Date.now()` across layers full of hidden buffers.
 5. Forgetting that browser AudioWorklet quanta (e.g. 128 samples at 48 kHz ≈ 2.67 ms) are not the same as your STFT hop.
 
+## Mini-lab
+
+**Goal.** Print the 10 ms hop budget at 48 kHz, then show a spiked hop whose mean RTF still looks safe.
+
+```python
+fs, hop = 48_000, 480
+t_audio_ms = 1_000 * hop / fs
+t_proc_max_ms = 0.5 * t_audio_ms
+mean_ms = (99 * 3 + 15) / 100
+quantum_ms = 1_000 * 128 / fs
+print(f"t_audio_ms={t_audio_ms:.1f} t_proc_max_ms={t_proc_max_ms:.1f}")
+print(f"mean_ms={mean_ms:.2f} mean_rtf={mean_ms / t_audio_ms:.3f}")
+print(f"spike_rtf={15 / t_audio_ms:.2f}")
+print(f"quantum_ms={quantum_ms:.2f} quanta_per_hop={hop/128:.2f}")
+```
+
+**Expected.** `t_audio_ms=10.0 t_proc_max_ms=5.0`, `mean_ms=3.12 mean_rtf=0.312`, `spike_rtf=1.50`, `quantum_ms=2.67 quanta_per_hop=3.75`.
+
+**Failure modes.** Averaging RTF across hops and ignoring the spike. Treating 128 samples as a 10 ms hop. Inverting RTF so a slower machine prints a smaller number.
+
 ## Mini exercises
 
 1. Hop 256 samples at 16 kHz: hop ms? Max \(T_{\mathrm{proc}}\) for RTF 0.25?
@@ -114,8 +142,15 @@ A DeepFilterNet-class streaming model with small hop and RTF \(\sim 0.2\)–\(0.
 3. Explain why mean RTF 0.4 can still glitch in Chrome under load.
 4. Propose a go/no-go checklist of 5 measurements before enabling NS by default in a call product.
 
+### Answer hints
+
+1. \(256/16000=16\,\mathrm{ms}\). RTF \(0.25\) allows \(4\,\mathrm{ms}\) of processing.
+2. OLA overlap buffer, analysis window state, and the neural or noise-tracker recurrence. Sample-rate and channel count belong in that list too.
+3. The mean hides a GC pause, a thermal spike, or one hop that exceeds 16 ms. p99 is the number the callback feels.
+4. A usable five: causal look-ahead in ms, p95 RTF on the target CPU, underrun count over a 10-minute call, stereo downmix policy, and a listening check at the product sample rate.
+
 ## Further reading
 
-- DeepFilterNet2 / DeepFilterNet3 papers — sections on real-time / causal design.
+- DeepFilterNet2 (arXiv:2205.05474) and DeepFilterNet3 (arXiv:2305.08227) — real-time and causal sections. Code: https://github.com/Rikorose/DeepFilterNet.
 - WebRTC APM processing graph overview (where NS sits among AEC/AGC).
 - MDN AudioWorklet documentation (callback timing constraints).

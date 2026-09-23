@@ -11,95 +11,130 @@ lesson_type: required
 draft: false
 ---
 
-A great ONNX graph still fails productization if **packaging** is wrong: multi-megabyte downloads on 3G, uncached CDN paths, mismatched versions, or licenses. This lesson covers artifact layout, compression, versioning, integrity checks, and constraints that shape Mezon’s npm/CDN delivery (expanded in Ch. 07).
+A correct ONNX graph still fails in a product when **packaging** is wrong: a huge first load, an uncached URL, a WASM file and a model archive from different generations, or a license you cannot hand to a customer. `deepfilternet3-noise-filter` **1.3.0** splits that problem. The npm package ships the JavaScript glue, the inlined AudioWorklet, and the loader. The heavy bytes, `df_bg.wasm` and `DeepFilterNet3_onnx.tar.gz`, are fetched from a CDN base you pass as `assetConfig.cdnUrl`. This lesson designs the layout, the version prefix rule, integrity, and the rollback path. Lesson 07-03 computes the full URLs.
+
+![Packaged WASM and ONNX archive on the CDN side of the browser path]({{ site.imgurl }}/generated/onnx-wasm-path.png)
+
+*Figure. Packaging decides which bytes the WASM compile in the browser is allowed to see.*
 
 ## Learning objectives
 
-You will design a model package directory layout with semver, choose compression and cache headers at a high level, specify integrity hashes and compatibility matrix (opset ↔ runtime), and list legal/privacy constraints for redistributing weights.
+You will separate the npm tarball from the CDN artifacts, apply the path rule for package ≤ 1.1.2 versus ≥ 1.2.0 (including 1.3.0, which still auto-prefixes `v2/`), refuse a `cdnUrl` that already contains `v2`, and list the license and cache checks that belong in a ship gate.
 
 ## 60-minute teaching plan
 
-- **0–10 min** — Horror story: app update ships FP32 80 MB model, uninstalls spike.
-- **10–25 min** — Artifact contents: onnx, config, licenses, changelog.
-- **25–40 min** — Size budgets, compression, quantization interplay.
-- **40–50 min** — Versioning & integrity; staged rollout.
-- **50–60 min** — Pitfalls, exercises, checklist.
+- **0–10 min** — A first-run download that blocks the call, and why npm size is the wrong number.
+- **10–25 min** — Artifact pair, suggested config, semver.
+- **25–40 min** — Prefix rule, compression, immutable cache.
+- **40–50 min** — Integrity, licenses, staged rollout.
+- **50–60 min** — Mini-lab, pitfalls, exercises.
 
 ## Core explanation
 
-### Suggested layout
+### Two packages, one product
+
+`npm install deepfilternet3-noise-filter` installs a library whose peer dependency is `livekit-client` ^2. The README states that worker and worklet sources are inlined as blob URLs, so Webpack, Vite, Rollup, esbuild, and Parcel do not need a copy plugin. That is the small, versioned JavaScript surface. It is not the model. `DeepFilterNet3Core.initialize()` fetches two bodies in parallel: the WASM module and the model archive. Those bodies dominate cold-start time. Quantization (lesson 06-02) and the SIMD build (lesson 06-03) change their size and their speed, but only after you publish the pair to a URL the client will actually request.
+
+### Suggested sidecar, not a private API
+
+A product mirror should carry enough metadata that a wrapper cannot drift silently. A teaching layout, which you own, looks like this:
 
 ```text
 models/df3-mono-48k/
-  model.onnx              # or .ort optimized
+  df_bg.wasm
+  DeepFilterNet3_onnx.tar.gz
   config.json             # hop, sample_rate, state shapes
   LICENSE_WEIGHTS.txt
   SHA256SUMS
   CHANGELOG.md
 ```
 
-`config.json` must include sample rate, hop/window, input names, and state tensor shapes so wrappers cannot silently desync.
+`config.json` is your manifest: sample rate (48000 for this package), hop, input names, and state shapes. The npm public API does not require you to upload a file with that name. The client requests exactly two paths under `cdnUrl`. Keep the manifest beside them for humans and for CI.
 
-### Size budgets (teaching defaults — tune per product)
+### README path rule
 
-| Channel | Aggressive budget | Notes |
-|---------|-------------------|-------|
-| Mobile web first load | ≤ 5–10 MB compressed | Prefer INT8 / smaller variant |
-| Desktop Electron | ≤ 20–40 MB | Can lazy-download |
-| Native mobile app | ship in binary or on-demand | Watch App Store sizes |
+The package README specifies:
 
-Quantization (06-02) and ultra-light alternatives (04-05) are packaging decisions as much as ML decisions.
+| Package | WASM | Model archive |
+|---------|------|----------------|
+| ≤ 1.1.2 | `{cdnUrl}/pkg/df_bg.wasm` | `{cdnUrl}/models/DeepFilterNet3_onnx.tar.gz` |
+| ≥ 1.2.0, including 1.3.0 | `{cdnUrl}/v2/pkg/df_bg.wasm` | `{cdnUrl}/v2/models/DeepFilterNet3_onnx.tar.gz` |
 
-### Compression & caching
+The client adds `v2/` itself for ≥ 1.2.0. Do not put `v2` inside `cdnUrl`. A base that already ends in `/v2` becomes `.../v2/v2/...` and 404s. The example base in the package README is `https://cdn.mezon.ai/AI/models/datas/noise_suppression/deepfilternet3`. The archive name is `DeepFilterNet3_onnx.tar.gz`, from the upstream Rikorose DeepFilterNet repository. The WASM file name is `df_bg.wasm`.
 
-- Serve with Brotli/gzip; ONNX often compresses well.
-- Content-hash filenames (`model.onnx` → `model.abc123.onnx`) for immutable CDN cache.
-- `Cache-Control: immutable` for hashed assets; short cache for `latest` pointers.
+### Cache, compression, integrity
 
-### Integrity & compatibility
+Serve the pair with Brotli or gzip. ONNX archives often compress well; WASM less so, but it still benefits. Prefer immutable, content-addressed names or an immutable version directory, with `Cache-Control: public, max-age=31536000, immutable`. Publish SHA-256 sums and verify after download in CI. Refuse to start a canary if the WASM hash and the model hash are not from the same release. A new SIMD module with last month’s archive is a packaging bug, not a model-quality bug.
 
-1. Publish SHA-256; verify after download.
-2. Matrix-test: ORT 1.x + model opset + browser matrix in CI.
-3. Refuse to run if `config.json` semver major ≠ wrapper major.
+Overwrite-in-place of a URL you told caches to keep for a year is how you poison clients. Roll forward by publishing a new directory. Keep the previous directory up so you can point `cdnUrl` back, or ship a package downgrade, without rebuilding the world. The JavaScript package version and the asset directory version move together in your compatibility matrix: opset, tract or ORT build, SIMD feature set, browser floor.
 
-### Legal / ethical packaging
+### Size is a channel decision
 
-- Respect weight licenses (academic non-commercial vs commercial).
-- Document third-party notices (ORT, model authors).
-- Do not bundle customer audio in packages.
-- GDPR-style: models aren’t personal data, but telemetry of voice metrics may be.
+Teaching budgets, not measurements of this archive: a mobile web first load wants a small compressed pair, desktop can lazy-load a larger one, and a native app has store limits of its own. INT8 weights and ultra-light models (lesson 04-05) are how you hit the mobile number. They are chosen before the CDN upload, which is why the figure puts quantization on the left of the WASM compile.
+
+### Legal packaging
+
+The npm package is dual-licensed Apache-2.0 OR MIT, following upstream DeepFilterNet. Weights you redistribute need the same reading of the upstream license, plus third-party notices for the runtime. Do not put customer audio in the artifact. A model file is not a recording, but telemetry that stores voice metrics can be personal data. The optional instructor tree `/Users/nguyenlelinh/ncc/mezon-noise-suppression` is a local checkout for the teacher. Course work does not modify it.
 
 ### Staged rollout
 
-Canary 5% of desktop clients → watch underrun metrics → expand. Keep previous model version on CDN for rollback.
+Canary a small desktop cohort, watch underruns and init failures, then expand. Cold-start failures are packaging failures: 404, CORS, wrong MIME, double prefix. Steady-state underruns are real-time factor failures. Log them separately.
 
-## Packaging checklist (ship gate)
+## Mini-lab
 
-- [ ] `config.json` complete and tested
-- [ ] SHA256 published
-- [ ] License files present
-- [ ] RTF_p95 pass on target tier
-- [ ] Listening gate vs previous version
-- [ ] CDN cache verified
-- [ ] Rollback path documented
+Run `python3 prefix_check.py`. The function encodes the README rule: a 1.3.0 `cdnUrl` must not already end with `/v2`.
+
+```python
+def prefix_ok(url):
+    if url.rstrip("/").endswith("/v2"):
+        return "double-prefix risk"
+    return "base-ok"
+
+print(prefix_ok("https://example.com/df3"))
+print(prefix_ok("https://example.com/df3/v2"))
+```
+
+**Expected**
+
+```text
+base-ok
+double-prefix risk
+```
+
+**Failure modes**
+
+- Putting `v2` in `cdnUrl` because the README table shows `v2` in the resolved path. The prefix is the client’s job.
+- Uploading only `df_bg.wasm` under `v2/pkg/` and leaving the tar.gz at the 1.1.2 path. The pair must match the package generation.
+- Putting `v2` inside `cdnUrl` and also letting ≥ 1.2.0 add it, so the request 404s on `.../v2/v2/...`.
+- Hashing the files on a laptop and publishing different bytes to the CDN.
 
 ## Pitfalls
 
-- Overwriting `model.onnx` in place (cache poisoning hell).
-- Forgetting that npm package size ≠ CDN model size (split them).
-- No `config` → silent hop mismatch after “successful” load.
-- Shipping debug ORT builds to production.
+- Judging the product by the npm install size.
+- No manifest, so a hop change ships “successfully” and breaks overlap-add.
+- Shipping a debug WASM.
+- Query-string cache busters on every page load (`?t=Date.now()`), which defeat the CDN.
+- Mixing ≤ 1.1.2 clients and ≥ 1.2.0 clients in one folder without both layouts present.
 
 ## Exercises
 
-1. **Write a config schema.** JSON Schema or typed struct for Mezon model config.
-2. **Budget table.** Propose sizes for web vs native given DF3 FP32 vs INT8.
-3. **Rollback drill.** Document steps to revert model version in <15 minutes.
-4. **License audit.** List license questions you must answer before redistributing DeepFilterNet weights commercially.
+1. Write the fields your `config.json` must contain so a 48 kHz DeepFilter hop cannot drift.
+2. Propose compressed-size budgets for mobile web and desktop, and state which knob (INT8, ultra-light model, lazy load) hits each budget.
+3. Document a rollback that restores the previous artifact pair without editing the product repository.
+4. List the license questions you must answer before redistributing `DeepFilterNet3_onnx.tar.gz` commercially.
+5. A teammate sets `cdnUrl` to `https://cdn.example.com/df3/v2`. What URLs will a ≥ 1.2.0 client request if it follows the README and prefixes `v2` again?
+
+### Answer hints
+
+1. Sample rate, hop, window, model input names, state shapes, and the package version the shapes were checked against.
+2. Mobile: quantize or swap in a smaller model and keep the pair on the CDN, not inside npm. Desktop: lazy-load is acceptable if join is not blocked (lesson 07-02).
+3. Keep the previous directory. Point `cdnUrl` at the base that resolves to it, or pin the older package. Do not overwrite immutable URLs.
+4. Upstream license, the package’s Apache-2.0 OR MIT dual license, trademark, and whether your mirror may rehost the archive. Read the upstream model card. Do not guess “non-commercial” without the text.
+5. `https://cdn.example.com/df3/v2/v2/pkg/df_bg.wasm` and `.../v2/v2/models/DeepFilterNet3_onnx.tar.gz`. That is the double-prefix failure.
 
 ## Further reading
 
-- ONNX Runtime packaging / model optimization docs (`ORT` format).
-- npm package size best practices; CDN caching guides.
-- DeepFilterNet / model card license sections (primary sources).
-- Chapter 07 lessons on CDN loading and Mezon npm surface.
+- Package README, Custom CDN Configuration: [deepfilternet3-noise-filter](https://www.npmjs.com/package/deepfilternet3-noise-filter).
+- [ONNX Runtime documentation](https://onnxruntime.ai/docs/) on optimized model artifacts.
+- Upstream archive [DeepFilterNet3_onnx.tar.gz](https://github.com/Rikorose/DeepFilterNet/blob/main/models/DeepFilterNet3_onnx.tar.gz).
+- Chapter 07 for LiveKit `TrackProcessor` loading and CDN failure policy.

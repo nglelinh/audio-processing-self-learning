@@ -13,6 +13,10 @@ draft: false
 
 Speech enhancement lives in the frequency domain more often than in raw waveforms. This lesson builds continuous-time Fourier intuition so that discrete STFT code in later chapters is not a pile of magic parameters. Plan on a full hour: definitions, properties, perceptual mapping, and an engineer’s bridge toward sampling and DFTs.
 
+![A waveform split into a few sinusoids whose sum rebuilds the original curve]({{ site.imgurl }}/generated/fourier-intuition.png)
+
+*Figure. Frequency is a coordinate: each sinusoid is one basis tone, and the transform measures how much of that tone is in the signal.*
+
 ## Learning objectives
 
 1. Explain frequency as rate of oscillation and as a coordinate in a signal basis.
@@ -92,7 +96,13 @@ Microphones give samples. Continuous integrals become DTFT/DFT/FFT on windows. I
 
 ### Two tones and a low-pass
 
-Let \(x(t)=\cos(2\pi\cdot 440\,t)+0.3\cos(2\pi\cdot 880\,t)\). Using Euler’s formula, lines sit at \(\pm 440\) and \(\pm 880\) Hz. A low-pass at 600 Hz removes the octave partial and dulls brightness. NS that blindly low-passes “to remove hiss” makes the same mistake on fricatives.
+Let \(x(t)=\cos(2\pi\cdot 440\,t)+0.3\cos(2\pi\cdot 880\,t)\). Euler’s identity is the derivation, not a slogan:
+
+$$
+\cos\theta=\frac{e^{j\theta}+e^{-j\theta}}{2}.
+$$
+
+So the 440 Hz cosine is a pair of lines at \(\pm 440\,\mathrm{Hz}\), each with complex amplitude \(1/2\), and the 880 Hz cosine is a pair at \(\pm 880\,\mathrm{Hz}\) with amplitude \(0.3/2=0.15\). A low-pass at 600 Hz removes the octave partial and dulls brightness. NS that blindly low-passes “to remove hiss” makes the same mistake on fricatives. On a 48 kHz full-band path (the `deepfilternet3-noise-filter` default) those fricatives are allowed to live well above 8 kHz; a continuous-frequency picture that stops at telephony bandwidth will not match what the product mic can capture.
 
 ### Phase ramp from delay
 
@@ -110,6 +120,30 @@ Speech bin magnitude 0.10, noise 0.10 (linear). Sum 0.20 if **coherent** same-ph
 4. Assuming “more frequency resolution is always better” without latency cost (later lessons).
 5. Expecting CTFT symbols to appear in code — production uses FFT windows.
 
+## Mini-lab
+
+**Goal.** Synthesize one second of 200 Hz + 600 Hz + 1000 Hz at 8 kHz and read the `rfft` peak bins. With \(N=f_s\), bin index equals frequency in Hz.
+
+```python
+import numpy as np
+
+fs = 8000
+t = np.arange(fs) / fs
+x = (
+    np.sin(2 * np.pi * 200 * t)
+    + np.sin(2 * np.pi * 600 * t)
+    + np.sin(2 * np.pi * 1000 * t)
+)
+mag = np.abs(np.fft.rfft(x))
+order = np.sort(np.argsort(mag)[-3:])
+print(order.tolist())
+print(np.round(mag[order], 1).tolist())
+```
+
+**Expected.** `[200, 600, 1000]` and `[4000.0, 4000.0, 4000.0]`. Each unit-amplitude sine, held for an integer number of cycles, lands on one positive bin with magnitude \(N/2=4000\).
+
+**Failure modes.** Using `np.fft.fft` and reporting a negative-frequency index as a second peak. Choosing \(N\) not divisible by the periods, then watching the peak smear off the integer bin. Reading the magnitude as the cosine’s \(1/2\) coefficient from the worked example — a sine’s `rfft` scaling is \(N/2\), not \(1/2\).
+
 ## Mini exercises
 
 1. Write \(\sin(\Omega t)\) as complex exponentials via Euler’s formula.
@@ -118,8 +152,16 @@ Speech bin magnitude 0.10, noise 0.10 (linear). Sum 0.20 if **coherent** same-ph
 4. In one paragraph, why are complex exponentials preferred when analyzing LTI filters?
 5. Give one case where time-domain methods might beat naive spectral subtraction (hint: impulsive clicks).
 
+### Answer hints
+
+1. \(\sin\theta=(e^{j\theta}-e^{-j\theta})/(2j)\). Two lines, opposite sign, factor \(1/(2j)\).
+2. \(\Delta\phi=-2\pi f t_0\). At 500 Hz and 2 ms: \(-2\pi\cdot 0.5\cdot 2=-2\pi\) radians (one full turn). At 2 kHz: \(-8\pi\) radians, four turns. Magnitude is unchanged.
+3. Vowel: harmonic stack plus formant blobs. White noise: flat. Click: broadband spike. Babble: a second, messier harmonic stack.
+4. An LTI filter multiplies \(e^{j\Omega t}\) by \(H(j\Omega)\) and creates no new frequencies. A cosine splits into two such eigenfunctions.
+5. A single-sample click is already spread across every bin. A short time-domain gate can catch it; a slow noise-floor tracker cannot.
+
 ## Further reading
 
 - Alan V. Oppenheim & Ronald W. Schafer, *Discrete-Time Signal Processing* — Fourier transform overview chapters (any recent edition).
-- Standard university DSP notes on the CTFT (e.g. MIT OCW DSP).
-- DeepFilterNet papers — skim that enhancement runs in STFT / deep-filtering domains (motivation only here).
+- Julius O. Smith, *Mathematics of the DFT*, https://ccrma.stanford.edu/~jos/mdft/ — sinusoids as a basis, before any STFT code.
+- DeepFilterNet (arXiv:2110.05588) — skim that enhancement runs in an STFT / deep-filtering domain. Motivation only in this lesson.

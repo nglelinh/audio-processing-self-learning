@@ -11,149 +11,159 @@ lesson_type: required
 draft: false
 ---
 
-DeepFilterNet3 in the browser needs **WASM** plus a **model archive** (`DeepFilterNet3_onnx.tar.gz`). Shipping those only inside npm tarball bloats installs and slows first paint; production apps usually load them from a **CDN** with caching and versioned paths. This lesson designs progressive download, cache safety, and failure modes that keep the call up.
+DeepFilterNet3 in the browser needs a **WASM** module and a model archive, `DeepFilterNet3_onnx.tar.gz`. Shipping both only inside the npm tarball bloats install and couples asset updates to application deploys. Production pages load them from a **CDN** (content delivery network): a cache in front of those two files. `deepfilternet3-noise-filter` **1.3.0** resolves the URLs from `assetConfig.cdnUrl`. This lesson makes the four URLs for 1.1.2 and 1.3.0 self-checking, and keeps a failed fetch from taking down the call.
 
-## 60-minute teaching plan
+![CDN fetch of WASM and the ONNX archive before AudioWorklet compile]({{ site.imgurl }}/generated/onnx-wasm-path.png)
 
-- 0–10 min: What must be fetched (WASM vs model) and approximate sizes.
-- 10–25 min: Mezon `assetConfig.cdnUrl` and `v2/` path rules (≥1.2.0).
-- 25–40 min: HTTP caching, content hashing, cache busting.
-- 40–50 min: Progressive UX — readiness without blocking connect.
-- 50–60 min: Mini-lab: failure matrix (404, CORS, offline, stale cache).
+*Figure. The client turns cdnUrl into a WASM URL and a model URL, then compiles WASM.*
 
 ## Learning objectives
 
-By the end of this lesson, you can:
+You will write the resolved URLs for package ≤ 1.1.2 and for the 1.3.0 README rule, keep `v2` out of `cdnUrl`, set cache headers that survive a version bump, and bypass suppression when the fetch fails.
 
-- Design progressive download with user-visible readiness.
-- Cache models safely across sessions.
-- Handle partial failures without killing the call.
-- Explain why ≥1.2.0 appends `v2/` under your CDN base URL.
+## 60-minute teaching plan
 
-## Assets involved
+- **0–10 min** — Which two bodies move, and when `initialize()` fetches them.
+- **10–25 min** — `cdnUrl` and the version prefix.
+- **25–40 min** — Cache, MIME, CORS.
+- **40–50 min** — Readiness without blocking `connect()`.
+- **50–60 min** — Mini-lab: four URLs.
 
-From the `deepfilternet3-noise-filter` README:
+## Assets
+
+From the package README:
 
 | Asset | Role |
 |-------|------|
-| `pkg/df_bg.wasm` (under base or `v2/`) | Native-speed DSP/inference glue |
-| `models/DeepFilterNet3_onnx.tar.gz` | Model weights / graph archive from upstream DeepFilterNet |
+| `pkg/df_bg.wasm` under the base or under `v2/` | SIMD WASM glue for versions that enable it |
+| `models/DeepFilterNet3_onnx.tar.gz` | Upstream DeepFilterNet3 archive |
 
-Upstream model pointer: [Rikorose/DeepFilterNet `DeepFilterNet3_onnx.tar.gz`](https://github.com/Rikorose/DeepFilterNet/blob/main/models/DeepFilterNet3_onnx.tar.gz).
+Upstream pointer: [DeepFilterNet3_onnx.tar.gz](https://github.com/Rikorose/DeepFilterNet/blob/main/models/DeepFilterNet3_onnx.tar.gz). The CDN serves **weights and code**, not user audio. Inference stays on device. Do not add an upload of PCM “for debugging” on a production client.
 
-**Privacy:** default Mezon design runs inference **on-device**. CDN serves *weights*, not user audio. Do not "helpfully" upload PCM to a server unless you have an explicit product + consent path.
-
-## Configuring the CDN base
+## Configuring the base
 
 ```javascript
 const filter = new DeepFilterNoiseFilterProcessor({
   sampleRate: 48000,
   noiseReductionLevel: 80,
+  enabled: true,
   assetConfig: {
-    cdnUrl:
-      "https://cdn.mezon.ai/AI/models/datas/noise_suppression/deepfilternet3",
-  },
+    cdnUrl: "https://cdn.mezon.ai/AI/models/datas/noise_suppression/deepfilternet3"
+  }
 });
 ```
 
+If you omit `cdnUrl`, the package default is that same Mezon base. A private mirror replaces the origin and the path prefix only.
+
 ### Version-specific paths
 
-| Package version | Resolved paths |
-|-----------------|----------------|
-| ≤ 1.1.2 | `{cdnUrl}/pkg/df_bg.wasm`, `{cdnUrl}/models/DeepFilterNet3_onnx.tar.gz` |
-| ≥ 1.2.0 | `{cdnUrl}/v2/pkg/df_bg.wasm`, `{cdnUrl}/v2/models/DeepFilterNet3_onnx.tar.gz` |
+The README states:
 
-The `v2/` prefix is added **by the package** for ≥1.2.0 — do **not** put `v2` in `cdnUrl` yourself or you risk `.../v2/v2/...`.
+| Package | Resolved paths |
+|---------|----------------|
+| ≤ 1.1.2 | `{cdnUrl}/pkg/df_bg.wasm` and `{cdnUrl}/models/DeepFilterNet3_onnx.tar.gz` |
+| ≥ 1.2.0, including 1.3.0 | `{cdnUrl}/v2/pkg/df_bg.wasm` and `{cdnUrl}/v2/models/DeepFilterNet3_onnx.tar.gz` |
 
-SIMD builds (≥1.2.0) need browsers with WASM SIMD (Chrome 91+, Firefox 89+, Safari 16.4+ per package notes).
+The package adds `v2/`. You do not. The README also says the SIMD build is about 20–30% faster for ≥ 1.2.0; cite that as the README’s number. Browsers for that build, again from the README: Chrome 91+, Firefox 89+, Safari 16.4+.
 
-## Progressive download and readiness UX
+Package ≥ 1.2.0, including 1.3.0, adds `v2/` itself. You do not. Never put `v2` inside `cdnUrl`. The public example base is `https://cdn.mezon.ai/AI/models/datas/noise_suppression/deepfilternet3`. The 1.3.0 changelog also records a tract 0.23.3 bump for the WASM build; that pin does not change the `v2/` paths.
 
-Recommended sequence:
+## Progressive readiness
 
-1. **Room connect** proceeds with mic muted or NS bypassed.
-2. Background fetch WASM + model; show "Enhancing audio…" progress if you can measure bytes.
-3. On success → enable processor / unmute with NS.
-4. On failure → stay on APM-only or raw mic; toast once.
+`initialize()` fetches both bodies with `Promise.all` and compiles WASM on the main thread. `setProcessor` awaits `init`, which awaits that work. Room signaling must not.
 
 ```text
-connect() ──► publish (NS bypassed)
-                │
-                ├─► fetch assets ──► ok ──► setEnabled(true)
-                │
-                └─► fetch assets ──► err ──► telemetry + stay bypassed
+connect() ──► room is up, mic muted or NS bypassed
+                ├─► fetch pair ──► ok ──► setProcessor, then publish, then setEnabled(true)
+                └─► fetch pair ──► err ──► telemetry, stay bypassed or APM-only
 ```
 
-Never make `await fetch(model)` the gate for WebSocket join on mobile networks.
+A practical policy is still the README order once assets are hot: construct, `setProcessor`, `publishTrack`. The failure to avoid is awaiting the cold CDN **inside** `connect()` before the user is in the room. Show “enhancing audio” from byte progress if you measure it. Toast once on failure.
 
-## HTTP caching and cache busting
+## HTTP caching
 
-### Desired browser/CDN behavior
+An immutable version directory can use `Cache-Control: public, max-age=31536000, immutable`. When bytes change, publish a new directory and let the package prefix point at it. Do not mutate bytes at a URL you marked immutable. `?t=Date.now()` on every join destroys the hit rate. If you also use the Cache API, key by the full versioned URL, cap storage, and offer a support action that clears the noise-suppression cache.
 
-- **Immutable versioned URL** (best): `/deepfilternet3/v2/...` with long `Cache-Control: public, max-age=31536000, immutable`.
-- When weights change, publish a **new path** (v3) or new package major that points elsewhere — do not silently mutate bytes at an immutable URL.
+Serve `df_bg.wasm` as `Content-Type: application/wasm`. A missing `Access-Control-Allow-Origin` looks like a generic network error; log status and response type. WASM and the archive are one atomic pair. A 1.3.0 SIMD module beside a 1.1.2-era archive is not a mixed configuration you should “try.”
 
-### Cache busting anti-patterns
+Regional latency matters on mobile networks. Mirror into a customer VPC when the public host is blocked. CORS and TLS still apply. There is no unpublished authentication header in this public API: the client issues a normal `fetch`.
 
-- Query `?t=Date.now()` on every load — destroys CDN hit rate.
-- Same URL, new bytes, short max-age only — works but wastes bandwidth; prefer versioned directories.
+## Partial failure
 
-### Service workers / Cache API (optional)
+| Failure | What the user sees | Action |
+|---------|--------------------|--------|
+| 404 on WASM or model | Suppression unavailable | Fix the path; publish raw audio |
+| CORS error | Same | Fix CDN headers |
+| Truncated body | `initialize` throws | Retry once, then bypass |
+| Offline after a good cache | May still work | Confirm disk cache or Cache API |
+| Mismatched pair | Bad audio or a compile error | Lock both files to one directory |
+| Wrong MIME | Streaming loaders fail | `application/wasm` |
 
-If you cache models in Cache Storage:
+## Worked mirror
 
-- Key by full URL including version segment.
-- Cap storage; model archives are large.
-- Provide an "Clear NS cache" support action.
+Download the upstream `DeepFilterNet3_onnx.tar.gz` and the `df_bg.wasm` that matches your package generation. For a client that follows the README’s ≥ 1.2.0 rule, upload to `https://assets.example.com/ns/df3/v2/pkg/` and `.../v2/models/`, and set `cdnUrl` to `https://assets.example.com/ns/df3`. Smoke-test a cold profile with the cache disabled, then again with the cache enabled.
 
-## Regional CDN considerations
+## Mini-lab
 
-- Put the origin close to users (or use a multi-region CDN).
-- Measure TTFB and total download on Viet Nam / SEA mobile networks — first-session NS delay is a product metric.
-- Mirror for enterprise VPC if customers block public CDN hosts (CORS + TLS still required).
+Given `cdnUrl = https://example.com/df3`, compute the paths for ≤ 1.1.2 and for ≥ 1.2.0 including 1.3.0. Run `python3 cdn_urls.py`.
 
-### CORS
+```python
+cdn = "https://example.com/df3"
+pairs = {
+    "1.1.2": ("pkg/df_bg.wasm", "models/DeepFilterNet3_onnx.tar.gz"),
+    "1.3.0": ("v2/pkg/df_bg.wasm", "v2/models/DeepFilterNet3_onnx.tar.gz"),
+}
+for ver, (wasm, model) in pairs.items():
+    print(ver)
+    print(f"{cdn}/{wasm}")
+    print(f"{cdn}/{model}")
+```
 
-WASM and model fetches from a different origin need correct `Access-Control-Allow-Origin`. A missing CORS header presents as a generic failure in JS — log status and response type in telemetry.
+**Expected**
 
-## Partial failure matrix
+```text
+1.1.2
+https://example.com/df3/pkg/df_bg.wasm
+https://example.com/df3/models/DeepFilterNet3_onnx.tar.gz
+1.3.0
+https://example.com/df3/v2/pkg/df_bg.wasm
+https://example.com/df3/v2/models/DeepFilterNet3_onnx.tar.gz
+```
 
-| Failure | User-visible | Engineering action |
-|---------|--------------|--------------------|
-| 404 on wasm | NS unavailable | Fix deploy; fallback audio |
-| 404 on model | NS unavailable | Same |
-| CORS error | NS unavailable | Fix CDN headers |
-| Truncated download | init error | retry once; then fallback |
-| Offline after cached | may work | verify Cache API / HTTP disk cache |
-| Stale incompatible wasm/model pair | crashes / bad audio | version lock both under same `v2/` |
+**Failure modes**
 
-**Atomicity:** treat WASM + model as a **pair** released together under one version directory.
+- Embedding `v2` in `cdnUrl`, which yields `https://example.com/df3/v2/v2/pkg/df_bg.wasm`.
+- Using a filename that is not `df_bg.wasm` or `DeepFilterNet3_onnx.tar.gz`.
+- Blocking `connect()` until all four hypothetical URLs respond. Only the two URLs for the installed version are fetched, and not as a gate on signaling.
+- Treating 1.3.0 as a no-prefix layout. From 1.2.0 onward, including 1.3.0, the client adds `v2/`.
 
-## Worked example: private mirror
+## Pitfalls
 
-1. Download upstream `DeepFilterNet3_onnx.tar.gz` and your built `df_bg.wasm`.
-2. Upload to `https://assets.example.com/ns/df3/v2/pkg/` and `.../v2/models/`.
-3. Set `cdnUrl: "https://assets.example.com/ns/df3"` with package ≥1.2.0.
-4. Smoke-test: cold browser profile, DevTools disabled cache off/on, verify single download then 304/disk cache.
-
-## Common pitfalls
-
-1. Double `v2` in the path.
-2. Blocking UI on model fetch.
-3. Logging or uploading raw audio "for debugging" from production clients.
-4. Mixing ≤1.1.2 layout with ≥1.2.0 clients on one CDN folder.
-5. Forgetting `Content-Type` / compression issues on `.wasm` (serve correct MIME).
+1. Double prefix.
+2. Join UI gated on `fetch`.
+3. Uploading raw audio from production.
+4. One folder shared blindly by ≤ 1.1.2 and ≥ 1.2.0 clients.
+5. Wrong WASM MIME type.
 
 ## Exercises
 
-1. Given `cdnUrl = https://example.com/df3`, write the four full URLs for package 1.1.2 vs 1.3.0.
-2. Design a readiness UI state list: `idle | downloading | ready | error`.
-3. Propose Cache-Control headers for an immutable `v2` tree.
-4. Write a fallback policy in 10 lines of pseudocode for asset load failure.
+1. Repeat the four URLs from memory, then diff against the expected block.
+2. List UI states `idle`, `downloading`, `ready`, `error` and which processor method runs on `ready`.
+3. Write `Cache-Control` for an immutable `v2` tree and the rule for publishing a new tree.
+4. Ten lines of policy for a failed asset load that still leaves the room usable.
+5. Why are the WASM file and the tar.gz required to share a directory generation?
+
+### Answer hints
+
+1. Two files times two generations. Prefix only on ≥ 1.2.0 / 1.3.0 README. Base stays `https://example.com/df3`.
+2. `ready` is when `initialize()` has resolved. Then `setProcessor` (if you have not already) and `await setEnabled(true)` if the user wanted suppression.
+3. `public, max-age=31536000, immutable` on the versioned tree. New bytes get a new directory, not an overwrite.
+4. Catch the `setProcessor` or `initialize` rejection, publish the raw track, emit one telemetry reason, do not retry forever.
+5. SIMD WASM and the archive are a matched pair. Split generations across folders and you will compile a module against the wrong weights.
 
 ## Further reading
 
-- Package README: Custom CDN Configuration — [deepfilternet3-noise-filter](https://www.npmjs.com/package/deepfilternet3-noise-filter).
-- MDN: [HTTP caching](https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching), [CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS).
-- Upstream model: [DeepFilterNet3_onnx.tar.gz](https://github.com/Rikorose/DeepFilterNet/blob/main/models/DeepFilterNet3_onnx.tar.gz).
-- Course Chapter 06 (WASM/SIMD packaging).
+- Package README, Custom CDN: [deepfilternet3-noise-filter](https://www.npmjs.com/package/deepfilternet3-noise-filter).
+- MDN [HTTP caching](https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching) and [CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS).
+- Upstream [DeepFilterNet3_onnx.tar.gz](https://github.com/Rikorose/DeepFilterNet/blob/main/models/DeepFilterNet3_onnx.tar.gz).
+- Chapter 06 for quantization, SIMD, and packaging of the same pair.

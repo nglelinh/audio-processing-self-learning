@@ -41,6 +41,20 @@ $$
 
 Khi $$\hat{h}\approx h$$ và đường tuyến tính biến chậm, $$e\approx s+n$$—NS có thể tập trung vào $$n$$.
 
+```text
+far-end x ──► loa ──► phòng h ──► mic y
+near-end s ─────────────────────► mic y
+nhiễu nền n ────────────────────► mic y
+AEC:  e = y − ĥ ∗ x
+NS:   chạy trên e, không chạy trên y thô
+```
+
+Phần dư sau phép trừ đó mới là thứ suppressor phía sau thực sự nghe. Khi bộ hủy làm đúng việc, \(e\) trông như hỗn hợp cộng trên hình: tiếng near-end cộng với thứ chưa hủy (nhiễu nền, và echo sót nhỏ hơn). Hình không vẽ đường phòng.
+
+![Tiếng sạch, nhiễu cộng, và tổng của chúng — dạng phần dư sau khi echo đã bị trừ]({{ site.imgurl }}/generated/noise-mixture.png)
+
+*Hình. Sau AEC tuyến tính, phần dư là hỗn hợp cộng của tiếng near-end và thứ bộ hủy chưa bỏ; hoạt hình này là hỗn hợp đó, không phải đường echo.*
+
 ### Trực giác adaptive filter (NLMS)
 
 FIR độ dài $$L$$ cập nhật kiểu NLMS:
@@ -95,12 +109,39 @@ AEC tuyến tính để lại phần dư khi loa méo phi tuyến, ước lượ
 - AGC trước AEC khiến gain điều chế đường echo.
 - Nhầm echo **âm học** với echo **đường dây** gateway điện thoại.
 
+## Mini-lab
+
+**Mục tiêu.** Hoạt hình số: công suất echo dư so với lỗi bạn thực sự đo, và một frame double-talk (hai phía cùng nói) làm gì. Đây không phải bản dựng WebRTC và không gọi Audio Processing Module.
+
+```python
+import numpy as np
+
+far = np.array([0.0, 0.2, 1.0, 1.0, 0.3, 1.2])
+near = np.array([0.0, 0.0, 0.0, 0.8, 0.0, 0.0])  # double-talk chỉ ở frame 3
+h, hhat = 0.5, 0.45
+residual_echo = (h - hhat) * far
+err = near + residual_echo
+print("residual echo power", np.round(residual_echo ** 2, 4))
+print("measured error power", np.round(err ** 2, 4))
+```
+
+**Kỳ vọng.** Công suất echo dư vẫn nhỏ: `[0, 0.0001, 0.0025, 0.0025, 0.0002, 0.0036]`. Công suất lỗi đo được khớp nó mọi frame trừ frame 3, nơi tiếng near-end đẩy lên khoảng `0.7225` trong khi echo sót thật vẫn là `0.0025`. Thích nghi \(\hat{h}\) trên frame đó sẽ coi người nói là echo.
+
+**Khi hỏng.** Nếu hai công suất ở frame 3 khớp nhau, `near` còn bằng 0 và bạn không ở double-talk. Nếu công suất echo dư lớn trên mọi frame far-end có tiếng, \(\hat{h}\) còn xa \(h\) (thử hoán 0.5 và 0.45). Coi công suất lỗi là sàn nhiễu rồi đưa vào gain Wiener sẽ đè người nói near-end. Không có gì ở đây khởi tạo AEC của WebRTC.
+
 ## Bài tập
 
 1. Vẽ capture, render, $$\hat{h}$$, $$e$$, NS; đánh dấu chỗ AudioWorklet neural.
 2. Giải thích NLMS khi reference sớm/muộn 40 ms so với echo trong mic.
 3. Lướt docs WebRTC APM; liệt kê tên toggle NS level và AEC.
 4. Playbook hỗ trợ: triệu chứng → nghi AEC/NS/AGC → bước chẩn đoán đầu.
+
+### Gợi ý đáp án
+
+1. NS neural ngồi trên \(e\), sau \(\hat{h}\). Trên đồ thị trình duyệt, chỗ đó thường là sau AEC của nền tảng và trước encoder.
+2. Tham chiếu sớm hoặc muộn 40 ms sẽ trượt các tap đang giữ \(h\), nên \(e\) vẫn còn echo và bộ lọc thích nghi sai lag.
+3. Tìm mức NS và công tắc AEC trên `AudioProcessing`; tên đổi giữa các bản, nên ghi revision bạn đã đọc.
+4. Far-end phát mà không có người near-end là bài test AEC. Người near-end trong nhiễu, far-end im, là bài test NS. Mức nhảy khi một phía ngừng nói thường là AGC.
 
 ## Đọc thêm
 

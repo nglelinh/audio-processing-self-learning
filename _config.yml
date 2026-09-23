@@ -3,7 +3,7 @@ title:               "Real-Time Audio Noise Suppression: From DSP to DeepFilterN
 description:         "Bilingual self-learning course for Vietnamese software engineers: DSP foundations through DeepFilterNet and real-time product integration (Mezon NS)."
 url:                 https://nglelinh.github.io
 baseurl:             '/audio-processing-self-learning'
-imgurl:              https://nglelinh.github.io/audio-processing-self-learning/img
+imgurl:              /audio-processing-self-learning/img
 paginate:            5
 permalink:           pretty
 

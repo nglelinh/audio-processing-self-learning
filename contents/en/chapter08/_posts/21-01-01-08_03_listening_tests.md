@@ -11,119 +11,92 @@ lesson_type: required
 draft: false
 ---
 
-Objective metrics miss product-critical artifacts: underwater speech, cut consonants, pumping, residual keyboard spikes. **Listening tests** remain the tie-breaker for shipping noise suppression. This lesson shows how to run a *small, honest* AB or MUSHRA-like test with a engineering team — not a full ITU lab — and how to document results for stakeholders.
+SI-SDR can stay high while the voice turns metallic, and DNSMOS can miss a domain your users actually occupy. A listening test is the column that catches both, if you control loudness, order, and the clip grid. You do not need an ITU-certified lab to learn the discipline. You do need a written protocol, blinded labels, and a table that can lose. This lesson is a small AB (or MUSHRA-like) design for an engineering team deciding whether to change `setSuppressionLevel` on `DeepFilterNoiseFilterProcessor`.
 
-## 60-minute teaching plan
+![Evaluation map: intrusive SI-SDR, non-intrusive DNSMOS, and listening tests]({{ site.imgurl }}/generated/eval-metric-map.png)
 
-- 0–10 min: When dogfooding is enough vs when a structured test is required.
-- 10–25 min: AB vs MUSHRA-like designs; loudness and order controls.
-- 25–40 min: Rater instructions and sample curation.
-- 40–50 min: Analysis — win rates, ties, disagreement.
-- 50–60 min: Mini-lab: write a 1-page test protocol for a suppression-level change.
+*Figure. Listening tests are the slow, high-value column. They arbitrate when SI-SDR and DNSMOS disagree, which is a normal outcome on real microphones.*
 
-## Learning objectives
+## What you should be able to do
 
-By the end of this lesson, you can:
+You should be able to pick AB versus a light MUSHRA-like scale, loudness-normalize the stimuli, randomize order, write rater instructions in English and Vietnamese, and report wins, losses, and ties per condition. You should also know when a day of dogfooding is enough and when it is not.
 
-- Design a small MUSHRA-like or AB test for a team.
-- Control for loudness and order effects.
-- Document results for product stakeholders.
-- Know when informal dogfooding is enough.
+## Pick a protocol that matches the decision
 
-## Choose a protocol
+Informal dogfooding — using noise suppression in a real meeting — catches crashes, CPU spikes, and “I hate this” moments. It does not estimate a preference rate. AB asks each rater to prefer A, prefer B, or tie, on one pair. That is the right tool for level 80 versus level 60, or for the processor enabled versus bypassed with `setEnabled(false)`. An ABC task adds a raw microphone anchor. A MUSHRA-like scale, inspired by ITU-R BS.1534, rates several systems against an anchor and needs more rater training. ITU-T P.808 describes crowdsourced conversational-speech tests; read it as a standard to respect, then run a lightweight variant and say so in the report. Do not label a five-person hallway test as P.808.
 
-| Protocol | What raters do | Good for |
-|----------|----------------|----------|
-| Informal dogfood | Use NS in real meetings for a day | Catch UX / crash / CPU issues |
-| **AB** | Prefer A or B (or tie) | Two versions / two levels |
-| **ABC** | Pick best of three | Baseline vs NS vs NS' |
-| MUSHRA-like | Rate multiple systems on a scale with anchors | More systems; needs more care |
+## Controls that keep the result about noise suppression
 
-ITU-T **P.808** / MUSHRA (ITU-R BS.1534) are formal references — your course team will usually run a **lightweight** variant inspired by them, not a certified lab.
+Loudness is the classic confound. If the suppressed file is quieter, raters who were told to judge “comfort” will pick it even when fricatives died. Normalize integrated loudness toward a common target and say which tool you used. Randomize which system is A on each clip. Never park the new level on the right. Show “System 1” and “System 2,” not “DF3-80.” Use the same headphones when you can, and record the device when you cannot. Prefer 5–10 seconds that contain the hard noise and a consonant, not a full minute that exhausts the rater. Keep the playback path identical: same browser, same sample rate, no extra limiter on one side.
 
-## Loudness and order controls
+Include a clean-speech control. A suppressor that only helps on café babble and wounds a quiet sentence is not a default you can ship. Include at least one impulsive noise (keyboard) and one babble noise. A single favorite café clip is how suites overfit.
 
-1. **Loudness:** loudness-normalize clips (e.g. toward a common integrated loudness) so raters do not prefer the louder file.
-2. **Order:** randomize A/B assignment per clip; never always put "new" on the right.
-3. **Blind labels:** show "System 1 / System 2", not "DF3-80".
-4. **Same headphones** when possible; note device if remote.
-5. **Short clips:** 5–10 s of critical noise + speech beats 60 s of fatigue.
+## A grid, not a dump
 
-## Sample curation
+| Noise | Difficulty | Device | Why it is here |
+|-------|------------|--------|----------------|
+| Café babble | Hard | Laptop mic | Overlapping speech-like noise |
+| Keyboard | Medium | Laptop | Impulsive; easy to over-cut |
+| Fan or AC | Easier | Phone | Stationary; bandwidth differs |
+| Traffic | Hard | Phone | Low-frequency rumble |
+| Quiet room | Control | Laptop | Over-suppression detector |
 
-Build a **grid**, not a random dump:
+Eight to fifteen clips and five to ten raters is a small team test. Write $$N$$ in the table. Repeat two clips with the labels flipped as an attention check. If a rater contradicts themselves on both, set their sheet aside and say so. Translate the instruction sheet into Vietnamese when the raters work in Vietnamese. The decision criterion must stay the same language-to-language: clear consonants, a natural voice, low distraction, and a penalty for muffling, robotic timbre, or chopped words. Tell raters to ignore leftover loudness differences.
 
-| Noise type | SNR-ish difficulty | Device |
-|------------|--------------------|--------|
-| Café babble | hard | laptop mic |
-| Keyboard | medium | laptop |
-| Fan / AC | easy | phone |
-| Traffic | hard | phone |
-| Silent room | control | laptop |
+## What you report
 
-Include **clean** controls — NS should not wreck clean speech.
+For AB, report wins for the candidate, wins for the baseline, and ties, overall and per condition. A keyboard win plus a café loss is a split decision: you might ship the lower suppression level as default and document the residual café noise, or you might refuse to change the default. You do not average those rows into a single triumphant percentage. Attach one example you have rights to play on demo day (lesson 09-05), with the condition named.
 
-Typical small test: 8–15 clips × 5–10 raters (teammates). More is better; document N.
+Stakeholder table shape:
 
-## Rater instructions (template)
+| Condition | New wins | Old wins | Ties | N |
+|-----------|----------|----------|------|---|
+| Keyboard | 7 | 2 | 1 | 10 |
+| Café | 4 | 5 | 1 | 10 |
+| Quiet | 3 | 2 | 5 | 10 |
 
-```text
-You will hear two versions of the same take (order random).
-Choose which is better for a work meeting, or "tie".
-Prefer: clear consonants, natural voice, low distraction from noise.
-Penalize: muffled speech, robotic artifacts, cutting out words.
-Ignore: tiny loudness differences.
+The quiet row full of ties is a success if the candidate was not supposed to touch clean speech. A quiet row where “old” wins means the new level is eating the voice.
+
+## When dogfooding is the whole test
+
+Use dogfooding alone for a change that must be bit-identical in the waveform: a CDN fallback, a logging line, a cache header. Use it for an internal flag that does not change the default listeners hear. Require the structured test when you change the default suppression level, ship a new WASM or model archive, or respond to “the voice sounds weird.” RTF work can skip listening only when the output samples match a golden wav within a tolerance you wrote down. A faster build that is not sample-close is a new system.
+
+## Mini-lab
+
+Write `ab_protocol.md` for a suppression-level change (for example 80 versus 60 on `setSuppressionLevel`). Then run the checker. The lab passes when the protocol names loudness, blinding, a clean control, and both languages.
+
+```python
+from pathlib import Path
+text = Path("ab_protocol.md").read_text().lower()
+need = ["loudness", "blind", "tie", "quiet", "keyboard", "cafe", "vietnamese", "setsuppressionlevel"]
+missing = [n for n in need if n not in text]
+print("missing", missing or "none")
+print("chars", len(text))
 ```
 
-Translate instructions to Vietnamese when raters are VI-speaking (same meaning).
+Expected output:
 
-## Analysis and reporting
+```text
+missing none
+chars <some integer above 400>
+```
 
-For AB:
+The character count will be your own. The checker’s `missing none` line is the pass signal. Failure modes: unblinded filenames in the rater UI; no tie option, which forces a preference when the clips match; no quiet control; instructions only in English for a Vietnamese-speaking panel; judging a level change on one talker’s voice.
 
-- Win rate of New vs Old; ties separately.
-- Per-condition breakdown (keyboard vs café).
-- Flip rate if you repeat 2 clips for attention checks.
-
-Stakeholder table:
-
-| Condition | New wins | Old wins | Ties |
-|-----------|----------|----------|------|
-| Keyboard | 7 | 2 | 1 |
-| Café | 4 | 5 | 1 |
-| **Overall** | … | … | … |
-
-Attach **one** audio example (with permission) in the demo — Chapter 09-05.
-
-## When dogfooding is enough
-
-- Pure reliability change (CDN fallback) with no DSP change.
-- Enabling NS behind a flag for internal users only.
-- RTF optimization with bit-identical / golden waveform parity.
-
-Require structured listening when:
-
-- Changing suppression defaults.
-- New model / WASM build.
-- Reports of "voice sounds weird".
-
-## Common pitfalls
-
-1. Testing only on your own voice / headset.
-2. Unblinded "of course the new one is better".
-3. No clean-speech control clips.
-4. Huge clip sets → exhausted raters → noise.
+A minimal protocol body that satisfies the checker will state the task in both languages, name `setSuppressionLevel`, and list the three conditions. Expand it with the rater paragraph from this lesson rather than keyword-stuffing.
 
 ## Exercises
 
-1. Write AB instructions in EN and VI for your team.
-2. Curate a 9-clip grid (3 noises × 3 devices) with filenames.
-3. Given win table Café loses but Keyboard wins — what do you ship?
-4. Design an attention check (duplicate clip) policy.
+1. Write the rater paragraph in English and a natural Vietnamese equivalent. Keep the same penalties.
+2. List nine filenames for a 3×3 grid (babble, keyboard, quiet × laptop, phone, headset).
+3. Keyboard: new wins 7–2–1. Café: new wins 4–5–1. Quiet: 3–2–5. What do you ship as the default level, and what do you retest?
+4. Define an attention-check rule for one duplicated clip.
+5. Name two product changes that do not need this protocol, and one that does.
 
-## Further reading
+### Answer hints
 
-- ITU-T P.808 (conversational speech quality crowdsourcing) — overview.
-- ITU-R BS.1534 (MUSHRA) — overview for multi-system rating.
-- DNS Challenge human evaluation notes in challenge summaries.
-- Course 08-01/08-02 for objective complements.
+1. Penalize muffling, robotic timbre, and chopped words. Ignore small loudness gaps. Vietnamese should sound like an instruction to a colleague, not a word-for-word gloss.
+2. Encode condition and device in the stem, for example `babble__laptop__01.wav`.
+3. Do not ship on the keyboard row alone. The café loss and the quiet ties mean you either keep the old default or retest a middle level. Say which.
+4. Flip A/B on the duplicate. A rater who flips their own preference fails the check.
+5. CDN fallback with unchanged samples can be dogfood. A new default for `setSuppressionLevel` cannot.

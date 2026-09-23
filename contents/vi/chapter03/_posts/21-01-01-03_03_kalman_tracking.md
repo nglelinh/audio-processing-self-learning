@@ -46,7 +46,11 @@ $$
 K=\frac{p^{-}}{p^{-}+r},\quad \hat{x}=\hat{x}^{-}+K(y-\hat{x}^{-}).
 $$
 
-So với Wiener: $$K$$ giống $$\xi/(\xi+1)$$ nếu đọc $$p^{-}/r$$ như SNR tiên nghiệm. Kalman = Wiener **cộng bộ nhớ** qua trạng thái và phương sai dự đoán.
+So với Wiener: $$K$$ giống $$\xi/(\xi+1)$$ nếu đọc $$p^{-}/r$$ như SNR tiên nghiệm. Kalman = Wiener **cộng bộ nhớ** qua trạng thái và phương sai dự đoán. Trên hình, đường cam là kiểu mức sàn mà một tracker đệ quy giữ, và đường xanh là gain mà sàn đó nuôi. Một bước Kalman là một cách tường minh về thống kê để cập nhật sàn; bản thân hình vẫn là NS cổ điển, không phải sơ đồ khối của bộ lọc.
+
+![Sàn nhiễu được theo dõi, cạnh gain theo SNR mà sàn đó dùng để tính]({{ site.imgurl }}/generated/spectral-subtraction-wiener.png)
+
+*Hình. Đường cam là một tracker sàn nhiễu; đường bên phải là gain mà tracker đó nuôi — phần mà một bước cập nhật Kalman đang cố giữ ổn định.*
 
 ### Vì sao kỹ sư âm thanh quan tâm
 
@@ -83,12 +87,37 @@ Con trỏ khảo sát: Align-ULCNet và hybrid ULCNet+adaptive filter; GSC+DeepF
 - Kalman đầy đủ trên vector STFT khổng lồ trong khi gần đúng chéo / NLMS mới thực tế.
 - Quên neural residual thêm latency và state streaming (Ch. 05–06).
 
+## Mini-lab
+
+**Mục tiêu.** Một bước predict–update vô hướng. In Kalman gain khi phép đo đáng tin và khi phép đo nhiễu.
+
+```python
+def kalman_gain(p, q, r):
+    p_pred = p + q
+    return p_pred / (p_pred + r)
+
+for r in (0.1, 10.0):
+    K = kalman_gain(p=1.0, q=0.1, r=r)
+    print("r", r, "K", round(K, 3))
+```
+
+**Kỳ vọng.** Phương sai tiên nghiệm sau bước predict là \(1.1\). Với \(r=0.1\), \(K\approx 0.917\) (tin phép đo). Với \(r=10\), \(K\approx 0.099\) (bám dự đoán). Cùng dạng một gain Wiener: lớn khi “SNR” \(p^{-}/r\) lớn.
+
+**Khi hỏng.** Cập nhật \(p\) bằng phép đo trước khi tính \(K\) sẽ đổi cả hai số. Hoán \(q\) và \(r\) làm cảm biến nhiễu trông đáng tin hơn cảm biến sạch. Đây là hoạt hình vô hướng của gain, không phải bộ lọc Kalman tiếng nói và không phải cài tracker PSD nhiễu.
+
 ## Bài tập
 
 1. Cài predict–update vô hướng; kích $$x$$ bằng sine chậm; quan sát $$K$$ khi đổi $$r$$.
 2. Sơ đồ một trang: AEC với state $$=\mathbf{h}$$; đánh dấu postfilter neural.
 3. Ba điểm giống / khác giữa Wiener decision-directed và Kalman cho PSD tiếng nói.
 4. Brief thiết kế: trình duyệt có echo loa → WebRTC AEC → neural NS dư; nêu trách nhiệm từng khối.
+
+### Gợi ý đáp án
+
+1. \(K\) phải giảm khi \(r\) tăng, và ước lượng phải trễ một dao động nhanh của \(y\) khi \(r\) lớn.
+2. Các tap far-end là hồi quy; mic là \(y\); khối neural thấy \(e=y-\hat{h}*x\), không phải mic thô.
+3. Cả hai đều đệ quy và đều thu gain khi nhiễu át. Wiener decision-directed theo một tỉ số công suất; Kalman theo một trạng thái và một phương sai, và có mô hình quá trình tường minh.
+4. AEC sở hữu echo tuyến tính khi có tham chiếu far-end. Tầng neural sở hữu phần còn lại: echo dư và nhiễu nền. Đừng bắt mạng tìm lại \(\mathbf{h}\).
 
 ## Đọc thêm
 

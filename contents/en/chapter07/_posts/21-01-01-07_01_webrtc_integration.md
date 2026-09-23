@@ -11,190 +11,161 @@ lesson_type: required
 draft: false
 ---
 
-Where you insert noise suppression (NS) in a WebRTC call decides latency, echo behavior, and whether the SFU ever sees clean speech. This lesson maps the insertion points relative to `getUserMedia`, the browser Audio Processing Module (APM), and `RTCPeerConnection`, then contrasts built-in APM NS with a custom neural path like DeepFilterNet3.
+Where you insert noise suppression in a WebRTC call decides latency, echo, and whether the SFU ever forwards clean speech. This lesson maps insertion points against `getUserMedia`, the browser Audio Processing Module, and `RTCPeerConnection`, then shows how `DeepFilterNoiseFilterProcessor` from `deepfilternet3-noise-filter` **1.3.0** occupies the local pre-encode slot through LiveKit’s `TrackProcessor`.
 
-## 60-minute teaching plan
+![LiveKit local track passing through a noise-suppression processor before publish]({{ site.imgurl }}/generated/livekit-trackprocessor.png)
 
-- 0–10 min: Call graph — mic → processing → encode → SFU → decode → render.
-- 10–25 min: Insertion points A/B/C (pre-encode local, remote post-decode, SFU-side).
-- 25–40 min: Browser APM NS vs custom neural NS (constraints, when to disable APM NS).
-- 40–50 min: Track replacement patterns and device-switch pitfalls.
-- 50–60 min: Mini-lab sketch: replace a local `MediaStreamTrack` after Neural NS.
+*Figure. Insertion point A is a TrackProcessor on the local mic track, before the sender encodes.*
 
 ## Learning objectives
 
-By the end of this lesson, you can:
+You will place neural noise suppression on the uplink before encode, keep browser echo cancellation while turning browser noise suppression off, and describe what `setProcessor` changes in the published `MediaStreamTrack` without moving inference off the device.
 
-- Locate where NS can run relative to `getUserMedia` and `PeerConnection`.
-- Compare browser APM NS vs custom neural NS for conferencing.
-- List constraints unique to SFU-based calls (no shared AEC reference on the server for every client).
-- Sketch a safe track-replacement flow that survives mute and device changes.
+## 60-minute teaching plan
+
+- **0–10 min** — Mic, processing, encode, SFU, decode, render.
+- **10–25 min** — Insertion points A, B, and C.
+- **25–40 min** — Browser APM versus the 1.3.0 processor.
+- **40–50 min** — Device switch, mute, and the worklet graph.
+- **50–60 min** — Mini-lab, pitfalls, exercises.
 
 ## The conferencing audio graph
 
-A simplified local-send path:
+A local send path:
 
 ```text
 Microphone
   → getUserMedia MediaStreamTrack
   → [optional: AudioContext / AudioWorklet NS]
   → [optional: browser APM: AEC / NS / AGC]
-  → RTCPeerConnection sender (encode Opus/…)
+  → RTCPeerConnection sender (encode Opus)
   → SFU / peers
 ```
 
-A simplified receive path:
+A receive path:
 
 ```text
 Remote RTP
-  → PeerConnection receiver (decode)
+  → receiver decode
   → MediaStreamTrack
-  → <audio> / AudioContext render
-  → [rarely: post-decode NS on remote — usually wrong place for your own echo]
+  → audio element or AudioContext
 ```
 
-**Product rule of thumb:** run *your* uplink NS on the **local send path**, before encode. Post-decode NS on remote audio cleans *other people's* noise for *your* ears; it does not reduce what you upload.
+Run **your** uplink noise suppression on the local send path, before encode. Post-decode suppression on a remote track cleans other people’s noise for your ears. It does not reduce what you upload, and it is the wrong place to chase your own echo.
 
-## Insertion points (A / B / C)
+## Insertion points A, B, and C
 
-### A — Pre-encode local (recommended for product NS)
+**A — pre-encode local.** Process the mic and publish the processed track. The SFU and remote peers receive the enhanced speech. You pay algorithmic delay on the critical path, and you must not disturb the echo canceller’s timing. This is the Mezon package’s target. `DeepFilterNoiseFilterProcessor` implements LiveKit’s `TrackProcessor`. You construct it, then `await audioTrack.setProcessor(filter)`, then `await room.localParticipant.publishTrack(audioTrack)`. LiveKit calls the processor’s `init`, which builds the graph. You do not upload PCM to a private enhancement server in this design.
 
-Process the mic track, produce a *new* `MediaStreamTrack`, publish that track.
+**B — browser APM only.** Constraints such as `echoCancellation`, `noiseSuppression`, and `autoGainControl` ask Chromium’s Audio Processing Module to do the work. Cost is low. Control is mostly a boolean, and non-stationary noise is often weaker than a DeepFilterNet3 model. There is no suppression slider from 0 to 100.
 
-Pros:
+**C — SFU or cloud.** The client CPU stays idle and quality is uniform, at the cost of privacy, money, and extra delay. Echo cancellation also gets harder because the server does not hold each client’s loudspeaker reference. That is a different product from this npm package.
 
-- SFU and remote peers receive enhanced speech (bandwidth and ASR benefit).
-- One place to tune suppression level for the call.
+## Browser APM beside the neural path
 
-Cons:
+| Aspect | APM noise suppression | DeepFilterNoiseFilterProcessor |
+|--------|----------------------|--------------------------------|
+| Control | Boolean / browser default | `noiseReductionLevel`, `setSuppressionLevel` (0–100), `setEnabled` |
+| Latency | Usually small | Hop plus model; must meet the real-time factor budget |
+| Echo | AEC inside the APM | You keep the AEC reference timing intact |
+| Delivery | Built in | WASM plus CDN model (lessons 06-03, 07-03) |
 
-- Adds algorithmic + buffering latency on the critical path.
-- Must coexist carefully with AEC (echo path).
-
-### B — Browser APM only
-
-Use `getUserMedia` constraints / Chromium APM (echoCancellation, noiseSuppression, autoGainControl).
-
-Pros: free, low engineering cost, tuned for telephony SNR.
-
-Cons: classical / lighter models; often weaker on non-stationary noise than DeepFilterNet-class models; less control for product UX knobs.
-
-### C — SFU or cloud NS
-
-Server-side enhancement after uplink.
-
-Pros: client CPU free; uniform quality.
-
-Cons: privacy, cost, extra latency; harder AEC; not the Mezon browser-package design.
-
-Mezon's `deepfilternet3-noise-filter` targets **A** via LiveKit `TrackProcessor` (next lesson).
-
-## Browser APM NS vs custom neural NS
-
-| Aspect | APM NS | Custom neural (e.g. DF3 WASM) |
-|--------|--------|-------------------------------|
-| Control | boolean / browser defaults | suppression level, enable/disable, model version |
-| Latency | typically small | frame hop + model (must stay within realtime budget) |
-| Quality on keyboard / babble | moderate | often better when model fits domain |
-| Echo | AEC inside APM | **You** must not break AEC reference timing |
-| Deployment | built-in | WASM + model CDN load |
-
-**Practical combo:** many products keep **AEC + AGC** from the browser and turn **browser NS off** when a neural NS is active, to avoid double-suppression (muffled speech).
-
-Example constraint sketch:
+Many products keep **echo cancellation and auto gain** and set **browser noise suppression to false** while the neural processor is active. Two suppressors in series dull the voice. The constraint sketch:
 
 ```javascript
 const stream = await navigator.mediaDevices.getUserMedia({
   audio: {
     echoCancellation: true,
-    noiseSuppression: false, // neural NS owns this role
+    noiseSuppression: false,
     autoGainControl: true,
     channelCount: 1,
   },
 });
 ```
 
-Always verify on the target browser: constraint support and effective settings differ (Chrome vs Safari).
+Log `track.getSettings()` on the target browser. Chrome and Safari do not honor every constraint you request.
 
-## Track replacement pattern
+## What the processor inserts
 
-Conceptual steps:
+`DeepFilterNoiseFilterProcessor` is the public LiveKit adapter. `DeepFilterNet3Core` is the Web Audio adapter underneath it. On `init` or `restart` the processor ensures a 48 kHz `AudioContext`, calls `initialize()` (WASM compile and model fetch), and `createAudioWorkletNode`. The graph is source → worklet → `MediaStreamDestination`. `processedTrack` is the destination’s audio track, and that is what LiveKit should publish. `setSuppressionLevel` clamps to an integer from 0 to 100 and posts it to the worklet. `await filter.setEnabled(false)` bypasses suppression without tearing the graph down. `destroy` closes the context and calls `proc.destroy()` on the core.
 
-1. Obtain raw mic track from `getUserMedia`.
-2. Feed it through `AudioContext` → worklet/WASM NS → `MediaStreamDestination`.
-3. Take `destination.stream.getAudioTracks()[0]` as the **publish track**.
-4. On LiveKit: `audioTrack.setProcessor(filter)` (higher-level; lesson 07-02).
-5. On raw WebRTC: `sender.replaceTrack(processedTrack)` when switching devices or toggling NS.
-
-```javascript
-// Illustrative — not a full product implementation
-async function wrapWithPassthroughWorklet(micStream) {
-  const ctx = new AudioContext({ sampleRate: 48000 });
-  await ctx.audioWorklet.addModule("ns-processor.js");
-  const src = ctx.createMediaStreamSource(micStream);
-  const worklet = new AudioWorkletNode(ctx, "ns-processor");
-  const dest = ctx.createMediaStreamDestination();
-  src.connect(worklet).connect(dest);
-  return { ctx, track: dest.stream.getAudioTracks()[0] };
-}
-```
+A raw WebRTC page that does not use LiveKit can build the same graph with `DeepFilterNet3Core` and then `sender.replaceTrack(processedTrack)`. The peer dependency of the package is `livekit-client` ^2; the core class itself is still the right tool when you are not in a Room.
 
 ### Device switch and mute
 
-- **Device switch:** tear down old graph (close nodes / destroy processor), rebuild with the new device track, then `replaceTrack`.
-- **Mute:** prefer disabling the track or skipping publish; do not leave a stalled worklet without clear UX.
-- **Permissions:** re-prompt only when needed; label devices after permission grant.
+On a device switch, tear the old graph down with `destroy`, or let LiveKit call `restart` with the new `MediaStreamTrack`. Then publish the new processed track. Mute by disabling the track or by `setEnabled(false)`, and keep the UX honest. Do not leave a stalled worklet with no on-screen state. Re-prompt for permission only when the browser requires it.
 
-## Echo path interactions (revisit Chapter 03)
+## Echo, hop, and the SFU
 
-AEC needs a **reference** (what was played to the speaker) aligned with the mic. If your NS:
+The canceller needs a reference aligned with the microphone. A noise suppressor that adds an unaccounted delay, or that runs in an order the browser AEC did not expect, leaves residual echo or cuts speech. Prefer the stack’s documented AEC, keep the DeepFilter hop near 10 ms at 48 kHz (480 samples) when that is the model’s frame, and do not add a second AEC in JavaScript without a measurement.
 
-- adds large unaccounted delay, or
-- aggressively alters the mic signal *before* AEC in a browser path that expected a different order,
+The SFU forwards Opus. It does not share a loudspeaker reference for every client. Noise-suppression CPU is per publishing participant, not per subscriber. If only some clients enable it, say so in the support notes.
 
-you can get residual echo or cutouts.
+## Worked choice
 
-Guidelines:
+For a browser meeting on a LiveKit SFU: insertion **A**, `DeepFilterNoiseFilterProcessor`, `echoCancellation: true`, browser `noiseSuppression: false`, assets from a CDN you control (lesson 07-03) so an air-gapped network is a packaging decision rather than a fork.
 
-1. Prefer browser AEC *around* your NS as documented by your stack (LiveKit / browser).
-2. Keep NS frame sizes aligned with 10 ms @ 48 kHz when matching DeepFilterNet3 WASM (480 samples) — see Chapter 05.
-3. Never run a second full AEC in JS "for luck" without measuring.
+## Mini-lab
 
-## SFU-specific constraints
+Run `python3 insertion_check.py`.
 
-- The SFU usually **forwards** Opus; it does not share a per-client loudspeaker reference for AEC.
-- Simulcast / dynacast: NS CPU is per local participant, not per subscriber.
-- If you enable NS only for some clients, document the asymmetry for support teams.
+```python
+steps = [
+    "getUserMedia",
+    "new DeepFilterNoiseFilterProcessor",
+    "setProcessor",
+    "publishTrack",
+]
+constraints = {
+    "echoCancellation": True,
+    "noiseSuppression": False,
+    "autoGainControl": True,
+}
+print("order=" + " > ".join(steps))
+print("browser_ns=" + str(constraints["noiseSuppression"]))
+```
 
-## Worked example: decision matrix
+**Expected**
 
-Scenario: Mezon-style meeting app, browser clients, LiveKit SFU.
+```text
+order=getUserMedia > new DeepFilterNoiseFilterProcessor > setProcessor > publishTrack
+browser_ns=False
+```
 
-| Requirement | Choice |
-|-------------|--------|
-| Clean audio for all listeners | Insertion **A** (local pre-encode) |
-| Low engineering time | Start from `DeepFilterNoiseFilterProcessor` |
-| Preserve AEC | Keep `echoCancellation: true`; disable browser NS |
-| Offline / air-gapped | Bundle WASM+model or private CDN (07-03) |
+**Failure modes**
 
-## Common pitfalls
+- `noiseSuppression: true` together with the neural processor (double suppression).
+- Running the processor on a **remote** track and calling that uplink cleanup.
+- Blocking `room.connect()` on the CDN fetch. `setProcessor` waits for `init`, so start the room connection on its own timeline (lesson 07-02).
+- `replaceTrack` with the raw mic after a device switch, dropping the processed track on the floor.
 
-1. **Double NS** — browser NS + neural NS → dull speech.
-2. **Processing remote tracks by default** — wastes CPU; wrong product story for "my noise".
-3. **Ignoring sample rate** — resampling before DF3 can hurt quality; prefer 48 kHz graphs.
-4. **Leaking AudioContexts** — not closing on leave → device locks / battery drain.
-5. **Assuming constraints are honored** — always log `track.getSettings()`.
+## Pitfalls
+
+1. Double noise suppression dulls speech.
+2. Processing remote tracks by default spends CPU on the wrong product story.
+3. A surprise resample away from 48 kHz before this model.
+4. Leaking `AudioContext`s on leave, which holds the microphone and the battery.
+5. Assuming constraints were honored because you requested them.
 
 ## Exercises
 
-1. Draw your app's send/receive graph and mark the single NS insertion point you will ship.
-2. On Chrome, capture `getSettings()` with NS on vs off; note `noiseSuppression` effective value.
-3. List three device-switch edge cases (Bluetooth headset, USB mic, tab background) and how you dispose the processor.
-4. Explain in five sentences why SFU-side NS is a different product from Mezon's npm package.
+1. Draw your app’s send and receive graph and mark the one insertion point you will ship.
+2. On Chrome, capture `getSettings()` with browser noise suppression requested on and off.
+3. List three device-switch cases (Bluetooth headset, USB mic, background tab) and name `destroy` or `restart` for each.
+4. In five sentences, explain why SFU-side suppression is a different product from this package.
+5. Where does `await filter.setEnabled(false)` sit relative to encode, and what still flows to the SFU?
+
+### Answer hints
+
+1. Ship point A on the local mic. Point B is a fallback, not a second stage.
+2. Record the effective `noiseSuppression` value, not only the constraint you passed.
+3. Bluetooth and USB both need `restart` or a new processor with the new track. A background tab may `suspend` the `AudioContext`; `resume` after the user gesture. Always `destroy` on leave.
+4. Cloud suppression sees encoded or server-side audio, costs bandwidth and trust, and lacks the client loudspeaker reference. The npm processor stays in the browser.
+5. Bypass is still insertion A. The SFU receives the mic path with suppression disabled, not a different publish slot.
 
 ## Further reading
 
-- [WebRTC samples](https://webrtc.github.io/samples/) — track and constraint patterns.
-- [MDN: MediaStreamTrack](https://developer.mozilla.org/en-US/docs/Web/API/MediaStreamTrack) — `getSettings`, `applyConstraints`, `replaceTrack` via sender.
-- WebRTC APM overview in Chromium design docs (search "WebRTC AudioProcessing").
-- Course Chapter 03-04 (AEC / APM) and Chapter 05 (AudioWorklet budgets).
+- [WebRTC samples](https://webrtc.github.io/samples/).
+- [MDN: MediaStreamTrack](https://developer.mozilla.org/en-US/docs/Web/API/MediaStreamTrack).
+- LiveKit docs on publish: [TrackProcessor / setProcessor on LocalAudioTrack](https://docs.livekit.io/transport/media/publish/). Docs home: [https://docs.livekit.io/](https://docs.livekit.io/).
+- Chapter 03 for AEC and Chapter 05 for the AudioWorklet budget.

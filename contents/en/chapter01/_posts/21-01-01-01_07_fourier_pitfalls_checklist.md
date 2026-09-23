@@ -13,6 +13,10 @@ draft: false
 
 When NS “sounds broken,” engineers often retrain models first. This lesson is a pre-flight Fourier/STFT checklist: units, windows, symmetry, scaling, resampling, and DC/Nyquist — so you blame the network last.
 
+![Sampling copies of a spectrum, the picture behind a mis-labeled Nyquist bin]({{ site.imgurl }}/generated/sampling-nyquist.png)
+
+*Figure. The dominant pitfall in this lesson is a wrong frequency axis: Nyquist is \(f_s/2\), and an off-by-one bin is a different Hertz value, not a rounding error.*
+
 ## Learning objectives
 
 1. Diagnose common FT/DFT mistakes in audio pipelines.
@@ -40,6 +44,16 @@ When NS “sounds broken,” engineers often retrain models first. This lesson i
 - [ ] `AudioContext.sampleRate` not assumed 48 kHz on all devices.
 
 **Symptom of failure:** robotic pitch shifts, dull audio, mysterious noise textures.
+
+**Walk-through: the Nyquist bin is an integer, and it knows \(f_s\).** For an even length \(N\), the Nyquist bin is \(k=N/2\), at
+
+$$
+f_{\mathrm{Nyquist}}=\frac{N/2}{N}f_s=\frac{f_s}{2}.
+$$
+
+Take \(N=512\) and \(f_s=16\,\mathrm{kHz}\). The true bin is \(k=256\) at \(8000\,\mathrm{Hz}\). The off-by-one index \(k=255\) sits at \(255\times 16000/512=7968.75\,\mathrm{Hz}\). A mask aimed at “the last speech bin” using 255 never touches Nyquist, and a test that only checks “some high bin moved” will pass. The same index at the product default of 48 kHz is \(256\times 48000/512=24000\,\mathrm{Hz}\) if you forgot you were still on a 16 kHz array: you believe you are editing near 24 kHz while the samples only contain energy up to 8 kHz. `setSuppressionLevel(0–100)` then changes depth on the wrong axis. Fix the rate and the bin map before you touch `DeepFilterNet3Core`.
+
+**Walk-through: swapped real and imaginary parts.** A real PCM frame has a conjugate-symmetric DFT, \(X[k]=X^*[(N-k)\bmod N]\), and the Nyquist and DC bins are real. Swap real and imaginary parts and that identity fails by an amount on the order of the spectrum itself. The inverse transform grows a nonzero imaginary part that a “take the real part and move on” cast will hide as a dull, phasey residue. The mini-lab asserts both traps.
 
 ### 2) Units on the frequency axis
 
@@ -136,6 +150,38 @@ Phase/complex issues or musical noise; check symmetry and time-domain artifacts;
 4. Ignoring p99 hop times.
 5. “Fixing” warble with more aggressive NS gain.
 
+## Mini-lab
+
+**Goal.** Fail an assert on a swapped real/imaginary spectrum, and show an off-by-one Nyquist bin is not 8 kHz.
+
+```python
+import numpy as np
+
+def hermitian_error(X):
+    n = np.arange(X.shape[0])
+    mirror = np.conj(X[(X.shape[0] - n) % X.shape[0]])
+    return np.max(np.abs(X - mirror))
+
+x = np.array([1.0, 0.5, -0.2, 0.1, 0.0, -0.3, 0.4, 0.2])
+X = np.fft.fft(x)
+swapped = X.imag + 1j * X.real
+
+def nyquist_hz(n_fft, fs):
+    return (n_fft // 2) * fs / n_fft
+
+print(f"good={hermitian_error(X):.3e}")
+print(f"swapped={hermitian_error(swapped):.3f}")
+print(f"nyquist={nyquist_hz(512, 16000):.2f}")
+print(f"off_by_one={(512 // 2 - 1) * 16000 / 512:.2f}")
+assert hermitian_error(X) < 1e-8
+assert hermitian_error(swapped) > 1e-3
+assert nyquist_hz(512, 16000) == 8000.0
+```
+
+**Expected.** `good=0.000e+00`, `swapped=3.400`, `nyquist=8000.00`, `off_by_one=7968.75`. The three asserts pass. Delete the swap assert and a broken spectrum ships; point `nyquist_hz` at `N/2-1` and the last assert fires.
+
+**Failure modes.** Checking symmetry with `np.allclose(X, np.conj(X[::-1]))` and forgetting that index 0 must match itself, not a reversed neighbor (the formula above uses \((N-k)\bmod N\), so DC maps to DC). Treating 7968.75 Hz as “close enough to Nyquist” for a unit test.
+
 ## Mini exercises
 
 1. Pick three checklist items and write a unit test name for each.
@@ -144,8 +190,16 @@ Phase/complex issues or musical noise; check symmetry and time-domain artifacts;
 4. Draft a 6-step incident report template for “NS sounds bad in Chrome.”
 5. Which checklist item catches interleaved stereo fed to a mono FFT?
 
+### Answer hints
+
+1. Name tests after the failure: `test_cola_impulse_roundtrip`, `test_parseval_scale`, `test_downmix_length`.
+2. A broken COLA at a 5 ms hop modulates near \(1/0.005=200\,\mathrm{Hz}\).
+3. Every bin label scales with \(f_s\). A 16 kHz model fed 48 kHz numbers looks like a low-pass even when the weights are untouched.
+4. Rate, channels, hop in ms, p95 callback time, one COLA impulse check, then the model id. One change per retry.
+5. Channel layout: interleaved stereo read as mono alternates left and right into consecutive “time” samples.
+
 ## Further reading
 
 - Oppenheim & Schafer — windows, scaling, DFT pitfalls chapters.
-- DeepFilterNet papers — configuration & real-time notes.
+- DeepFilterNet (arXiv:2110.05588), DeepFilterNet2 (arXiv:2205.05474), DeepFilterNet3 (arXiv:2305.08227) — configuration and real-time notes. Julius O. Smith, https://ccrma.stanford.edu/~jos/mdft/, for the DFT symmetries the asserts check.
 - ORT / browser profiling docs (high level) for separating STFT vs net costs.

@@ -6,7 +6,7 @@ order: 1
 owner: Nguyen Le Linh
 ---
 
-Real-time audio noise suppression for Vietnamese software engineers: **deep Fourier & audio DSP**, through DeepFilterNet and Mezon product integration.
+Real-time audio noise suppression for Vietnamese software engineers: **deep Fourier & audio DSP**, through DeepFilterNet and Mezon product integration. Each required lesson is a full EN/VI article with a labeled figure under `img/generated/`, a mini-lab, and exercises with hints. The public integration target is npm `deepfilternet3-noise-filter` 1.3.0 (`DeepFilterNoiseFilterProcessor` on a LiveKit track).
 
 # Course objectives
 
