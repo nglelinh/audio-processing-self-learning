@@ -25,7 +25,7 @@ You should be able to create the capstone directories, mix a four-sample signal 
 
 **A. Eval and policy (recommended).** Freeze clips, fill the six-column sheet from lesson 08-04, and justify one `setSuppressionLevel` choice with an AB note.
 
-**B. Integration.** Exercise `assetConfig.cdnUrl`, the prefix the installed client adds (`v2/` in the ≥ 1.2.0 README, `v3/` in published 1.3.0 `getAssetUrls()`), `setEnabled`, and a blocked-CDN drill that still publishes audio.
+**B. Integration.** Exercise `assetConfig.cdnUrl` (Mezon example `https://cdn.mezon.ai/AI/models/datas/noise_suppression/deepfilternet3`), the automatic `v2/` prefix on package ≥ 1.2.0 including 1.3.0, `setEnabled`, and a blocked-CDN drill that still publishes audio.
 
 **C. Rust stretch.** Optional `df-core` from lesson 09-03. A passthrough backend must be labeled passthrough. Partial credit is real if the label is honest. No credit for “NS works” on a copy loop.
 

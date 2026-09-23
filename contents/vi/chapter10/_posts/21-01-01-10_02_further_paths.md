@@ -35,7 +35,7 @@ Vé ra: `path-b/table.md` với sáu cột của bài 08-04 và một đoạn gi
 
 ## Hướng C — sản phẩm hóa
 
-Ở trên đường LiveKit công khai: mic, `DeepFilterNoiseFilterProcessor`, `setProcessor`, publish. Đo thời gian khởi động lạnh của hai URL mà `getAssetUrls()` in ra (với bản 1.3.0 đã phát hành là `{cdnUrl}/v3/pkg/df_bg.wasm` và `{cdnUrl}/v3/models/DeepFilterNet3_onnx.tar.gz`) trên mạng bạn thật sự có, rồi lặp khi CDN bị chặn. Rust `df-core` tùy chọn vẫn là phương án kéo thay hộp WASM. Nếu backend là passthrough, README portfolio nói vậy.
+Ở trên đường LiveKit công khai: mic, `DeepFilterNoiseFilterProcessor`, `setProcessor`, publish. Đo thời gian khởi động lạnh của `{cdnUrl}/v2/pkg/df_bg.wasm` và `{cdnUrl}/v2/models/DeepFilterNet3_onnx.tar.gz` (tiền tố mà 1.3.0 tự thêm từ ≥ 1.2.0) trên mạng bạn thật sự có, rồi lặp khi CDN bị chặn. Rust `df-core` tùy chọn vẫn là phương án kéo thay hộp WASM. Nếu backend là passthrough, README portfolio nói vậy.
 
 Vé ra: `path-c/design.md` với thời gian init, RTF p95 hoặc `n/a`, và log lỗi từ CDN bị chặn.
 

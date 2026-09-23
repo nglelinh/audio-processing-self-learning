@@ -35,7 +35,7 @@ Exit ticket: `path-b/table.md` with the six columns from lesson 08-04 and a limi
 
 ## Path C — productization
 
-Stay on the public LiveKit path: mic, `DeepFilterNoiseFilterProcessor`, `setProcessor`, publish. Measure cold-start time of the two URLs `getAssetUrls()` prints (published 1.3.0 uses `{cdnUrl}/v3/pkg/df_bg.wasm` and `{cdnUrl}/v3/models/DeepFilterNet3_onnx.tar.gz`) on a network you actually have, and repeat with the CDN blocked. Optional Rust `df-core` remains a stretch alternative to the WASM box. If the backend is passthrough, the portfolio README says so.
+Stay on the public LiveKit path: mic, `DeepFilterNoiseFilterProcessor`, `setProcessor`, publish. Measure cold-start time of `{cdnUrl}/v2/pkg/df_bg.wasm` and `{cdnUrl}/v2/models/DeepFilterNet3_onnx.tar.gz` (the prefix 1.3.0 adds for ≥ 1.2.0) on a network you actually have, and repeat with the CDN blocked. Optional Rust `df-core` remains a stretch alternative to the WASM box. If the backend is passthrough, the portfolio README says so.
 
 Exit ticket: `path-c/design.md` with init time, RTF p95 or `n/a`, and the failure log from the blocked CDN.
 

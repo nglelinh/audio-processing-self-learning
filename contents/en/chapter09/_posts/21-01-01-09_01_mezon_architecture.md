@@ -11,7 +11,7 @@ lesson_type: required
 draft: false
 ---
 
-Mezon noise suppression is a product case study, not a second syllabus. The public path is a browser microphone, a LiveKit local track, and `DeepFilterNoiseFilterProcessor` from the npm package `deepfilternet3-noise-filter` (version 1.3.0 in this course). Inference stays on device. The package loads a WASM build and the DeepFilterNet3 ONNX archive from a CDN base you pass as `assetConfig.cdnUrl`. The README still says every release at or after 1.2.0 prefixes `v2/`. The published 1.3.0 client does not: `AssetLoader.getAssetUrls()` requests `{cdnUrl}/v3/pkg/df_bg.wasm` and `{cdnUrl}/v3/models/DeepFilterNet3_onnx.tar.gz` (release note: “bump assets cdn version to v3”, 2026-06-26). You study that path. You do not edit the shared repository [mezonai/mezon-noise-suppression](https://github.com/mezonai/mezon-noise-suppression) as the assignment. A personal fork or an external harness is the workspace. The instructor tree at `/Users/nguyenlelinh/ncc/mezon-noise-suppression` is optional and not required to finish the lab.
+Mezon noise suppression is a product case study, not a second syllabus. The public path is a browser microphone, a LiveKit local track, and `DeepFilterNoiseFilterProcessor` from the npm package `deepfilternet3-noise-filter` (version 1.3.0 in this course). Inference stays on device. The package loads a WASM build and the DeepFilterNet3 ONNX archive from a CDN base you pass as `assetConfig.cdnUrl`. Package ≥ 1.2.0, including 1.3.0, adds `v2/` itself, so the files fetched are `{cdnUrl}/v2/pkg/df_bg.wasm` and `{cdnUrl}/v2/models/DeepFilterNet3_onnx.tar.gz`. The example base is `https://cdn.mezon.ai/AI/models/datas/noise_suppression/deepfilternet3`. You study that path. The weights are the Rikorose DeepFilterNet3 archive. You do not edit the shared repository [mezonai/mezon-noise-suppression](https://github.com/mezonai/mezon-noise-suppression) as the assignment. A personal fork or an external harness is the workspace. The instructor tree at `/Users/nguyenlelinh/ncc/mezon-noise-suppression` is optional and not required to finish the lab.
 
 ![LiveKit publish path with DeepFilterNoiseFilterProcessor]({{ site.imgurl }}/generated/livekit-trackprocessor.png)
 
@@ -32,7 +32,7 @@ Stay on this surface:
 | `setProcessor` | Attaches the processor to the local track before publish |
 | `setSuppressionLevel(0–100)` | Runtime aggressiveness |
 | `setEnabled` | Bypass without pretending the model ran |
-| `assetConfig.cdnUrl` | CDN **base**. Do not append `v2/` or `v3/` yourself |
+| `assetConfig.cdnUrl` | CDN **base**. Do not append `v2/` yourself |
 
 LiveKit’s own docs are the signaling reference: [docs.livekit.io](https://docs.livekit.io/). The processor does not own tokens, the room, or the SFU. `DeepFilterNet3Core` is the escape hatch when you are not inside a LiveKit `TrackProcessor`. It is still the same product package, not a private class you invent.
 
@@ -42,8 +42,8 @@ Read this once, then close it and rewrite it in the mini-lab.
 
 1. The page requests the microphone and receives a `MediaStream`.
 2. You wrap that stream in a LiveKit local audio track. The track is the object that can accept a processor.
-3. You construct `DeepFilterNoiseFilterProcessor` and pass `assetConfig.cdnUrl` as the CDN base, with no `v2/` or `v3/` suffix.
-4. Package 1.2.x, per the README, requests `{cdnUrl}/v2/pkg/df_bg.wasm` and `{cdnUrl}/v2/models/DeepFilterNet3_onnx.tar.gz`. Installed 1.3.0 requests the same two filenames under `v3/` instead. Follow `getAssetUrls()` from the version you installed.
+3. You construct `DeepFilterNoiseFilterProcessor` (or `DeepFilterNoiseFilter(options)`, which returns that processor) and pass `assetConfig.cdnUrl` as the CDN base, with no `v2/` suffix.
+4. Package ≥ 1.2.0, including 1.3.0, requests `{cdnUrl}/v2/pkg/df_bg.wasm` and `{cdnUrl}/v2/models/DeepFilterNet3_onnx.tar.gz`.
 5. You call `setProcessor` with that processor so samples are enhanced before encode.
 6. You publish the track to the room. The SFU receives encoded audio, not your CDN credentials.
 7. Later, `setSuppressionLevel` between 0 and 100 changes aggressiveness without a new publish.
@@ -63,7 +63,7 @@ Browser noise suppression and echo control still exist beside this processor. If
 ## Mezon NS — architecture sketch
 - Goal: on-device uplink noise suppression for a LiveKit meeting
 - Data path: mic → setProcessor(DeepFilterNoiseFilterProcessor) → publish
-- Assets for installed 1.3.0: {cdnUrl}/v3/pkg/df_bg.wasm and {cdnUrl}/v3/models/DeepFilterNet3_onnx.tar.gz (README still says v2/ for ≥ 1.2.0)
+- Assets for ≥ 1.2.0 including 1.3.0: {cdnUrl}/v2/pkg/df_bg.wasm and {cdnUrl}/v2/models/DeepFilterNet3_onnx.tar.gz
 - Controls: setEnabled, setSuppressionLevel(0–100)
 - Eval: SI-SDR on synthetic pairs, DNSMOS or n/a on real clips, AB note, RTF p95
 - Non-goals: uploading raw audio for cloud inference; editing the shared product repo
@@ -76,7 +76,7 @@ Browser noise suppression and echo control still exist beside this processor. If
 | 03 | Whether browser AEC/NS is on at the same time |
 | 04 | Why this model is DeepFilterNet3 and what the level knob trades |
 | 05 | What happens when the callback misses its quantum |
-| 06 | WASM and the ONNX archive, including the prefix the installed client adds (`v3/` on 1.3.0) |
+| 06 | WASM and the ONNX archive; the package adds `v2/` for ≥ 1.2.0 |
 | 07 | `setProcessor` and `assetConfig.cdnUrl` |
 | 08 | Which metric is `n/a` on a real recording |
 
@@ -122,7 +122,7 @@ Failure modes: a ninth step that names a private class; putting `v2/` inside `cd
 
 ### Answer hints
 
-1. Include both files under the prefix the installed client adds (`v3/` on 1.3.0) and say the prefix is the package’s, not yours.
+1. Include both `v2/` files and say the prefix is the package’s, not yours.
 2. On failure, publish the unprocessed mic and show an error. Do not block the room.
 3. Counters and timings only. No samples, no transcripts of the room.
 4. LiveKit publish path uses the processor and `setProcessor`. A custom WebAudio page may use the core. Do not invent further methods.

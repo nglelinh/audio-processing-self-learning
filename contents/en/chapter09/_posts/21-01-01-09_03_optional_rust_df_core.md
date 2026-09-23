@@ -11,11 +11,11 @@ lesson_type: required
 draft: false
 ---
 
-The supported Mezon path is the WASM box in `deepfilternet3-noise-filter`: ONNX weights, a SIMD WASM build, the CDN layout the installed client requests (`v3/` in published 1.3.0), and an AudioWorklet. A Rust crate you might call `df-core` is a **stretch alternative to that box**, for a desktop CLI or a native embed you build in your own workspace. It is not a second product, it is not required to pass, and it is not a folder you are entitled to find under `/Users/nguyenlelinh/ncc/mezon-noise-suppression`. If your first backend only copies samples from input to output, label it **passthrough**. Never write “NS works” on a passthrough build.
+The supported Mezon path is the WASM box in `deepfilternet3-noise-filter`: ONNX weights, a SIMD WASM build, the `v2/` CDN layout the package adds for ≥ 1.2.0 (including 1.3.0), and an AudioWorklet. A Rust crate you might call `df-core` is a **stretch alternative to that box**, for a desktop CLI or a native embed you build in your own workspace. It is not a second product, it is not required to pass, and it is not a folder you are entitled to find under `/Users/nguyenlelinh/ncc/mezon-noise-suppression`. If your first backend only copies samples from input to output, label it **passthrough**. Never write “NS works” on a passthrough build.
 
 ![On-device WASM path for deepfilternet3-noise-filter]({{ site.imgurl }}/generated/onnx-wasm-path.png)
 
-*Figure. The shipping path is PyTorch to ONNX to WASM to the package or CDN assets (published 1.3.0 requests `v3/`), then AudioWorklet. Rust `df-core` is a stretch alternative to this WASM box, not a second product beside it.*
+*Figure. The shipping path is PyTorch to ONNX to WASM to the package or CDN `v2/` assets, then AudioWorklet. Rust `df-core` is a stretch alternative to this WASM box, not a second product beside it.*
 
 ## What you should be able to do
 
@@ -23,7 +23,7 @@ You should be able to say what the WASM path loads (`df_bg.wasm`, `DeepFilterNet
 
 ## The box you are not replacing by default
 
-Installed package 1.3.0 requests `{cdnUrl}/v3/pkg/df_bg.wasm` and `{cdnUrl}/v3/models/DeepFilterNet3_onnx.tar.gz`. The README paragraph for “≥ 1.2.0” still prints `v2/`. The prefix is added by the client either way. The public controls remain `DeepFilterNoiseFilterProcessor` or `DeepFilterNet3Core`, `setProcessor`, `setSuppressionLevel(0–100)`, and `setEnabled`. A Rust experiment does not get new public names in the npm package. If you want a CLI, you build it beside the course, in a personal repository.
+Package 1.3.0, like every release ≥ 1.2.0, requests `{cdnUrl}/v2/pkg/df_bg.wasm` and `{cdnUrl}/v2/models/DeepFilterNet3_onnx.tar.gz`. The client adds `v2/`. Do not put it in `cdnUrl`. The example base is `https://cdn.mezon.ai/AI/models/datas/noise_suppression/deepfilternet3`. The public controls remain `DeepFilterNoiseFilterProcessor` or `DeepFilterNet3Core`, `setProcessor`, `setSuppressionLevel(0–100)`, and `setEnabled`. A Rust experiment does not get new public names in the npm package. If you want a CLI, you build it beside the course, in a personal repository.
 
 The DeepFilterNet papers describe why a native reimplementation is picky: 48 kHz full-band audio, an STFT with a hop on the order of 10 ms, an ERB gain stage, and a deep filter that may use a short look-ahead. That look-ahead is algorithmic latency. Matching RTF is not the same as matching the waveform. Lesson 08-01 showed that a one-sample slip turns 13.80 dB into −10.67 dB. A Rust port that is “a little late” will look terrible on SI-SDR even when it sounds similar.
 

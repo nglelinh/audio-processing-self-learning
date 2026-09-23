@@ -19,7 +19,7 @@ draft: false
 
 ## Mục tiêu học tập
 
-Bạn tách tarball npm khỏi artifact trên CDN, áp quy tắc README cho gói ≤ 1.1.2 và ≥ 1.2.0, cùng đường `v3/` mà bản 1.3.0 đã cài thực sự xin, từ chối `cdnUrl` đã chứa tiền tố phiên bản, và liệt kê kiểm tra giấy phép cùng cache thuộc cổng ship.
+Bạn tách tarball npm khỏi artifact trên CDN, áp quy tắc đường cho gói ≤ 1.1.2 và ≥ 1.2.0 (gồm 1.3.0, vẫn tự thêm `v2/`), từ chối `cdnUrl` đã chứa `v2`, và liệt kê kiểm tra giấy phép cùng cache thuộc cổng ship.
 
 ## Kế hoạch 60 phút
 
@@ -58,10 +58,9 @@ README gói nêu:
 | Gói | WASM | Kho mô hình |
 |-----|------|-------------|
 | ≤ 1.1.2 | `{cdnUrl}/pkg/df_bg.wasm` | `{cdnUrl}/models/DeepFilterNet3_onnx.tar.gz` |
-| 1.2.x, như README vẫn ghi cho mọi bản ≥ 1.2.0 | `{cdnUrl}/v2/pkg/df_bg.wasm` | `{cdnUrl}/v2/models/DeepFilterNet3_onnx.tar.gz` |
-| `getAssetUrls()` của bản 1.3.0 đã cài | `{cdnUrl}/v3/pkg/df_bg.wasm` | `{cdnUrl}/v3/models/DeepFilterNet3_onnx.tar.gz` |
+| ≥ 1.2.0, gồm 1.3.0 | `{cdnUrl}/v2/pkg/df_bg.wasm` | `{cdnUrl}/v2/models/DeepFilterNet3_onnx.tar.gz` |
 
-Client tự thêm `v2/` với bản ≥ 1.2.0. Bạn không thêm. Base đã kết thúc bằng `/v2` sẽ thành `.../v2/v2/...` và 404. Mã nguồn 1.3.0 của `AssetLoader.getAssetUrls()` trên kho công khai lại thêm tiền tố `v3/` thay vì chuỗi `v2/` mà README vẫn in. Bảng trên là hợp đồng README mà khóa này dùng để tự chấm. Trước khi upload mirror sản xuất, hãy in URL từ gói đã cài và đăng đúng thư mục đó. Đừng bịa tên file thứ ba. Tên kho trong cả hai layout là `DeepFilterNet3_onnx.tar.gz`, từ kho DeepFilterNet upstream. Tên file WASM là `df_bg.wasm`.
+Client tự thêm `v2/` với bản ≥ 1.2.0. Bạn không thêm. Base đã kết thúc bằng `/v2` sẽ thành `.../v2/v2/...` và 404. Base ví dụ trong README gói là `https://cdn.mezon.ai/AI/models/datas/noise_suppression/deepfilternet3`. Tên kho là `DeepFilterNet3_onnx.tar.gz`, từ kho DeepFilterNet upstream của Rikorose. Tên file WASM là `df_bg.wasm`.
 
 ### Cache, nén, toàn vẹn
 
@@ -106,7 +105,7 @@ double-prefix risk
 
 - Nhét `v2` vào `cdnUrl` vì bảng README có `v2` trong đường đã resolve. Tiền tố là việc của client.
 - Chỉ upload `df_bg.wasm` dưới `v2/pkg/` và để tar.gz ở đường 1.1.2. Cặp file phải cùng thế hệ gói.
-- Tin chuỗi `v2` của README khi `getAssetUrls()` của bản đã cài in `v3`. Lab kiểm quy tắc “đừng nhúng tiền tố”; tên thư mục lấy từ gói bạn thực sự ship.
+- Nhét `v2` vào `cdnUrl` rồi để bản ≥ 1.2.0 thêm tiếp, request 404 ở `.../v2/v2/...`.
 - Băm file trên laptop rồi đăng byte khác lên CDN.
 
 ## Bẫy thường gặp

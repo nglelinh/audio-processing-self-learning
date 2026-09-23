@@ -53,7 +53,8 @@ LiveKit `TrackProcessor` implementation. `name` is `deepfilternet3-noise-filter`
 Web Audio core used by the processor and usable alone:
 
 ```javascript
-import { DeepFilterNet3Core, DeepFilterNoiseFilterProcessor } from "deepfilternet3-noise-filter";
+import { DeepFilterNet3Core, DeepFilterNoiseFilter, DeepFilterNoiseFilterProcessor } from "deepfilternet3-noise-filter";
+// LiveKit: new DeepFilterNoiseFilterProcessor(opts) or DeepFilterNoiseFilter(opts)
 
 const proc = new DeepFilterNet3Core({ sampleRate: 48000, noiseReductionLevel: 0 });
 await proc.initialize();
@@ -120,14 +121,16 @@ Pair every knob change with Chapter 08 (SI-SDR on synthetic mixes, DNSMOS or a s
 
 ```javascript
 // 07-01 insertion A, local pre-encode
-// 07-03 CDN; client prefixes v2 for the README’s >= 1.2.0 rule
+// 07-03 CDN; >= 1.2.0 including 1.3.0 auto-prefixes v2/
 // 05 AudioWorklet inside init
 // 04 DeepFilterNet3 weights in the tar.gz
 const filter = new DeepFilterNoiseFilterProcessor({
   sampleRate: 48000,
   noiseReductionLevel: 80,
   enabled: true,
-  assetConfig: { cdnUrl: MY_CDN },
+  assetConfig: {
+    cdnUrl: "https://cdn.mezon.ai/AI/models/datas/noise_suppression/deepfilternet3",
+  },
 });
 await audioTrack.setProcessor(filter);
 await room.localParticipant.publishTrack(audioTrack);

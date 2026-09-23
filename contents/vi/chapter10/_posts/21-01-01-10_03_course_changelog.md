@@ -25,7 +25,7 @@ Bạn vá được bài khi `deepfilternet3-noise-filter` hoặc bố trí CDN �
 
 | Upstream | Cái gì gãy | Sửa đâu |
 |----------|------------|---------|
-| npm `deepfilternet3-noise-filter` trên 1.3.0 | Tên công khai hoặc tiền tố asset (`v2/` trong README, `v3/` trong bản 1.3.0 đã cài) | Chương 07 và 09, cả hai ngôn ngữ |
+| npm `deepfilternet3-noise-filter` trên 1.3.0 | Tên công khai hoặc tiền tố `v2/` tự thêm | Chương 07 và 09, cả hai ngôn ngữ |
 | CDN rời `v2/` | URL `{cdnUrl}/v2/pkg/df_bg.wasm` và `{cdnUrl}/v2/models/DeepFilterNet3_onnx.tar.gz` | 07-03 và 09-01 |
 | LiveKit `setProcessor` | Đường publish ở 09-01 | Đọc lại [docs.livekit.io](https://docs.livekit.io/) và trích phiên bản |
 | Tên archive ONNX mới | Câu asset ở 09 và 10 | Chỉ tên file, sau khi bạn thấy nó |

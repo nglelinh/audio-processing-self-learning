@@ -64,12 +64,11 @@ README nêu:
 | Gói | Đường đã resolve |
 |-----|------------------|
 | ≤ 1.1.2 | `{cdnUrl}/pkg/df_bg.wasm` và `{cdnUrl}/models/DeepFilterNet3_onnx.tar.gz` |
-| ≥ 1.2.0 như README vẫn in | `{cdnUrl}/v2/pkg/df_bg.wasm` và `{cdnUrl}/v2/models/DeepFilterNet3_onnx.tar.gz` |
-| `getAssetUrls()` của bản 1.3.0 đã cài | `{cdnUrl}/v3/pkg/df_bg.wasm` và `{cdnUrl}/v3/models/DeepFilterNet3_onnx.tar.gz` |
+| ≥ 1.2.0, gồm 1.3.0 | `{cdnUrl}/v2/pkg/df_bg.wasm` và `{cdnUrl}/v2/models/DeepFilterNet3_onnx.tar.gz` |
 
 Gói thêm `v2/`. Bạn không thêm. README cũng nói bản SIMD nhanh hơn khoảng 20–30% với ≥ 1.2.0; hãy trích đó như con số của README. Trình duyệt cho bản đó, lại theo README: Chrome 91+, Firefox 89+, Safari 16.4+.
 
-`AssetLoader.getAssetUrls()` của bản 1.3.0 đã phát hành thêm tiền tố `v3/`, khớp ghi chú phát hành “bump assets cdn version to v3” (2026-06-26). Đoạn README chưa được sửa và vẫn nói `v2/` cho mọi bản ≥ 1.2.0. Mini-lab in cả hai. Hãy upload đúng thư mục mà client đã cài xin. Đừng bao giờ đặt `v2` hoặc `v3` trong `cdnUrl`. Changelog 1.3.0 cũng nâng bản WASM lên tract 0.23.3.
+Gói ≥ 1.2.0, gồm 1.3.0, tự thêm `v2/`. Bạn không thêm. Đừng bao giờ đặt `v2` trong `cdnUrl`. Base ví dụ công khai là `https://cdn.mezon.ai/AI/models/datas/noise_suppression/deepfilternet3`. Changelog 1.3.0 cũng ghi lần nâng tract 0.23.3 cho bản WASM; ghim đó không đổi đường `v2/`.
 
 ## Sẵn sàng dần
 
@@ -110,14 +109,13 @@ Tải `DeepFilterNet3_onnx.tar.gz` từ upstream và `df_bg.wasm` khớp thế h
 
 ## Mini-lab
 
-Cho `cdnUrl = https://example.com/df3`, tính đường README và đường mà bản 1.3.0 đã phát hành thực sự xin. Chạy `python3 cdn_urls.py`.
+Cho `cdnUrl = https://example.com/df3`, tính đường của bản ≤ 1.1.2 và của bản ≥ 1.2.0 gồm 1.3.0. Chạy `python3 cdn_urls.py`.
 
 ```python
 cdn = "https://example.com/df3"
 pairs = {
     "1.1.2": ("pkg/df_bg.wasm", "models/DeepFilterNet3_onnx.tar.gz"),
-    "readme_ge_1.2.0": ("v2/pkg/df_bg.wasm", "v2/models/DeepFilterNet3_onnx.tar.gz"),
-    "installed_1.3.0": ("v3/pkg/df_bg.wasm", "v3/models/DeepFilterNet3_onnx.tar.gz"),
+    "1.3.0": ("v2/pkg/df_bg.wasm", "v2/models/DeepFilterNet3_onnx.tar.gz"),
 }
 for ver, (wasm, model) in pairs.items():
     print(ver)
@@ -131,12 +129,9 @@ for ver, (wasm, model) in pairs.items():
 1.1.2
 https://example.com/df3/pkg/df_bg.wasm
 https://example.com/df3/models/DeepFilterNet3_onnx.tar.gz
-readme_ge_1.2.0
+1.3.0
 https://example.com/df3/v2/pkg/df_bg.wasm
 https://example.com/df3/v2/models/DeepFilterNet3_onnx.tar.gz
-installed_1.3.0
-https://example.com/df3/v3/pkg/df_bg.wasm
-https://example.com/df3/v3/models/DeepFilterNet3_onnx.tar.gz
 ```
 
 **Failure modes**
@@ -144,7 +139,7 @@ https://example.com/df3/v3/models/DeepFilterNet3_onnx.tar.gz
 - Nhúng `v2` vào `cdnUrl`, ra `https://example.com/df3/v2/v2/pkg/df_bg.wasm`.
 - Dùng tên file không phải `df_bg.wasm` hoặc `DeepFilterNet3_onnx.tar.gz`.
 - Chặn `connect()` cho tới khi cả bốn URL giả định đều trả lời. Chỉ hai URL của phiên bản đã cài được fetch, và không phải cổng của signaling.
-- Bỏ qua tiền tố `v3` mà `getAssetUrls()` của bản 1.3.0 đã cài in ra. Hãy theo client đã cài khi upload; dùng khối expected phía trên để kiểm bạn hiểu README.
+- Coi 1.3.0 là layout không tiền tố. Từ 1.2.0 trở đi, gồm 1.3.0, client tự thêm `v2/`.
 
 ## Bẫy thường gặp
 

@@ -62,12 +62,11 @@ The README states:
 | Package | Resolved paths |
 |---------|----------------|
 | ≤ 1.1.2 | `{cdnUrl}/pkg/df_bg.wasm` and `{cdnUrl}/models/DeepFilterNet3_onnx.tar.gz` |
-| ≥ 1.2.0 as the README still prints it | `{cdnUrl}/v2/pkg/df_bg.wasm` and `{cdnUrl}/v2/models/DeepFilterNet3_onnx.tar.gz` |
-| installed 1.3.0 `getAssetUrls()` | `{cdnUrl}/v3/pkg/df_bg.wasm` and `{cdnUrl}/v3/models/DeepFilterNet3_onnx.tar.gz` |
+| ≥ 1.2.0, including 1.3.0 | `{cdnUrl}/v2/pkg/df_bg.wasm` and `{cdnUrl}/v2/models/DeepFilterNet3_onnx.tar.gz` |
 
 The package adds `v2/`. You do not. The README also says the SIMD build is about 20–30% faster for ≥ 1.2.0; cite that as the README’s number. Browsers for that build, again from the README: Chrome 91+, Firefox 89+, Safari 16.4+.
 
-Published 1.3.0 `AssetLoader.getAssetUrls()` prefixes `v3/`, matching the release note “bump assets cdn version to v3” (2026-06-26). The README paragraph was not updated and still says `v2/` for every release ≥ 1.2.0. The mini-lab prints both. Upload to the directory the installed client requests. Never put `v2` or `v3` inside `cdnUrl`. The same 1.3.0 changelog bumps the WASM build to tract 0.23.3.
+Package ≥ 1.2.0, including 1.3.0, adds `v2/` itself. You do not. Never put `v2` inside `cdnUrl`. The public example base is `https://cdn.mezon.ai/AI/models/datas/noise_suppression/deepfilternet3`. The 1.3.0 changelog also records a tract 0.23.3 bump for the WASM build; that pin does not change the `v2/` paths.
 
 ## Progressive readiness
 
@@ -106,14 +105,13 @@ Download the upstream `DeepFilterNet3_onnx.tar.gz` and the `df_bg.wasm` that mat
 
 ## Mini-lab
 
-Given `cdnUrl = https://example.com/df3`, compute the README paths and the paths published 1.3.0 actually requests. Run `python3 cdn_urls.py`.
+Given `cdnUrl = https://example.com/df3`, compute the paths for ≤ 1.1.2 and for ≥ 1.2.0 including 1.3.0. Run `python3 cdn_urls.py`.
 
 ```python
 cdn = "https://example.com/df3"
 pairs = {
     "1.1.2": ("pkg/df_bg.wasm", "models/DeepFilterNet3_onnx.tar.gz"),
-    "readme_ge_1.2.0": ("v2/pkg/df_bg.wasm", "v2/models/DeepFilterNet3_onnx.tar.gz"),
-    "installed_1.3.0": ("v3/pkg/df_bg.wasm", "v3/models/DeepFilterNet3_onnx.tar.gz"),
+    "1.3.0": ("v2/pkg/df_bg.wasm", "v2/models/DeepFilterNet3_onnx.tar.gz"),
 }
 for ver, (wasm, model) in pairs.items():
     print(ver)
@@ -127,12 +125,9 @@ for ver, (wasm, model) in pairs.items():
 1.1.2
 https://example.com/df3/pkg/df_bg.wasm
 https://example.com/df3/models/DeepFilterNet3_onnx.tar.gz
-readme_ge_1.2.0
+1.3.0
 https://example.com/df3/v2/pkg/df_bg.wasm
 https://example.com/df3/v2/models/DeepFilterNet3_onnx.tar.gz
-installed_1.3.0
-https://example.com/df3/v3/pkg/df_bg.wasm
-https://example.com/df3/v3/models/DeepFilterNet3_onnx.tar.gz
 ```
 
 **Failure modes**
@@ -140,7 +135,7 @@ https://example.com/df3/v3/models/DeepFilterNet3_onnx.tar.gz
 - Embedding `v2` in `cdnUrl`, which yields `https://example.com/df3/v2/v2/pkg/df_bg.wasm`.
 - Using a filename that is not `df_bg.wasm` or `DeepFilterNet3_onnx.tar.gz`.
 - Blocking `connect()` until all four hypothetical URLs respond. Only the two URLs for the installed version are fetched, and not as a gate on signaling.
-- Ignoring a `v3` prefix printed by the installed 1.3.0 `getAssetUrls()`. Follow the installed client for the upload; use the expected block above to check you understood the README.
+- Treating 1.3.0 as a no-prefix layout. From 1.2.0 onward, including 1.3.0, the client adds `v2/`.
 
 ## Pitfalls
 

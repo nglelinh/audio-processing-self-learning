@@ -11,11 +11,11 @@ lesson_type: required
 draft: false
 ---
 
-Đường Mezon được hỗ trợ là hộp WASM trong `deepfilternet3-noise-filter`: weight ONNX, bản WASM SIMD, bố trí CDN mà client đã cài xin (`v3/` trên bản 1.3.0 đã phát hành), và AudioWorklet. Crate Rust bạn có thể gọi `df-core` là **phương án kéo thay cho hộp đó**, cho CLI máy bàn hoặc nhúng native bạn tự dựng trong workspace của mình. Nó không phải sản phẩm thứ hai, không bắt buộc để đậu, và không phải thư mục bạn có quyền tìm dưới `/Users/nguyenlelinh/ncc/mezon-noise-suppression`. Nếu backend đầu chỉ chép mẫu từ vào ra, hãy ghi **passthrough**. Đừng viết “NS works” trên bản passthrough.
+Đường Mezon được hỗ trợ là hộp WASM trong `deepfilternet3-noise-filter`: weight ONNX, bản WASM SIMD, bố trí CDN `v2/` mà gói tự thêm từ ≥ 1.2.0 (gồm 1.3.0), và AudioWorklet. Crate Rust bạn có thể gọi `df-core` là **phương án kéo thay cho hộp đó**, cho CLI máy bàn hoặc nhúng native bạn tự dựng trong workspace của mình. Nó không phải sản phẩm thứ hai, không bắt buộc để đậu, và không phải thư mục bạn có quyền tìm dưới `/Users/nguyenlelinh/ncc/mezon-noise-suppression`. Nếu backend đầu chỉ chép mẫu từ vào ra, hãy ghi **passthrough**. Đừng viết “NS works” trên bản passthrough.
 
 ![Đường WASM trên thiết bị của deepfilternet3-noise-filter]({{ site.imgurl }}/generated/onnx-wasm-path.png)
 
-*Hình. Đường ship là PyTorch sang ONNX sang WASM sang gói hoặc asset CDN (bản 1.3.0 đã phát hành xin `v3/`), rồi AudioWorklet. Rust `df-core` là phương án kéo thay cho hộp WASM này, không phải sản phẩm thứ hai đứng cạnh nó.*
+*Hình. Đường ship là PyTorch sang ONNX sang WASM sang gói hoặc asset CDN `v2/`, rồi AudioWorklet. Rust `df-core` là phương án kéo thay cho hộp WASM này, không phải sản phẩm thứ hai đứng cạnh nó.*
 
 ## Bạn làm được gì sau bài này
 
@@ -23,7 +23,7 @@ Bạn nói được đường WASM tải gì (`df_bg.wasm`, `DeepFilterNet3_onnx
 
 ## Hộp bạn không thay theo mặc định
 
-Gói 1.3.0 đã cài xin `{cdnUrl}/v3/pkg/df_bg.wasm` và `{cdnUrl}/v3/models/DeepFilterNet3_onnx.tar.gz`. Đoạn README “≥ 1.2.0” vẫn in `v2/`. Tiền tố do client thêm, dù là bản nào. Nút công khai vẫn là `DeepFilterNoiseFilterProcessor` hoặc `DeepFilterNet3Core`, `setProcessor`, `setSuppressionLevel(0–100)`, và `setEnabled`. Thí nghiệm Rust không thêm tên công khai mới vào gói npm. Muốn CLI thì dựng cạnh khóa học, trong repo cá nhân.
+Gói 1.3.0, như mọi bản ≥ 1.2.0, xin `{cdnUrl}/v2/pkg/df_bg.wasm` và `{cdnUrl}/v2/models/DeepFilterNet3_onnx.tar.gz`. Client tự thêm `v2/`. Đừng nhét vào `cdnUrl`. Base ví dụ là `https://cdn.mezon.ai/AI/models/datas/noise_suppression/deepfilternet3`. Nút công khai vẫn là `DeepFilterNoiseFilterProcessor` hoặc `DeepFilterNet3Core`, `setProcessor`, `setSuppressionLevel(0–100)`, và `setEnabled`. Thí nghiệm Rust không thêm tên công khai mới vào gói npm. Muốn CLI thì dựng cạnh khóa học, trong repo cá nhân.
 
 Các bài DeepFilterNet nói vì sao viết lại native khó tính: audio full-band 48 kHz, STFT với hop cỡ 10 ms, tầng gain ERB, và deep filter có thể dùng look-ahead ngắn. Look-ahead đó là độ trễ thuật toán. Khớp RTF không phải khớp waveform. Bài 08-01 cho thấy trượt một mẫu biến 13.80 dB thành −10.67 dB. Bản Rust “trễ một chút” sẽ tệ trên SI-SDR dù nghe na ná.
 

@@ -25,7 +25,7 @@ You should be able to patch a lesson when `deepfilternet3-noise-filter` or the C
 
 | Upstream | What breaks | What you edit |
 |----------|-------------|---------------|
-| npm `deepfilternet3-noise-filter` above 1.3.0 | Public names or the asset prefix (`v2/` in the README, `v3/` in installed 1.3.0) | Chapters 07 and 09, both languages |
+| npm `deepfilternet3-noise-filter` above 1.3.0 | Public names or the automatic `v2/` prefix | Chapters 07 and 09, both languages |
 | CDN layout leaving `v2/` | URLs `{cdnUrl}/v2/pkg/df_bg.wasm` and `{cdnUrl}/v2/models/DeepFilterNet3_onnx.tar.gz` | 07-03 and 09-01 |
 | LiveKit `setProcessor` | The publish path in 09-01 | Re-read [docs.livekit.io](https://docs.livekit.io/) and quote the version |
 | A new ONNX archive name | Asset sentences in 09 and 10 | The filename only, after you see it |

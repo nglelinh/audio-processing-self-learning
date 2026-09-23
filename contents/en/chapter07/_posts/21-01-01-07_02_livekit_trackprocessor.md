@@ -40,7 +40,8 @@ A processor should accept a source track through `LocalAudioTrack.setProcessor`,
 Peer dependency: `livekit-client` ^2. The public constructor and the call order:
 
 ```javascript
-import { DeepFilterNoiseFilterProcessor } from "deepfilternet3-noise-filter";
+import { DeepFilterNoiseFilter, DeepFilterNoiseFilterProcessor } from "deepfilternet3-noise-filter";
+// DeepFilterNoiseFilter(options) returns a DeepFilterNoiseFilterProcessor.
 
 const filter = new DeepFilterNoiseFilterProcessor({
   sampleRate: 48000,

@@ -25,7 +25,7 @@ Bạn tạo được các thư mục capstone, trộn tín hiệu bốn mẫu �
 
 **A. Đánh giá và chính sách (nên chọn).** Đóng băng clip, điền phiếu sáu cột từ bài 08-04, và biện minh một lựa chọn `setSuppressionLevel` bằng ghi chú AB.
 
-**B. Tích hợp.** Tập `assetConfig.cdnUrl`, tiền tố mà client đã cài thêm (`v2/` trong README ≥ 1.2.0, `v3/` trong `getAssetUrls()` của bản 1.3.0 đã phát hành), `setEnabled`, và diễn tập CDN bị chặn mà audio vẫn publish.
+**B. Tích hợp.** Tập `assetConfig.cdnUrl` (ví dụ Mezon `https://cdn.mezon.ai/AI/models/datas/noise_suppression/deepfilternet3`), tiền tố `v2/` tự thêm trên gói ≥ 1.2.0 gồm 1.3.0, `setEnabled`, và diễn tập CDN bị chặn mà audio vẫn publish.
 
 **C. Kéo Rust.** `df-core` tùy chọn từ bài 09-03. Backend passthrough phải ghi passthrough. Điểm một phần là thật nếu nhãn trung thực. Không có điểm cho “NS works” trên vòng chép.
 

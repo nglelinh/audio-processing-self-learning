@@ -40,7 +40,8 @@ Processor nên nhận track nguồn qua `LocalAudioTrack.setProcessor`, sinh `pr
 Peer dependency: `livekit-client` ^2. Constructor công khai và thứ tự gọi:
 
 ```javascript
-import { DeepFilterNoiseFilterProcessor } from "deepfilternet3-noise-filter";
+import { DeepFilterNoiseFilter, DeepFilterNoiseFilterProcessor } from "deepfilternet3-noise-filter";
+// DeepFilterNoiseFilter(options) trả về DeepFilterNoiseFilterProcessor.
 
 const filter = new DeepFilterNoiseFilterProcessor({
   sampleRate: 48000,

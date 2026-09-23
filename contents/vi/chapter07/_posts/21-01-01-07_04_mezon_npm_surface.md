@@ -53,7 +53,8 @@ Lớp triển khai TrackProcessor (móc biến đổi track của LiveKit). `nam
 Core Web Audio mà processor dùng, và bạn cũng dùng riêng được:
 
 ```javascript
-import { DeepFilterNet3Core, DeepFilterNoiseFilterProcessor } from "deepfilternet3-noise-filter";
+import { DeepFilterNet3Core, DeepFilterNoiseFilter, DeepFilterNoiseFilterProcessor } from "deepfilternet3-noise-filter";
+// LiveKit: new DeepFilterNoiseFilterProcessor(opts) hoặc DeepFilterNoiseFilter(opts)
 
 const proc = new DeepFilterNet3Core({ sampleRate: 48000, noiseReductionLevel: 0 });
 await proc.initialize();
@@ -124,14 +125,16 @@ Hãy cặp mọi lần đổi núm với Chương 08 (SI-SDR trên mix tổng h�
 
 ```javascript
 // 07-01 điểm chèn A, local trước encode
-// 07-03 CDN; client thêm v2 theo quy tắc >= 1.2.0 của README
+// 07-03 CDN; >= 1.2.0 gồm 1.3.0 tự thêm v2/
 // 05 AudioWorklet bên trong init
 // 04 trọng số DeepFilterNet3 trong tar.gz
 const filter = new DeepFilterNoiseFilterProcessor({
   sampleRate: 48000,
   noiseReductionLevel: 80,
   enabled: true,
-  assetConfig: { cdnUrl: MY_CDN },
+  assetConfig: {
+    cdnUrl: "https://cdn.mezon.ai/AI/models/datas/noise_suppression/deepfilternet3",
+  },
 });
 await audioTrack.setProcessor(filter);
 await room.localParticipant.publishTrack(audioTrack);

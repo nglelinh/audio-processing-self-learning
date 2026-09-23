@@ -454,15 +454,15 @@ def onnx_wasm_path():
         (0.25, "PyTorch\nDF3 graph", "#e0f2fe"),
         (2.55, "ONNX\nexport", "#dbeafe"),
         (4.85, "WASM\nSIMD build", "#dcfce7"),
-        (7.15, "Package or CDN\n1.3.0 uses v3/", "#fef9c3"),
+        (7.15, "Package or CDN\n≥ 1.2.0 adds v2/", "#fef9c3"),
         (9.45, "AudioWorklet\ninference", "#ede9fe"),
     ]
     for x, text, fc in labels:
         _box(ax, (x, 2.2), 2.1, 1.3, text, fc, fs=9)
     for x in (2.35, 4.65, 6.95, 9.25):
         _arrow(ax, (x, 2.85), (x + 0.2, 2.85))
-    ax.text(0.3, 1.2, "Installed 1.3.0 getAssetUrls() requests v3/pkg/df_bg.wasm and v3/models/DeepFilterNet3_onnx.tar.gz.", fontsize=9, color=INK)
-    ax.text(0.3, 0.55, "The README still says v2/ for every release ≥ 1.2.0. The package adds the prefix. Do not put v2 or v3 in cdnUrl.", fontsize=9, color=MUTED)
+    ax.text(0.3, 1.2, "1.3.0 loads {cdnUrl}/v2/pkg/df_bg.wasm and {cdnUrl}/v2/models/DeepFilterNet3_onnx.tar.gz.", fontsize=9, color=INK)
+    ax.text(0.3, 0.55, "The v2/ prefix is added automatically for package >= 1.2.0. Do not put v2 in cdnUrl.", fontsize=9, color=MUTED)
     _save(fig, "onnx-wasm-path.png")
 
 

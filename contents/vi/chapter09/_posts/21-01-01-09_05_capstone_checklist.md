@@ -34,7 +34,7 @@ Chép vào `capstone/notes/demo_checklist.md` và đánh dấu. Ô trống là f
 
 Tải mô hình:
 
-- Lần lạnh lấy đúng hai đường của client đã cài. Với bản 1.3.0 đã phát hành đó là `{cdnUrl}/v3/pkg/df_bg.wasm` và `{cdnUrl}/v3/models/DeepFilterNet3_onnx.tar.gz`. README vẫn ghi `v2/` cho mọi bản ≥ 1.2.0. Trên panel mạng, xác nhận bạn **không** nhét `v2` hay `v3` vào trong `assetConfig.cdnUrl`.
+- Lần lạnh lấy `{cdnUrl}/v2/pkg/df_bg.wasm` và `{cdnUrl}/v2/models/DeepFilterNet3_onnx.tar.gz` với gói ≥ 1.2.0, gồm 1.3.0. Trên panel mạng, xác nhận bạn **không** nhét `v2/` vào trong `assetConfig.cdnUrl`.
 - Lần vào thứ hai dùng cache, hoặc bạn ghi là không.
 - Khi CDN bị chặn, cuộc gọi vẫn publish audio chưa xử lý và UI hiện lỗi. Ảnh hoặc một dòng log vào `capstone/notes/`.
 
@@ -68,7 +68,7 @@ Nếu tập vượt năm phút, cắt slide kiến trúc trước khi cắt hàn
 
 ## Tiêm lỗi
 
-Chặn host CDN (offline trong DevTools, hoặc `cdnUrl` sai) rồi vào phòng. Kỳ vọng: room vẫn có audio; processor không giả mô hình đã chạy; ghi chú nói `setEnabled` còn tới được không. Khôi phục mạng và tải lại. Kỳ vọng: WASM và tar.gz tải từ tiền tố mà client đã cài xin (`v3/` trên bản 1.3.0 đã phát hành). Nếu lần tiêm nào làm khác, hành vi đó là giới hạn, không phải bất ngờ để giấu.
+Chặn host CDN (offline trong DevTools, hoặc `cdnUrl` sai) rồi vào phòng. Kỳ vọng: room vẫn có audio; processor không giả mô hình đã chạy; ghi chú nói `setEnabled` còn tới được không. Khôi phục mạng và tải lại. Kỳ vọng: WASM và tar.gz tải từ đường `v2/`. Nếu lần tiêm nào làm khác, hành vi đó là giới hạn, không phải bất ngờ để giấu.
 
 Tiêm RTF, nếu bạn có log: kéo tới quantum tệ nhất, không phải trung bình. Thanh tràn trên hình là kiểu hỏng. p95 bạn chưa tính thì để `n/a`.
 

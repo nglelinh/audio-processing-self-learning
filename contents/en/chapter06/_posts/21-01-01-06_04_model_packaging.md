@@ -19,7 +19,7 @@ A correct ONNX graph still fails in a product when **packaging** is wrong: a hug
 
 ## Learning objectives
 
-You will separate the npm tarball from the CDN artifacts, apply the README path rule for package ≤ 1.1.2 versus the README rule for ≥ 1.2.0 and the `v3/` paths installed 1.3.0 actually requests, refuse a `cdnUrl` that already contains a version prefix, and list the license and cache checks that belong in a ship gate.
+You will separate the npm tarball from the CDN artifacts, apply the path rule for package ≤ 1.1.2 versus ≥ 1.2.0 (including 1.3.0, which still auto-prefixes `v2/`), refuse a `cdnUrl` that already contains `v2`, and list the license and cache checks that belong in a ship gate.
 
 ## 60-minute teaching plan
 
@@ -58,10 +58,9 @@ The package README specifies:
 | Package | WASM | Model archive |
 |---------|------|----------------|
 | ≤ 1.1.2 | `{cdnUrl}/pkg/df_bg.wasm` | `{cdnUrl}/models/DeepFilterNet3_onnx.tar.gz` |
-| 1.2.x, as the README still states for every ≥ 1.2.0 | `{cdnUrl}/v2/pkg/df_bg.wasm` | `{cdnUrl}/v2/models/DeepFilterNet3_onnx.tar.gz` |
-| installed 1.3.0 `getAssetUrls()` | `{cdnUrl}/v3/pkg/df_bg.wasm` | `{cdnUrl}/v3/models/DeepFilterNet3_onnx.tar.gz` |
+| ≥ 1.2.0, including 1.3.0 | `{cdnUrl}/v2/pkg/df_bg.wasm` | `{cdnUrl}/v2/models/DeepFilterNet3_onnx.tar.gz` |
 
-The client adds `v2/` itself for ≥ 1.2.0. Do not put `v2` inside `cdnUrl`. A base that already ends in `/v2` becomes `.../v2/v2/...` and 404s. The 1.3.0 source of `AssetLoader.getAssetUrls()` on the public repository prefixes `v3/` instead of the `v2/` string the README still prints. Treat the table above as the README contract this course self-checks. Before you upload a production mirror, print the URLs from the installed package and publish that directory. Do not invent a third filename. The archive name in both layouts is `DeepFilterNet3_onnx.tar.gz`, from the upstream DeepFilterNet repository. The WASM file name is `df_bg.wasm`.
+The client adds `v2/` itself for ≥ 1.2.0. Do not put `v2` inside `cdnUrl`. A base that already ends in `/v2` becomes `.../v2/v2/...` and 404s. The example base in the package README is `https://cdn.mezon.ai/AI/models/datas/noise_suppression/deepfilternet3`. The archive name is `DeepFilterNet3_onnx.tar.gz`, from the upstream Rikorose DeepFilterNet repository. The WASM file name is `df_bg.wasm`.
 
 ### Cache, compression, integrity
 
@@ -106,7 +105,7 @@ double-prefix risk
 
 - Putting `v2` in `cdnUrl` because the README table shows `v2` in the resolved path. The prefix is the client’s job.
 - Uploading only `df_bg.wasm` under `v2/pkg/` and leaving the tar.gz at the 1.1.2 path. The pair must match the package generation.
-- Trusting the README `v2` string when the installed `getAssetUrls()` prints `v3`. The lab checks the “do not embed the prefix” rule; the directory name comes from the package you actually ship.
+- Putting `v2` inside `cdnUrl` and also letting ≥ 1.2.0 add it, so the request 404s on `.../v2/v2/...`.
 - Hashing the files on a laptop and publishing different bytes to the CDN.
 
 ## Pitfalls

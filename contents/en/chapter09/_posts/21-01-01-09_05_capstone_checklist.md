@@ -34,7 +34,7 @@ Audio path:
 
 Model load:
 
-- Cold start fetches the two paths from the installed client. For published 1.3.0 that is `{cdnUrl}/v3/pkg/df_bg.wasm` and `{cdnUrl}/v3/models/DeepFilterNet3_onnx.tar.gz`. The README still documents `v2/` for every release ≥ 1.2.0. Confirm in the network panel that you did **not** also put `v2` or `v3` inside `assetConfig.cdnUrl`.
+- Cold start fetches `{cdnUrl}/v2/pkg/df_bg.wasm` and `{cdnUrl}/v2/models/DeepFilterNet3_onnx.tar.gz` for package ≥ 1.2.0, including 1.3.0. Confirm in the network panel that you did **not** also put `v2/` inside `assetConfig.cdnUrl`.
 - A second join uses cache or you document that it does not.
 - With the CDN blocked, the call still publishes unprocessed audio and the UI shows an error. Screenshot or a one-line log goes in `capstone/notes/`.
 
@@ -68,7 +68,7 @@ If the rehearsal exceeds five minutes, cut the architecture slide before you cut
 
 ## Failure injection
 
-Block the CDN host (DevTools offline, or a bad `cdnUrl`) and join. Expected: the room still has audio; the processor does not pretend the model ran; your notes say whether `setEnabled` was reachable. Restore the network and reload. Expected: WASM and the tar.gz load from the prefix the installed client requests (`v3/` on published 1.3.0). If either injection does something else, that behavior is a limit, not a surprise you hide.
+Block the CDN host (DevTools offline, or a bad `cdnUrl`) and join. Expected: the room still has audio; the processor does not pretend the model ran; your notes say whether `setEnabled` was reachable. Restore the network and reload. Expected: WASM and the tar.gz load from the `v2/` paths. If either injection does something else, that behavior is a limit, not a surprise you hide.
 
 RTF injection, if you have a log: scroll to the worst quantum, not the mean. The figure’s overrun bar is the failure mode. A p95 you never computed stays `n/a`.
 
