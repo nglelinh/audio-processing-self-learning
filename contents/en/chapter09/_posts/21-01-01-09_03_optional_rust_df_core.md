@@ -11,101 +11,103 @@ lesson_type: required
 draft: false
 ---
 
-The TypeScript/WASM package remains the supported browser distribution. A **sibling Rust workspace** (`df-core`, `df-audio`, `df-cli`) explores desktop/server-native DeepFilterNet3 with a frame API mirroring the WASM bindings. This path is **optional stretch** for the capstone — teach milestones and parity discipline, not a mandatory rewrite.
+The supported Mezon path is the WASM box in `deepfilternet3-noise-filter`: ONNX weights, a SIMD WASM build, the CDN layout the installed client requests (`v3/` in published 1.3.0), and an AudioWorklet. A Rust crate you might call `df-core` is a **stretch alternative to that box**, for a desktop CLI or a native embed you build in your own workspace. It is not a second product, it is not required to pass, and it is not a folder you are entitled to find under `/Users/nguyenlelinh/ncc/mezon-noise-suppression`. If your first backend only copies samples from input to output, label it **passthrough**. Never write “NS works” on a passthrough build.
 
-## 60-minute teaching plan
+![On-device WASM path for deepfilternet3-noise-filter]({{ site.imgurl }}/generated/onnx-wasm-path.png)
 
-- 0–10 min: Why native (embedding, CLI, shared libs).
-- 10–25 min: Frame API map TS → Rust.
-- 25–40 min: Backend choices (stub → tract / libDF).
-- 40–50 min: Golden tests and licensing/weights.
-- 50–60 min: Milestone plan you could finish in 1–2 weeks.
+*Figure. The shipping path is PyTorch to ONNX to WASM to the package or CDN assets (published 1.3.0 requests `v3/`), then AudioWorklet. Rust `df-core` is a stretch alternative to this WASM box, not a second product beside it.*
 
-## Learning objectives
+## What you should be able to do
 
-By the end of this lesson, you can:
+You should be able to say what the WASM path loads (`df_bg.wasm`, `DeepFilterNet3_onnx.tar.gz`), what a personal Rust experiment would have to match (frame hop, sample rate, a real model), and how you will prove parity without claiming bit-exactness you have not measured. You should also refuse to treat a passthrough backend as enhancement.
 
-- State goals for a Rust `df-core` experiment (ORT/tract/libDF).
-- List FFI / embedding options at a high level.
-- Mark this path as optional stretch work.
-- Write a parity-test plan against the JS/WASM path.
+## The box you are not replacing by default
 
-## Workspace layout (reference)
+Installed package 1.3.0 requests `{cdnUrl}/v3/pkg/df_bg.wasm` and `{cdnUrl}/v3/models/DeepFilterNet3_onnx.tar.gz`. The README paragraph for “≥ 1.2.0” still prints `v2/`. The prefix is added by the client either way. The public controls remain `DeepFilterNoiseFilterProcessor` or `DeepFilterNet3Core`, `setProcessor`, `setSuppressionLevel(0–100)`, and `setEnabled`. A Rust experiment does not get new public names in the npm package. If you want a CLI, you build it beside the course, in a personal repository.
 
-```text
-mezon-noise-suppression-rust/
-  crates/df-core   # frame API (create, process_frame, atten…)
-  crates/df-audio  # cpal + ringbuf skeleton
-  crates/df-cli    # offline WAV CLI
-  models/          # place DeepFilterNet3_onnx.tar.gz (do NOT commit)
-```
+The DeepFilterNet papers describe why a native reimplementation is picky: 48 kHz full-band audio, an STFT with a hop on the order of 10 ms, an ERB gain stage, and a deep filter that may use a short look-ahead. That look-ahead is algorithmic latency. Matching RTF is not the same as matching the waveform. Lesson 08-01 showed that a one-sample slip turns 13.80 dB into −10.67 dB. A Rust port that is “a little late” will look terrible on SI-SDR even when it sounds similar.
 
-Stub defaults documented in-tree: **480** samples @ **48 kHz** (10 ms) until goldens confirm WASM parity.
+## A personal workspace, if you opt in
 
-## Frame API map
-
-| TypeScript (`df.d.ts` style) | Rust `df-core` |
-|------------------------------|----------------|
-| `df_create(bytes, atten_lim)` | `DfState::create` / `create_from_path` / `create_stub` |
-| `df_get_frame_length(st)` | `DfState::frame_length` |
-| `df_process_frame(st, input)` | `DfState::process_frame` → `(Vec<f32>, snr)` |
-| `df_set_atten_lim` | `DfState::set_atten_lim` |
-| `df_set_post_filter_beta` | `DfState::set_post_filter_beta` |
-
-## Backend milestones (technique checklist)
-
-1. **Stub passthrough** — builds everywhere; validates framing/API. *(often already present)*  
-2. **Model path validation** — refuse missing tar/onnx; clear errors.  
-3. **Load ONNX** via **tract** *or* link upstream **libDF** / `deep_filter`.  
-4. **Match** frame length, hop, sample rate to WASM.  
-5. **Return** local SNR when the real model provides it.  
-6. **Golden tests** — short WAV fixtures; sample-wise tolerance vs WASM.  
-7. **df-cli** enhance files for Chapter 08 harness.  
-8. **df-audio** duplex callbacks; measure latency.  
-9. Optional **cdylib** FFI for other native hosts.
-
-## Why Rust here?
-
-- Deterministic desktop/server tooling without browser constraints  
-- Easier embedding in native meeting clients  
-- Shared library potential for non-JS hosts  
-- Learning on-device runtimes (tract/ORT) from Chapter 06  
-
-## Licensing and weights
-
-- Follow upstream DeepFilterNet dual license (**Apache-2.0 OR MIT**) as used by the npm package.  
-- **Do not commit** large model binaries to git; document download URL.  
-- CDN asset used by npm ≥1.2.0 under `v2/models/` is the same family of weights.
-
-## Parity tests (minimum)
+Create this only in your fork or a new repo. Do not add it to the shared product tree as the homework.
 
 ```text
-fixtures/: clean.wav, noisy.wav
-run WASM path → enh_wasm.wav
-run df-cli     → enh_rust.wav
-compare: SI-SDR(enh_wasm, enh_rust) high / MAE per sample within tolerance
-also compare: frame_length, atten behavior smoke tests
+my-df-stretch/
+  df-core/     # your frame API
+  df-cli/      # offline wav in, wav out
+  README.md    # says passthrough or real backend, in the first paragraph
 ```
 
-Until a real backend exists, mark goldens as **pending** — do not fake bit-exact claims.
+Suggested milestones, in order:
 
-## Common pitfalls
+1. **Passthrough backend.** `process` returns the input samples. The README title says passthrough. Tests check length and a copy, not a noise floor.
+2. **Asset errors.** A missing tar or ONNX path fails with a clear error. It does not silently pass audio and print “enhanced.”
+3. **Load a real runtime.** [tract](https://github.com/sonos/tract) or ONNX Runtime ([onnxruntime.ai/docs](https://onnxruntime.ai/docs/)) runs the same DeepFilterNet3 archive the CDN serves. Upstream [libDF](https://github.com/Rikorose/DeepFilterNet) is the other honest option. Pick one and pin the version.
+4. **Framing.** Document hop, window, and sample rate next to the WASM path. Do not invent a private Mezon API to do it.
+5. **Golden files.** One noisy wav through the public WASM path, one through your CLI. Compare with SI-SDR **between the two estimates**, after alignment, and report the float. Also listen. High SI-SDR between them means they match each other, not that either matches clean speech.
+6. **Stop conditions.** If you only finished step 1, the demo script says “passthrough, noise suppression is not running.”
 
-1. Treating stub passthrough as "NS works".
-2. Committing `DeepFilterNet3_onnx.tar.gz` to git.  
-3. Making Rust rewrite mandatory for course pass.  
-4. Skipping license attribution.
+Licensing follows the upstream DeepFilterNet project (Apache-2.0 OR MIT, as the npm package does). Do not commit the tar.gz. Point at the CDN layout or the upstream `models/` instructions.
+
+## Parity without fiction
+
+```text
+align hop delay
+enh_wasm.wav  from the published processor or an offline WASM run you script
+enh_rust.wav  from your CLI
+print SI-SDR(enh_wasm, enh_rust) after alignment
+write the float in the report
+if the backend is passthrough, skip this comparison and say why
+```
+
+Until step 3 exists, the golden test is **pending**. A passthrough file compared to a real enhancer will score badly. That bad score is the point. Do not loosen the tolerance until the number looks kind.
+
+tract versus a hand-written binding to upstream libDF is a tradeoff you should write in a paragraph: tract and ONNX Runtime consume the ONNX artifact the CDN already ships; libDF is the engine the WASM build is derived from and may track streaming state more faithfully. Either way you still measure. Chapter 06 is the background. This lesson does not add a private symbol table.
+
+## What “done” means for a stretch
+
+Done for the optional path is a README a stranger can build, a passthrough label if that is all you have, or a CLI plus one SI-SDR float against the WASM output if you loaded a model. Done is not a slide that says the native client is production Mezon. The shipping client remains the npm package on the LiveKit path in 09-01.
+
+## Mini-lab
+
+Write `df_core_status.md` with two lines a checker can see:
+
+```text
+backend: passthrough
+claim: noise suppression is not running
+```
+
+If you truly load a model, you may instead write `backend: tract` or `backend: onnxruntime` or `backend: libdf`, and `claim: compared to wasm SI-SDR <float>`. The passthrough wording must not appear next to a claim that NS works.
+
+```python
+from pathlib import Path
+text = Path("df_core_status.md").read_text().lower()
+ok_pass = "passthrough" in text and "not running" in text
+ok_real = any(k in text for k in ("tract", "onnxruntime", "libdf")) and "si-sdr" in text
+bad = "ns works" in text or "noise suppression works" in text
+print("status", "ok" if (ok_pass or ok_real) and not bad else "fix")
+```
+
+Expected output for the default stretch lab (no model yet):
+
+```text
+status ok
+```
+
+Failure modes: “NS works” on a copy loop; committing `DeepFilterNet3_onnx.tar.gz`; requiring the instructor’s machine path; describing Rust as the product and WASM as the demo; a parity float with no alignment note.
 
 ## Exercises
 
-1. Write a 5-bullet milestone plan with time estimates.  
-2. Sketch `process_frame` contract tests that do not need a model.  
-3. Explain tract vs libDF tradeoff in your own words.  
-4. Decide go/no-go: is Rust stretch in *your* capstone? Why?
+1. Write five milestones you can finish without a GPU, marking which ones are passthrough.
+2. List tests that do not need weights: frame length, identity copy, and a missing-file error.
+3. In one paragraph, compare tract (or ONNX Runtime) with upstream libDF as the stretch backend.
+4. Decide go or no-go for Rust in your capstone. Name the WASM work you will do if you say no-go.
+5. State the SI-SDR comparison direction: estimate versus estimate, not estimate versus a slogan.
 
-## Further reading
+### Answer hints
 
-- In-tree Rust README (workspace build notes).  
-- [tract](https://github.com/sonos/tract) / ONNX Runtime Rust docs.  
-- Upstream [DeepFilterNet](https://github.com/Rikorose/DeepFilterNet) `libDF` / models.  
-- Chapter 06 (ONNX, quantization, WASM).
+1. Steps 1–2 are passthrough-legal. Step 3 is the first time the word enhancement is allowed.
+2. Identity: output samples equal input samples. Missing file: non-zero exit status and no “enhanced” wav.
+3. ONNX runtimes consume the tar/ONNX the CDN already has. libDF is the upstream engine. Both need a golden.
+4. No-go is a complete capstone if 09-01 and 09-04 are real. Say so.
+5. SI-SDR(wasm, rust) after delay compensation. The 13.80 lab is the method, not the expected product score.

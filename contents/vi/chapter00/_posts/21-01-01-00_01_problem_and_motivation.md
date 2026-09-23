@@ -13,6 +13,10 @@ draft: false
 
 Khử nhiễu thời gian thực (real-time noise suppression, NS) là ràng buộc sản phẩm quyết định cuộc gọi có dùng được trong văn phòng mở, trên đường, hay cạnh bàn phím cơ hay không. Bài này định khung *bài toán*, chưa đi sâu thuật toán: ai quan tâm, “tốt” nghĩa là gì, và khóa học gắn với sản phẩm Mezon công khai như thế nào.
 
+![Xử lý offline cả file đặt cạnh đường thoại nhân quả, không nhìn được tương lai]({{ site.imgurl }}/generated/realtime-vs-offline.png)
+
+*Figure. Bộ khử nhiễu thời gian thực chỉ được dùng mẫu đến “bây giờ”, cộng một ngân sách look-ahead nhỏ; bộ xử lý offline được thấy cả file.*
+
 ## Mục tiêu học tập
 
 Sau khoảng 60 phút, bạn cần:
@@ -102,7 +106,7 @@ Sản phẩm họp muốn \(\le 40\,\mathrm{ms}\) buffering thuật toán từ c
 
 Giả sử \(f_s = 48\,\mathrm{kHz}\), cửa sổ \(L = 480\) (10 ms), hop \(R = 240\) (5 ms), mô hình cần một frame look-ahead.
 
-Tại 48 kHz, 1 ms = 48 mẫu. Nếu forward neural mất 8 ms tường trên hop 20 ms thì RTF \(=0.4\) — còn dư. Nếu mất 22 ms sẽ underrun trừ khi tăng hop (độ trễ) hoặc thu nhỏ mô hình.
+Tại 48 kHz, 1 ms là 48 mẫu, nên ngân sách 40 ms là \(40\times 48=1920\) mẫu. Chờ đủ cửa sổ 480 mẫu đã tiêu 10 ms; thêm một hop look-ahead 5 ms; còn 25 ms cho phần còn lại của phác thảo này. Forward 8 ms trên một hop 20 ms khác có RTF \(8/20=0.40\). Cùng khối đó mà mất 22 ms thì RTF \(1.1\), underrun, trừ khi kéo dài hop hoặc thu nhỏ mô hình. Mini-lab in lại nhóm số đầu.
 
 ## Bẫy thường gặp
 
@@ -112,6 +116,23 @@ Tại 48 kHz, 1 ms = 48 mẫu. Nếu forward neural mất 8 ms tường trên ho
 4. Đổ lỗi cho neural khi bug là lệch sample rate, sai hop, hoặc lệch cửa sổ OLA.
 5. Khẳng định “bí mật Mezon” từ khóa học — chỉ bám bề mặt công khai và literature DeepFilterNet.
 
+## Mini-lab
+
+**Mục tiêu.** Tính lại phác thảo 48 kHz để đổi hop không còn trốn trong bảng tính.
+
+```python
+fs, hop, window, budget_ms = 48_000, 240, 480, 40.0
+hop_ms = 1_000 * hop / fs
+window_ms = 1_000 * window / fs
+print(f"hop_ms={hop_ms:.1f} window_ms={window_ms:.1f}")
+print(f"samples_per_ms={fs/1000:.0f} budget_samples={budget_ms*fs/1000:.0f}")
+print(f"remaining_ms={budget_ms - window_ms - hop_ms:.1f} rtf={8/20:.2f}")
+```
+
+**Expected.** `hop_ms=5.0 window_ms=10.0`, rồi `samples_per_ms=48 budget_samples=1920`, rồi `remaining_ms=25.0 rtf=0.40`.
+
+**Failure modes.** Đổi chỗ hop và cửa sổ, đếm mẫu 16 kHz trong ngân sách 48 kHz, hoặc định nghĩa RTF ngược (thời lượng audio chia thời gian xử lý).
+
 ## Bài tập nhỏ
 
 1. Chọn cảnh 10 giây (quán cà phê). Liệt kê ba sự kiện nhiễu; gắn nhãn dừng / không dừng / giống tiếng nói.
@@ -119,8 +140,15 @@ Tại 48 kHz, 1 ms = 48 mẫu. Nếu forward neural mất 8 ms tường trên ho
 3. Với \(f_s=16\,\mathrm{kHz}\), hop \(R=160\), tính độ dài hop (ms) và thời gian xử lý tối đa trung bình để RTF \(=0.5\).
 4. Đọc README công khai `mezonai/mezon-noise-suppression` (khi online) và liệt kê ba khả năng *đã được ghi* — không bịa thêm.
 
+### Gợi ý đáp án
+
+1. HVAC đổi chậm; tiếng cửa đóng thì không; người nói cạnh mic là babble, cùng họ với tiếng nói.
+2. Độ rõ là lấy lại được từ, chất lượng là dễ nghe, ASR là lỗi từ — mục thứ ba có thể đi ngược hai mục đầu.
+3. Hop dài \(160/16000=10\,\mathrm{ms}\). RTF \(0.5\) cho phép trung bình \(5\,\mathrm{ms}\) xử lý trên hop đó.
+4. Chỉ trích bullet trong README (tên gói, runtime, sample rate). Đừng suy ra đồ thị chưa công bố.
+
 ## Đọc thêm
 
 - Tài liệu WebRTC Audio Processing Module (APM) — mục noise suppression.
-- Các bài DeepFilterNet (INTERSPEECH / arXiv) — abstract và phần mở đầu.
+- Schröter và cộng sự, DeepFilterNet (arXiv:2110.05588), DeepFilterNet2 (arXiv:2205.05474), DeepFilterNet3 (arXiv:2305.08227) — phần mở đầu về vì sao khử nhiễu nhân quả là bài toán sản phẩm. Repo: https://github.com/Rikorose/DeepFilterNet.
 - Trang tổng quan DNS Challenge (dataset và track).

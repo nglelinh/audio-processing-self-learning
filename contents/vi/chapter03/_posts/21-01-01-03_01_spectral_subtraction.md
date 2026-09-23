@@ -114,6 +114,12 @@ Bin 0 → $$3.5$$; bin 1 → sàn $$0.2$$; bin 2 → sàn $$0.12$$. Không có s
 - SpeexDSP preprocessor và chuỗi VoIP: subtraction / noise gate cùng AGC + VAD + NS.
 - Hybrid: khối cổ điển bỏ Hum HVAC dừng; neural dọn nhiễu không dừng (Chương 04).
 
+Với NS full-band realtime kiểu Mezon, subtraction một mình không đủ — nhưng hiểu nó thì mask học được của DeepFilterNet bớt bí. Panel trái của hình là quy tắc này trong miền công suất: cột xanh là \(|Y|^2\), đường cam là sàn nhiễu, cột xanh lá là phần sống sót sau sàn. Panel phải không phải phép trừ; đó là gain Wiener mềm của bài sau.
+
+![Spectral subtraction miền công suất theo từng bin, cạnh đường gain Wiener mà bài này chưa áp]({{ site.imgurl }}/generated/spectral-subtraction-wiener.png)
+
+*Hình. Spectral subtraction (trái) bỏ một sàn nhiễu rồi chặn phần còn lại; đường trơn bên phải là gain Wiener khi phép trừ được thay bằng SNR.*
+
 ## Bẫy thường gặp
 
 - Trộn công thức công suất và biên độ mà không chỉnh $$\alpha,\beta$$.
@@ -122,12 +128,41 @@ Bin 0 → $$3.5$$; bin 1 → sàn $$0.2$$; bin 2 → sàn $$0.12$$. Không có s
 - Quên chuẩn hóa OLA → pumping.
 - Kỳ vọng subtraction xử lý echo (AEC, 03-04) hoặc nhiễu có hướng (beamforming, 03-05).
 
+## Mini-lab
+
+**Mục tiêu.** Chạy spectral subtraction biên độ trên tám bin và in những bin chạm sàn.
+
+```python
+import numpy as np
+
+magY = np.array([1.2, 3.5, 0.8, 4.0, 2.2, 1.1, 0.5, 2.8])
+Nhat = np.array([1.0, 1.0, 0.9, 1.1, 1.0, 0.8, 0.7, 1.0])
+alpha, beta = 2.0, 0.1
+raw = magY - alpha * Nhat
+magS = np.maximum(raw, beta * magY)
+clipped = np.where(raw < beta * magY)[0]
+print("raw", np.round(raw, 2))
+print("magS", np.round(magS, 2))
+print("clipped bins", clipped.tolist())
+```
+
+**Kỳ vọng.** `raw` là `[-0.8, 1.5, -1.0, 1.8, 0.2, -0.5, -0.9, 0.8]`. Sau sàn, `magS` là `[0.12, 1.5, 0.08, 1.8, 0.22, 0.11, 0.05, 0.8]`. Bin bị cắt là `[0, 2, 4, 5, 6]`. Bin 1, 3 và 7 đi qua không bị cắt.
+
+**Khi hỏng.** Dùng công suất \(|Y|^2\) với các số biên độ này, hoặc quên `beta * magY`, sẽ đổi cả tập bin bị cắt lẫn giá trị sàn. Test `raw < 0` bỏ sót bin 4: phần dư vẫn dương nhưng thấp hơn sàn. `alpha=1` cắt ít bin hơn và giấu over-subtraction mà ví dụ muốn chỉ.
+
 ## Bài tập
 
 1. Chứng minh khi $$|Y| < \alpha\widehat{|N|}$$ thì quy tắc floored trả $$\beta|Y|$$; diễn giải $$\beta$$.
 2. Cài offline NumPy; quét $$\alpha,\beta$$; ghi chú musical noise vs nhiễu dư.
 3. Thay nhiễu dừng bằng gõ phím; giải thích vì sao $$\widehat{|N|}$$ cố định thất bại.
 4. Viết 5 gạch đầu dòng: khi nào giữ SpeexDSP-style trước DeepFilterNet3 WASM, khi nào tắt hẳn.
+
+### Gợi ý đáp án
+
+1. `max` trả đối số thứ hai đúng khi đối số thứ nhất nhỏ hơn; \(\beta|Y|\) là phần biên độ nhiễu bạn từ chối xóa sạch.
+2. Giữ ước lượng nhiễu từ đoạn đầu chỉ có nhiễu, rồi nghe đuôi nhiễu khi \(\alpha\) tăng và \(\beta\) giảm.
+3. Burst cao hơn sàn đóng băng thì bị trừ thiếu; các frame sau đó bị trừ thừa. Chỉ cập nhật \(\widehat{|N|}\) khi VAD báo nhiễu.
+4. Giữ front-end dừng, rẻ, khi mô hình neural là chặng đắt và hum ổn định; tắt khi nó đã đục lỗ mà mô hình 48 kHz sẽ coi là cấu trúc tiếng nói.
 
 ## Đọc thêm
 

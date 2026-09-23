@@ -85,7 +85,11 @@ Pattern A — **GSC → DeepFilterNet2**: spatial cancel of strong directional e
 Pattern B — **IVA → GTCRN**: blind separation then tiny CRN refine.  
 Pattern C — **mono DF3 only**: correct default when $$M=1$$ (most browser tabs).
 
-**Mezon product note:** current npm / WASM paths are typically **mono**. Multi-mic is a stretch goal—learn the front-ends so you can design a future native pipeline without rewriting the neural core.
+**Mezon product note:** current npm / WASM paths are typically **mono**. Multi-mic is a stretch goal—learn the front-ends so you can design a future native pipeline without rewriting the neural core. A beamformer would be a spatial pre-filter in front of that mono processor: several microphones in, one channel out, and only then the per-bin gain of a single-channel suppressor. The figure below is the single-channel product path. It does not contain a beamformer; the honest reading is where a beamformer would have to sit, which is upstream of `DeepFilterNoiseFilterProcessor`.
+
+![LiveKit publish path through a single-channel DeepFilterNoiseFilterProcessor, the stage a beamformer would have to feed]({{ site.imgurl }}/generated/livekit-trackprocessor.png)
+
+*Figure. This is the mono publish path; a beamformer is not drawn, and would sit in front of DeepFilterNoiseFilterProcessor so the processor still sees one channel.*
 
 ## Decision checklist
 
@@ -103,12 +107,36 @@ Pattern C — **mono DF3 only**: correct default when $$M=1$$ (most browser tabs
 - Running multi-channel STFT with inconsistent channel delays (USB clocking).
 - Expecting beamforming to fix **echo** without a far-end reference—still need AEC.
 
+## Mini-lab
+
+**Goal.** Far-field delay between two microphones 2 cm apart, at broadside and at 45°.
+
+```python
+import numpy as np
+
+d, c, fs = 0.02, 343.0, 48000  # meters, m/s, Hz
+for deg in (0, 45):
+    tau = d * np.sin(np.deg2rad(deg)) / c
+    print(deg, "deg", round(tau * 1e6, 1), "us", round(tau * fs, 2), "samples")
+```
+
+**Expected.** Broadside: `0.0 µs`, `0.0` samples. At 45°: about `41.2 µs`, about `1.98` samples at 48 kHz. Delay-and-sum at 48 kHz is a fractional-sample shift, not a multi-tap “room” filter.
+
+**Failure modes.** Using degrees in `np.sin` without converting to radians gives a nonsense delay (the 45° case will not be ~2 samples). Forgetting \(\sin\theta\) and using \(d/c\) for every angle makes broadside look like endfire. A 16 kHz print of “samples” is about 0.66 at 45°, so a hardcoded 48 kHz assumption has to be visible in the script.
+
 ## Exercises
 
 1. **Delay-and-sum.** For 2 mics spaced $$d=2\,\mathrm{cm}$$, $$f=2\,\mathrm{kHz}$$, speed of sound $$343\,\mathrm{m/s}$$, compute the inter-mic delay for broadside vs 45° incidence (far-field).
 2. **GSC sketch.** Label FBF, BM, adaptive filters on a diagram; mark where a neural postfilter would attach.
 3. **Product brief.** One page: propose a dual-mic native mode for Mezon that reuses the existing mono DF3 ONNX and adds a delay-and-sum front-end only.
 4. **Reading map.** Skim one hybrid abstract (GSC+DeepFilterNet2 or IVA+GTCRN); write three bullets on what the classical stage contributes vs the neural stage.
+
+### Answer hints
+
+1. Broadside delay is 0. At 45°, \(\tau=d\sin\theta/c\) is about 41 µs, roughly two samples at 48 kHz.
+2. Neural postfilter attaches to the GSC output, after the adaptive subtraction, on a single channel.
+3. Delay-and-sum emits one waveform; the existing mono ONNX does not grow a second input.
+4. The classical stage uses the extra microphone (nulls or independence). The neural stage is still a single-channel enhancer on whatever that spatial stage passed through.
 
 ## Further reading
 

@@ -11,80 +11,94 @@ lesson_type: required
 draft: false
 ---
 
-Deliver a **written design**, a **measured demo** on a small clip set, and evidence you understand techniques behind Mezon NS — not wrapper trivia. This brief defines milestones, artifacts, and grading emphasis.
+The capstone is a written design, a measured demo on a small clip set, and a public-API story you can defend. It is not a patch to the shared product repository [mezonai/mezon-noise-suppression](https://github.com/mezonai/mezon-noise-suppression). Work in a personal fork or in the `capstone/` tree this lab creates. The instructor path `/Users/nguyenlelinh/ncc/mezon-noise-suppression` is optional local context, not a required checkout and not a place to invent files.
 
-## 60-minute teaching plan
+![Evaluation map for the capstone report]({{ site.imgurl }}/generated/eval-metric-map.png)
 
-- 0–15 min: Read brief + success criteria aloud.
-- 15–30 min: Choose track (product harness / UX policy / rust stretch).
-- 30–45 min: Milestone calendar (baseline → change → eval → report).
-- 45–55 min: Artifact checklist.
-- 55–60 min: Q/A on scope cuts.
+*Figure. The report uses the evaluation map: SI-SDR only with a clean reference, DNSMOS or `n/a`, a listening note, and a systems line for RTF. The ship box is a decision, not a slogan.*
 
-## Learning objectives
+## What you should be able to do
 
-By the end of this lesson, you can:
+You should be able to create the capstone directories, mix a four-sample signal at a known SNR, pick one primary track, and list the artifacts a grader will open. You should also state the failure mode of each milestone so a slip does not become a silent skip.
 
-- Deliver a written design + measured demo on a small clip set.
-- Include RTF (or honest systems notes) on at least one target environment.
-- Submit a short reading log linking techniques to Mezon code/docs.
-- Plan milestones without touching the shared product repo.
+## Tracks
 
-## Tracks (pick one primary)
+**A. Eval and policy (recommended).** Freeze clips, fill the six-column sheet from lesson 08-04, and justify one `setSuppressionLevel` choice with an AB note.
 
-**A. Product eval & policy (recommended)**  
-Harness + listening + default level or fallback policy.
+**B. Integration.** Exercise `assetConfig.cdnUrl`, the prefix the installed client adds (`v2/` in the ≥ 1.2.0 README, `v3/` in published 1.3.0 `getAssetUrls()`), `setEnabled`, and a blocked-CDN drill that still publishes audio.
 
-**B. Integration engineering**  
-CDN readiness UX, telemetry, constraint checklist with measurements.
+**C. Rust stretch.** Optional `df-core` from lesson 09-03. A passthrough backend must be labeled passthrough. Partial credit is real if the label is honest. No credit for “NS works” on a copy loop.
 
-**C. Rust stretch**  
-`df-core` milestone toward real backend + CLI goldens (partial credit for honest stub+tests).
+Pick one primary track. The others may appear only as a named non-goal.
 
-## Milestones
+## Milestones and how they fail
 
-| Week-ish | Output |
-|----------|--------|
-| M0 | Architecture sketch (09-01) + hypothesis (09-02) |
-| M1 | Baseline metrics on frozen clip set |
-| M2 | Implement change *outside* product tree (or personal fork) |
-| M3 | Full Chapter 08-04 report table |
-| M4 | Demo script + checklist (09-05) |
+| ID | Output | Failure mode |
+|----|--------|----------------|
+| M0 | Architecture sketch (09-01) and hypothesis (09-02) | Private class names, or no fail rule |
+| M1 | Baseline on a frozen clip list | Tuning the list after you see the score |
+| M2 | Change lives in your fork or `capstone/`, not the shared tree | A commit on the product repo “just to try” |
+| M3 | Six-column table, `n/a` where required | Invented SI-SDR on a real mic file |
+| M4 | Demo checklist (09-05) | Live CDN as the only path, no backup recording |
 
-## Required artifacts
+There is no week count hiding in the IDs. Finish M0 before you collect M3, or you will fit the hypothesis to the number.
 
-1. **Design note** (2–4 pages): problem, approach, risks  
-2. **Metrics tables**: synthetic and/or DNSMOS; listening summary  
-3. **Systems note**: RTF or CPU/init timing on one device  
-4. **Reading log**: ≥5 bullets linking Ch 02–08 ideas to README/API  
-5. **Patch or config diff** *or* harness repo link — not "I clicked npm bump" alone  
-6. **Limitations** section (honest)
+## Artifacts the grader opens
+
+1. `capstone/design/sketch.md` — goal, public data path, asset URLs, non-goals.
+2. `capstone/design/hypothesis.md` — hypothesis, experiment, success, fail.
+3. `capstone/audio/` — small wavs or the `.npy` from the mixer, plus a README of filenames.
+4. `capstone/metrics/suite.md` — clip id, condition, SI-SDR or `n/a`, DNSMOS or `n/a`, listening note, RTF p95.
+5. `capstone/notes/reading.md` — at least five bullets that tie Chapters 02–08 to a public API or a paper URL from lesson 10-01.
+6. `capstone/notes/limits.md` — languages, devices, and the Rust status (`not attempted` or `passthrough` or a real backend).
+
+A slide deck is optional. An unreproducible screenshot of a score is not a metric.
 
 ## Grading emphasis
 
-| Weight (guide) | Criterion |
-|----------------|-----------|
-| High | Technique understanding + honest eval |
-| High | Reproducible measurements |
-| Medium | Working demo path |
-| Low | Polish of slides |
-| Zero | Unapproved edits to shared product repo |
+High weight: the technique is real and the table is honest, including `n/a`. High weight: someone else can re-run the mixer or the checker. Medium weight: a demo path that survives headphones and a blocked CDN. Low weight: visual polish. Zero: unapproved edits to the shared product repo, and any report that calls passthrough “noise suppression.”
 
-## Explicit non-goals
+Non-goals, stated so they do not creep: training a new state-of-the-art model, bit-exact Rust parity as a graduation requirement, and uploading customer audio to a cloud model without a privacy design you do not have.
 
-- Training a new SOTA SE model from scratch  
-- Guaranteed bit-exact Rust parity in one term  
-- Cloud processing of customer audio without a privacy design  
+## Mini-lab
+
+From an empty working directory that is **not** the product repo:
+
+```bash
+mkdir -p capstone/{design,audio,metrics,notes}
+find capstone -type d | sort
+python3 -c 'import numpy as np; s=np.array([1.,0,-1,.5]); n=np.array([.2,-.2,.2,-.2]); g=np.linalg.norm(s)/(10**(10/20)*np.linalg.norm(n)); y=s+g*n; np.save("capstone/audio/mix.npy", y); print(np.round(y,3).tolist())'
+```
+
+Expected output:
+
+```text
+capstone
+capstone/audio
+capstone/design
+capstone/metrics
+capstone/notes
+[1.237, -0.237, -0.763, 0.263]
+```
+
+The mixer builds a 10 dB mixture of the lesson 08-01 reference `s` with a four-point noise vector. `g` scales the noise so that $$10\log_{10}(\|s\|^2/\|gn\|^2) = 10$$. The printed samples are $$s + gn$$ rounded to three decimals. Confirm with `find capstone -type f | sort` that `capstone/audio/mix.npy` exists.
+
+Failure modes: running `mkdir` inside the shared product clone; a different SNR because the formula used amplitude ratios twice; forgetting `np.save` and then claiming the directory listing is the whole lab; treating `[1.237, -0.237, -0.763, 0.263]` as a DeepFilterNet output. It is the noisy mixture.
+
+After the commands, add a milestone checklist to `capstone/design/sketch.md` with M0–M4 marked `todo` or `done`. A grader should see the directories even if every milestone is still `todo`.
 
 ## Exercises
 
-1. Choose track A/B/C and write M0 hypothesis.  
-2. Freeze a 10-clip set list today (filenames only).  
-3. Draft your reading log with 5 empty links to fill while coding.  
-4. Identify the single risk most likely to blow the schedule.
+1. Choose track A, B, or C and write the M0 hypothesis under `capstone/design/`.
+2. Freeze ten clip filenames in `capstone/audio/CLIPS.txt` before you score anything.
+3. Start `capstone/notes/reading.md` with five bullets and real URLs you will actually open.
+4. Name the single failure mode most likely to hit you, from the table above, and the file that will show it.
+5. Re-run the one-line mixer at 0 dB (replace `10/20` with `0/20`) and explain why the samples change.
 
-## Further reading
+### Answer hints
 
-- `COURSE_OUTLINE.md` in this repo  
-- mezon-noise-suppression README  
-- Chapter 08-04 reporting template
+1. Track C still needs the passthrough label if you have no model.
+2. Filenames only. No scores yet, so you cannot steer the set.
+3. Use the URLs in lesson 10-01. Do not invent a successor paper.
+4. The common miss is M2 on the shared repo, or M3 with a fake SI-SDR.
+5. At 0 dB, $$\|gn\| = \|s\|$$, so `g` is larger and the noise is more visible in the printout.

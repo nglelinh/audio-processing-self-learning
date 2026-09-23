@@ -11,93 +11,108 @@ lesson_type: required
 draft: false
 ---
 
-**DeepFilterNet2** and **DeepFilterNet3** refine the original deep-filtering recipe for better quality–efficiency trade-offs and stronger real-world robustness. This lesson stays honest: we summarize **practical upgrades commonly associated** with DF2/DF3 from the published papers and ecosystem, relate DF3-style deployment to `deepfilternet3-noise-filter` / Mezon, and note **training-data / RIR sensitivity** without inventing benchmark numbers.
+DeepFilterNet2 and DeepFilterNet3 keep the ERB-plus-deep-filter split and change the training loss, the amount of temporal buffering, a post-filter, and an SNR gate. This lesson only uses numbers printed in arXiv:2205.05474 and arXiv:2305.08227. It does not invent block names, and it does not claim the npm package matches those checkpoints bit for bit.
+
+![Same ERB-plus-deep-filter skeleton across DeepFilterNet generations]({{ site.imgurl }}/generated/deepfilternet-erb.png)
+
+*Figure. The skeleton stays: 32 ERB gains for the envelope, then a 5-tap complex filter on the low bins. Across versions the published changes are the loss and the data (multi-resolution STFT, DNS4, a post-filter), fewer temporal buffers inside the net, and an SNR gate that can skip a stage. Module names you have not read in the paper are not part of this caption.*
 
 ## Learning objectives
 
-You will list headline upgrades from DF → DF2 → DF3 at a product-engineering level, explain why export-to-ONNX matters more than Python demo FPS, relate the npm package to the model family (wrapper ≠ algorithm), and state how room impulse response (RIR) realism in training affects deployment.
+You will state what DeepFilterNet2 changed relative to the ICASSP 2022 model (runtime buffers, multi-resolution loss, post-filter, reported RTF), what the Interspeech 2023 paper adds as a local-SNR gate and a DeepFilterNet3 row on Voicebank+Demand, and how `deepfilternet3-noise-filter` relates to that family without being a second source of truth for the weights.
 
 ## 60-minute teaching plan
 
-- **0–10 min** — Recap DF core (ERB + deep filter); versioning motivation.
-- **10–25 min** — DF2 narrative: efficiency, training, and streaming practicality.
-- **25–40 min** — DF3 narrative: further refinements; product packaging.
-- **40–50 min** — Data / RIR sensitivity; what not to over-claim.
-- **50–60 min** — Exercises; Mezon alignment checklist.
+- **0–10 min** — Recap: 32 ERB bands, 5 taps, 20 ms / 10 ms, 40 ms delay.
+- **10–25 min** — DF2: where the 0.04 RTF comes from, and where it does not.
+- **25–40 min** — The 2023 gate and the DF3 row on the metric table.
+- **40–50 min** — RIR mismatch, ONNX export, the npm surface.
+- **50–60 min** — Mini-lab, exercises.
 
 ## Core explanation
 
-### How to read version bumps
+### Same DNA, different checkpoints
 
-Treat DF / DF2 / DF3 as **generations of the same design family**:
+All three generations target 48 kHz, a 20 ms window, 50% overlap, 32 ERB bands, and a 5-tap filter up to about 5 kHz, with two frames of look-ahead quoted as **40 ms** of delay. Pin a weight file, not the word “DeepFilterNet.” A DF2 checkpoint in a DF3 config is a shape error or a timbre error.
 
-- Same DNA: full-band, real-time, ERB + deep filtering.
-- Different training recipes, network width/depth details, and sometimes loss / data pipelines.
-- Deployment artifacts (ONNX, quantized weights) may lag paper names—**always pin SHA / model filename** in product docs.
+### DeepFilterNet2 — arXiv:2205.05474
 
-### DeepFilterNet2 — engineering themes
+DeepFilterNet2, “Towards Real-Time Speech Enhancement on Embedded Devices for Full-Band Audio” (IWAENC 2022, arXiv:2205.05474), keeps that STFT. The changes that move quality and speed are:
 
-From the DF2 paper and ecosystem (cite the paper; do not fabricate metrics):
+- **Loss.** Warmup of 3 epochs, then cosine decay, updated every step. A multi-resolution spectral loss after the inverse STFT uses windows of 5, 10, 20, and 40 ms with compression $$c=0.3$$. The ICASSP $$\alpha$$ loss is dropped; a 5-tap filter can idle by setting the current real tap to 1 and the others to 0.
+- **Data.** English DNS4, plus a distortion path: the target keeps less reverberation than the mixture, and clipped speech is reconstructed. That is a meeting-room mechanism, not a guarantee on your rooms.
+- **Fewer temporal buffers.** Time kernels shrink from $$2\times 3$$ to $$1\times 3$$ except a causal $$3\times 3$$ at the input. The GRU hidden size is 256. Grouped linears become one matmul. Extra context is a ring of activations; on a small CPU that traffic dominates the MAC count.
+- **Post-filter.** A sine warp on the ERB gains, $$G \leftarrow G\sin(\pi G/2)$$, over-attenuates noisy bands. A second step mixes a strength $$\beta$$. Do not invent a default $$\beta$$; `--pf` enables the published post-filter.
+- **Same CPU, different RTF.** On Voicebank+Demand, Core i5-8250U: the ICASSP row is 1.778 M parameters, 0.348 GMAC, RTF 0.11, PESQ 2.81. The simplified DF2 row is 2.306 M, 0.356 GMAC, **RTF 0.04**, PESQ 3.08 (CSIG 4.30, CBAK 3.40, COVL 3.699, STOI 0.9429). GMAC is flat; RTF drops because the kernels and the GRU changed. The post-filter row stays at RTF 0.04 and PESQ **3.03**. PESQ fell. Watching only PESQ will revert a change that was made for perception.
 
-- Stronger focus on **real-time CPU** operation with competitive quality.
-- Continued use of multi-stage / multi-resolution processing in the DF family style.
-- Wider adoption as a **baseline** in follow-on papers (DPDFNet builds on DF2-style backbones—04-04).
+The abstract also calls this fast enough for a Raspberry Pi 4. That is still not a phone thermal result.
 
-For engineers: DF2 is often the baseline you beat *or* ship when DF3 packaging is unavailable.
+### The 2023 paper and DeepFilterNet3 — arXiv:2305.08227
 
-### DeepFilterNet3 — product themes
+“DeepFilterNet: Perceptually Motivated Real-Time Speech Enhancement” (Interspeech 2023, arXiv:2305.08227) restates the framework and is the citation the project README associates with the **DeepFilterNet3** model. Use that association. Do not invent a second DF3 title.
 
-DF3 continues the family toward better quality and robustness for modern full-band SE. In this course’s product alignment:
+The demo’s processing rules, which you can implement without new module names:
 
-- npm package name **`deepfilternet3-noise-filter`** signals a **DF3-oriented** runtime path (WASM / ONNX-style on-device inference—details in Ch. 06–07, 09).
-- Your job as a student is to understand **techniques**: framing, causal state, model I/O, RTF—not only `npm install`.
+- 48 kHz, 20 ms window, 10 ms hop, look-ahead of 2 frames, **40 ms** algorithmic latency.
+- 32 ERB gains for the envelope.
+- An $$N=5$$ complex filter on the lowest **96 bins** (4.8 kHz). Higher bins keep the ERB gain.
+- The encoder also predicts a local SNR $$\xi\in[-15,35]$$ dB. If $$\xi<-10$$ dB, both decoders are disabled and the frame is silent. If $$\xi>20$$ dB, the deep-filter decoder is disabled. Otherwise both stages run.
 
-**Wrapper vs model:** the package loads weights, runs inference in an audio callback-friendly way, and exposes a TrackProcessor-like API. It does **not** absolve you from knowing STFT hop, streaming state reset, or cold-start RTF.
+Speech just under −10 dB becomes digital silence. Speech above 20 dB never gets the harmonic stage, so a hum can remain between partials. The tract loop in that paper reports **RTF 0.19** on one i5-8250U thread. DF2’s **0.04** is a different binary. Do not average them, and do not call either a phone RTF.
 
-### Export paths toward ONNX
+The Voicebank+Demand row labeled DeepFilterNet3 is PESQ 3.17, CSIG 4.34, CBAK 3.61, COVL 3.77, STOI 0.944, against DF2 at PESQ 3.08 and the original at 2.81. One test set.
 
-Typical path (conceptual):
+### Wrapper, ONNX, rooms
 
-```text
-training (PyTorch) → ONNX graph → ORT / WASM / tract → AudioWorklet or native
-```
+`deepfilternet3-noise-filter` 1.3.0 ([mezonai/mezon-noise-suppression](https://github.com/mezonai/mezon-noise-suppression)) runs ONNX/WASM in an AudioWorklet: `DeepFilterNet3Core`, `DeepFilterNoiseFilterProcessor`, suppression 0–100 via `setSuppressionLevel`. Do not claim bit-exact agreement with the CLI or the paper table. A wrapper that changes hop, look-ahead, or sample rate is a different system.
 
-Pitfalls (expanded in Ch. 06): unsupported ops, dynamic axes for stream frames, RNN state I/O as graph inputs/outputs, float32 vs int8.
-
-### Training-data and RIR sensitivity (no invented numbers)
-
-Speech enhancers overfit to **how you simulate rooms**. DNS-style image-source RIRs differ from measured or hybrid wave/geometric simulations. Follow-on work on training DeepFilterNet with more accurate room acoustics (well-known DF3-related training paper—cite when you assign reading) reports better behavior on real rooms / ASR downstream—the qualitative lesson for Mezon:
-
-- If users sound “over-suppressed in meeting rooms,” suspect **train/test acoustic mismatch**, not only model size.
-- Prefer evaluation on **real captures** (Ch. 08 listening + DNSMOS) alongside synthetic DNS mixes.
-
-Do **not** quote specific PESQ deltas unless you reproduce them yourself from a pinned paper table.
-
-### Mezon alignment checklist
-
-1. Name the model generation actually shipped (DF3 weights? custom fine-tune?).
-2. Pin sample rate (often 48 kHz) and mono downmix policy.
-3. Measure RTF on target devices (Ch. 05)—not laptop-only averages.
-4. Document cold start (model load) vs steady-state inference.
-5. Keep classical AEC (browser/WebRTC) in front when echo exists (03-04).
+Export is PyTorch → ONNX → ONNX Runtime, WASM, or tract → AudioWorklet or a native callback. The GRU state must be a graph input and output. A dynamic axis that eats the whole file is an offline model. The first paper’s simulated RT60 stops at 1 s. Over-suppression in a real room is often that data gap. Listen (Chapter 08) before you grow the net.
 
 ## Pitfalls
 
-- Mixing DF2 and DF3 weight files with the wrong config.
-- Claiming “DF3 quality” after changing STFT hop in the wrapper.
-- Evaluating only on VCTK-DEMAND-style sets for a SEA-languages product.
-- Ignoring over-attenuation complaints (some successors add explicit losses—04-04).
+- Loading DF2 weights with the DF3 gate thresholds, or the reverse.
+- Quoting PESQ 3.17 as “the product MOS.”
+- Treating RTF 0.04 or 0.19 on an i5 as the budget for a fanless laptop or a phone.
+- Enabling `--pf`, watching PESQ drop from 3.08 to 3.03, and reverting a perceptual change you never listened to.
+- Assuming `setSuppressionLevel(100)` reproduces the paper’s full attenuation. It is a product control, range 0–100, not a dB value from the paper.
+
+## Mini-lab
+
+**Goal.** Run the CLI twice if weights are available, once with the post-filter flag, and always compute the unitless sine warp on four gains so the lab works offline.
+
+```bash
+deepFilter --output-dir out/noisy/ noisy.wav
+deepFilter --pf --output-dir out/pf/ noisy.wav
+python3 - << 'PY'
+import numpy as np
+G = np.array([0.0, 0.2, 0.5, 1.0])
+Gp = G * np.sin(0.5 * np.pi * G)
+np.set_printoptions(precision=6, suppress=True)
+print(Gp)
+PY
+```
+
+**Expected**. With weights and a 48 kHz input: two enhanced wavs, and a log that includes timing or RTF. Do not expect the two wavs to match. NumPy always prints `[0. 0.061803 0.353553 1.]`. A gain of 0.2 is pulled down harder than a gain of 1, which is the over-attenuation the post-filter is for. The second, $$\beta$$-weighted, step is intentionally not in this script.
+
+**Failure modes**. No network to download weights: keep the NumPy result and write down the CLI error. A non-48 kHz file into the Rust `deep-filter` binary. Comparing laptop log RTF with a phone. Claiming the `--pf` wav matches `setSuppressionLevel` in the npm package.
 
 ## Exercises
 
-1. **Version table.** Build a 3-row table DF / DF2 / DF3 with columns: paper year venue (from actual citations), primary claim in one sentence, artifact you can download.
-2. **Package audit.** Read `deepfilternet3-noise-filter` README; list APIs visible to an app author vs internals you still must understand.
-3. **RIR thought experiment.** Give two user-visible failure modes caused by train RIRs that are too dry vs too reverberant.
-4. **Export dry-run.** Sketch ONNX I/O tensors for one streaming frame + RNN states (names can be placeholder).
+1. **Three rows.** For the ICASSP 2022 model, DeepFilterNet2, and the DeepFilterNet3 row, list venue, arXiv id, one mechanism change, and one number you are willing to defend.
+2. **Gate.** Local SNR is −12 dB, then +25 dB, then +5 dB. Which stages run?
+3. **RTF reading.** DF2’s table says GMAC 0.356 and RTF 0.04; the earlier row says GMAC 0.348 and RTF 0.11. Why can the slower-looking MAC row be faster?
+4. **Package.** Name two symbols an app author sees on `deepfilternet3-noise-filter`, and two facts about hops and state the package does not excuse you from knowing.
+
+### Answer hints
+
+1. ICASSP 2022, 2110.05588: two-stage ERB + deep filter; PESQ 2.81 / 1.778 M. IWAENC 2022, 2205.05474: fewer temporal kernels, multi-resolution loss, post-filter; RTF 0.04 and PESQ 3.08 on that i5 table. Interspeech 2023, 2305.08227, README ties this citation to DF3: SNR gate and a table row at PESQ 3.17. All PESQ figures are Voicebank+Demand, not your product set.
+2. −12 dB: both decoders off, silent frame. +25 dB: ERB stage only. +5 dB: both stages.
+3. MAC tables ignore memory traffic. DF2’s smaller temporal kernels touch fewer buffered activations per hop, which is why RTF moved from 0.11 to 0.04 while GMAC stayed near 0.35.
+4. `DeepFilterNet3Core`, `DeepFilterNoiseFilterProcessor`, and `setSuppressionLevel` (0–100) are the surface. You still own the 10 ms hop versus the 128-sample quantum, and the GRU/STFT state across callbacks. No bit-exact claim with the CLI.
 
 ## Further reading
 
-- DeepFilterNet2 paper (Schröter et al.).
-- DeepFilterNet3 / official model releases and repo tags.
-- Verified follow-on training-acoustics work for DF3 (assign the specific arXiv only if verified—e.g. accurate RIR training papers naming DeepFilterNet3).
-- mezon-noise-suppression / `deepfilternet3-noise-filter` README (product surface).
+- Schröter et al., DeepFilterNet2, IWAENC 2022, [arXiv:2205.05474](https://arxiv.org/abs/2205.05474).
+- Schröter et al., Interspeech 2023, [arXiv:2305.08227](https://arxiv.org/abs/2305.08227), the README’s DeepFilterNet3 citation.
+- [Rikorose/DeepFilterNet](https://github.com/Rikorose/DeepFilterNet) for checkpoints and `deepFilter`.
+- [mezonai/mezon-noise-suppression](https://github.com/mezonai/mezon-noise-suppression) for the AudioWorklet packaging only.

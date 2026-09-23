@@ -70,7 +70,11 @@ Nghiệm $$\mathbf{w}\propto\mathbf{R}_{yy}^{-1}\mathbf{a}$$ (đã chuẩn hóa)
 - **IVA → GTCRN**: tách mù rồi CRN nhỏ tinh chỉnh.
 - **Chỉ DF3 mono**: mặc định đúng khi $$M=1$$ (đa số tab trình duyệt).
 
-**Ghi chú Mezon:** đường npm / WASM thường **mono**. Đa mic là stretch—học front-end để thiết kế pipeline native tương lai mà không viết lại lõi neural.
+**Ghi chú Mezon:** đường npm / WASM thường **mono**. Đa mic là stretch—học front-end để thiết kế pipeline native tương lai mà không viết lại lõi neural. Beamformer sẽ là một tiền lọc không gian đứng trước processor mono đó: nhiều micro vào, một kênh ra, rồi mới tới gain theo bin của suppressor một kênh. Hình dưới là đường sản phẩm một kênh. Nó không chứa beamformer; cách đọc trung thực là beamformer phải ngồi ở đâu — phía trước `DeepFilterNoiseFilterProcessor`.
+
+![Đường publish LiveKit qua DeepFilterNoiseFilterProcessor một kênh, chặng mà beamformer sẽ phải nuôi]({{ site.imgurl }}/generated/livekit-trackprocessor.png)
+
+*Hình. Đây là đường publish mono; beamformer không được vẽ, và sẽ ngồi trước DeepFilterNoiseFilterProcessor để processor vẫn chỉ thấy một kênh.*
 
 ## Checklist quyết định
 
@@ -88,12 +92,36 @@ Nghiệm $$\mathbf{w}\propto\mathbf{R}_{yy}^{-1}\mathbf{a}$$ (đã chuẩn hóa)
 - STFT đa kênh lệch trễ kênh (USB clock).
 - Kỳ vọng beamforming xử lý **echo** không có far-end—vẫn cần AEC.
 
+## Mini-lab
+
+**Mục tiêu.** Trễ trường xa giữa hai micro cách 2 cm, ở broadside và ở 45°.
+
+```python
+import numpy as np
+
+d, c, fs = 0.02, 343.0, 48000  # mét, m/s, Hz
+for deg in (0, 45):
+    tau = d * np.sin(np.deg2rad(deg)) / c
+    print(deg, "deg", round(tau * 1e6, 1), "us", round(tau * fs, 2), "samples")
+```
+
+**Kỳ vọng.** Broadside: `0.0 µs`, `0.0` mẫu. Ở 45°: khoảng `41.2 µs`, khoảng `1.98` mẫu ở 48 kHz. Delay-and-sum ở 48 kHz là một dịch phân số mẫu, không phải bộ lọc “cả phòng” nhiều tap.
+
+**Khi hỏng.** Đưa độ vào `np.sin` mà không đổi sang radian sẽ ra trễ vô nghĩa (ca 45° sẽ không còn khoảng 2 mẫu). Quên \(\sin\theta\) và dùng \(d/c\) cho mọi góc thì broadside trông như endfire. In “số mẫu” ở 16 kHz thì 45° khoảng 0.66, nên giả định 48 kHz phải hiện trong script.
+
 ## Bài tập
 
 1. 2 mic $$d=2\,\mathrm{cm}$$, $$f=2\,\mathrm{kHz}$$, $$c=343$$: tính trễ liên mic broadside vs 45°.
 2. Vẽ GSC; đánh dấu chỗ gắn postfilter neural.
 3. Brief một trang: chế độ dual-mic native tái sử dụng DF3 ONNX mono + chỉ thêm delay-and-sum.
 4. Đọc một abstract hybrid (GSC+DF2 hoặc IVA+GTCRN); 3 gạch: giai đoạn cổ điển đóng góp gì vs neural.
+
+### Gợi ý đáp án
+
+1. Trễ broadside bằng 0. Ở 45°, \(\tau=d\sin\theta/c\) khoảng 41 µs, cỡ hai mẫu ở 48 kHz.
+2. Postfilter neural gắn vào ngõ ra GSC, sau phép trừ thích nghi, trên một kênh.
+3. Delay-and-sum phát một dạng sóng; ONNX mono hiện có không mọc thêm đầu vào thứ hai.
+4. Chặng cổ điển dùng micro thừa (null hoặc độc lập thống kê). Chặng neural vẫn là enhancer một kênh trên thứ chặng không gian đã cho qua.
 
 ## Đọc thêm
 

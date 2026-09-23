@@ -11,97 +11,131 @@ lesson_type: required
 draft: false
 ---
 
-**DeepFilterNet** popularized a practical recipe for **full-band, real-time** speech enhancement: process a coarse **ERB-scale** representation for efficient noise reduction, then apply **multi-frame deep filtering** in the STFT domain to restore fine periodic structure. This lesson focuses on the *idea*—ERB + deep filter, complex spectrogram path, causality—so DF2/DF3 (04-03) read as evolutionary upgrades rather than brand-new inventions.
+**DeepFilterNet** (Schröter et al., ICASSP 2022, arXiv:2110.05588) is a full-band speech enhancer that spends most of its capacity on a coarse auditory envelope and a short complex filter, not on a dense net over all 481 bins. This lesson derives that split, writes the filter sum, and runs it on a two-tap toy spectrum even if the pretrained weights never download.
+
+![DeepFilterNet two-stage diagram: ERB gains on the envelope, deep filter on low-frequency harmonics]({{ site.imgurl }}/generated/deepfilternet-erb.png)
+
+*Figure. Stage 1 predicts real gains on 32 ERB bands and applies them to the full STFT. Stage 2 predicts a 5-tap complex filter and applies it only on the low frequencies, where most periodic speech energy sits. High bins keep the ERB gain.*
 
 ## Learning objectives
 
-You will explain ERB-band processing versus full STFT resolution, describe deep filtering as learned multi-frame complex filters (not only a per-bin mask), state why the design targets 48 kHz real-time CPU SE, and point to the official open-source ecosystem for experiments.
+You will compute an ERB gain application and a multi-frame deep-filter sum on complex bins; explain why a 5-tap filter up to about 5 kHz is cheaper than a complex mask on every bin at 48 kHz; state the published STFT (20 ms window, 10 ms hop) and the 40 ms algorithmic delay that includes two frames of look-ahead; and run either the `deepFilter` CLI or the NumPy fallback below.
 
 ## 60-minute teaching plan
 
-- **0–10 min** — Motivation: full-band quality without full-band MACs on every bin equally.
-- **10–25 min** — ERB encoder path: compressed auditory-inspired features.
-- **25–40 min** — Deep filtering: multi-frame taps on complex spectra; compare to Wiener gain.
-- **40–50 min** — Causality, look-ahead, and open-source `DeepFilterNet` repo orientation.
-- **50–60 min** — Pitfalls, exercises, bridge to DF2/DF3.
+- **0–10 min** — Why 481 bins at 48 kHz should not all get the same MAC budget.
+- **10–25 min** — ERB stage: 32 real gains, pointwise multiply.
+- **25–40 min** — Deep-filter sum versus a one-tap Wiener or CRM gain.
+- **40–50 min** — Look-ahead, causality, and the official repository.
+- **50–60 min** — Mini-lab (CLI or NumPy), exercises.
 
 ## Core explanation
 
-### The two-stage intuition
+### Two stages, with the published sizes
 
-Human hearing resolves frequency on a roughly **ERB (equivalent rectangular bandwidth)** scale—finer at low frequencies, coarser at high. DeepFilterNet-style models exploit that:
+Hearing resolves frequency more finely at low frequency than at high frequency. DeepFilterNet uses that fact twice.
 
-1. **Coarse stage (ERB):** enhance speech in a low-dimensional ERB feature space—cheap, strong noise attenuation.
-2. **Fine stage (deep filter):** apply short **multi-frame complex filters** across STFT bins to recover harmonics and detail that coarse ERB processing smears.
+1. **Envelope stage.** A rectangular ERB bank compresses log-power to $$N_{\mathrm{ERB}}=32$$ bands. The net predicts 32 real gains, the inverse bank spreads them onto STFT bins, and they multiply the noisy spectrum. Features use an exponential mean normalization with a 1 s decay, so a microphone-gain jump does not look like a new noise.
+2. **Periodicity stage.** Five complex taps run only up to $$f_{\mathrm{DF}}=5$$ kHz (ICASSP and DeepFilterNet2). The 2023 demo (arXiv:2305.08227) says the lowest 96 bins: a 960-point FFT at 48 kHz has 50 Hz bins, and $$96\times 50\,\mathrm{Hz}=4.8$$ kHz. Above the cutoff the ERB gain is the output.
 
-Cartoon:
+Comparisons use 48 kHz, $$N_{\mathrm{FFT}}=960$$ (20 ms), 50% overlap (hop 480 samples = 10 ms). DeepFilterNet2 and the 2023 demo use a two-frame look-ahead and state **40 ms** algorithmic latency. The ICASSP latency formula is window delay plus $$\max(l_{\mathrm{DNN}}, l_{\mathrm{DF}})$$; the training setup uses $$l_{\mathrm{DNN}}=2$$ and $$l_{\mathrm{DF}}=1$$. Those future frames are delay, counted before anyone says “real time.”
 
-```text
-PCM → STFT → ERB features → neural ERB enhancer → (gains)
-                ↘ complex STFT  → multi-frame deep filter → ISTFT → PCM
-```
+On the VCTK/DEMAND table in the ICASSP paper the full model has 1.778 million parameters and 0.348 GMAC/s, WB-PESQ 2.81, SI-SDR 16.63 dB. Stripping stage 2 leaves 0.885 million parameters, 0.251 GMAC/s, PESQ 2.57, SI-SDR 13.81 dB. Stage 2 is about half the parameters and most of the harmonic restoration.
 
-Exact module names evolve across DeepFilterNet versions; keep the cartoon, then verify against the paper/code you pin for the course.
+### The filter is not a mask
 
-### Deep filtering ≠ single-frame mask
-
-A classical mask is $$ \hat{S}(k,\ell)=M(k,\ell)Y(k,\ell) $$. A **deep filter** predicts filter taps that mix a small temporal context of the noisy spectrum:
+A one-tap mask, including the Wiener gain under a Gaussian model, is
 
 $$
-\hat{S}(k,\ell) = \sum_{\tau=0}^{T-1} H(k,\ell,\tau)\, Y(k,\ell-\tau),
+\hat{S}(k,\ell)=M(k,\ell)\,Y(k,\ell).
 $$
 
-with complex $$H$$ (learned). That is a learned, per-bin **FIR in time** (and sometimes neighboring frequencies in related variants)—a generalization of “multiply by gain” that can reinforce harmonic structure. HDF-Net (04-04) later explores hierarchical temporal vs frequency deep filtering as a named successor idea.
+Deep filtering (Mack and Habets, and the CLC line of work the ICASSP paper builds on) predicts taps $$W_i$$ and sums a short history. For a 5-tap filter and an optional look-ahead $$\ell$$,
 
-**Link to Chapter 03:** Wiener gives the optimal *single-tap* gain under Gaussian assumptions. Deep filters learn multi-tap corrections when those assumptions fail.
+$$
+\hat{S}(t,f)=\sum_{i=0}^{4} W_i(t,f)\,X(t-i+\ell,f).
+$$
 
-### Complex spectrograms
+The ICASSP write-up indexes a filter of order $$N=5$$ as a sum $$\sum_{i=0}^{N}$$; the 2023 demo writes an $$N=5$$ tap vector $$W_0,\ldots,W_{N-1}$$. Teach the five-coefficient sum. Either reading is a per-bin FIR across time, not a per-bin multiply. The lab below uses two taps so the arithmetic fits on one line; the missing three taps are the same pattern.
 
-Working with real and imaginary parts (or magnitude/phase parameterized carefully) lets the network adjust phase locally via the filter—important for voiced speech. Magnitude-only pipelines with noisy phase remain common teaching baselines but lose this degree of freedom.
+Complex taps can rotate a bin using a past frame, which a magnitude mask cannot do. Many tap vectors realize one output, so the paper trains them with the compressed spectral loss from 04-01 ($$c=0.6$$), not with a closed-form ideal filter. The ICASSP model also learns a blend $$\alpha(k)$$ between deep-filter output and ERB output. The 2023 demo uses an SNR gate instead (04-03). Do not merge those two mechanisms into one block.
 
-### Why full-band real-time?
+### Why the MAC count falls
 
-Wideband / full-band (e.g. 48 kHz) speech sounds clearer on modern devices, but STFT bins explode with sample rate. ERB compression keeps the neural net small; deep filtering spends capacity where periodic structure lives. DeepFilterNet’s published pitch is precisely this trade: **competitive quality at real-time CPU budgets**, which is why Mezon-style products export DF-family graphs to ONNX/WASM instead of huge offline SE models.
+The envelope decoder emits 32 gains, not 481 ($$32/481\approx 0.067$$). The fine stage is 5 complex taps on 96 bins, not a CRM on every bin. The ICASSP net also splits linear and GRU layers into $$P=8$$ groups of hidden size $$512/8=64$$. Layer names move between versions; this budget does not.
 
-### Causality
+### Causality and the repository
 
-For VoIP, filters must be **causal** (or with a fixed, small look-ahead counted in the latency budget). When you read code or ONNX graphs, verify:
+Taps may only touch frames inside the declared look-ahead. GRU state, the 1 s normalizer, and the past spectra are streaming state (05-04). Zeroing them mid-call is a click or a short noise burst.
 
-- No future-frame peeking beyond configured look-ahead,
-- RNN/GRU states carried across frames (Ch. 05),
-- STFT hop consistent with product AudioWorklet quantum.
+Configs and weights: [Rikorose/DeepFilterNet](https://github.com/Rikorose/DeepFilterNet). The `deepfilternet` package’s `deepFilter` CLI defaults to DeepFilterNet3 weights. The Rust `deep-filter` binary expects 48 kHz wav. The npm package `deepfilternet3-noise-filter` ([mezonai/mezon-noise-suppression](https://github.com/mezonai/mezon-noise-suppression)) runs ONNX/WASM in an AudioWorklet (`DeepFilterNet3Core`, `DeepFilterNoiseFilterProcessor`) and is not bit-exact with the CLI.
 
-### Official ecosystem pointer
+## Checklist before you call it DeepFilterNet
 
-Use the **official DeepFilterNet repository** (Rust/Python training and inference lineage as published by the authors) as the source of truth for model configs, pretrained weights, and CLI demos. Course labs should pin a commit / release tag. Product wrappers (npm `deepfilternet3-noise-filter`) package a deployment path—they do not replace reading the core idea.
-
-## Checklist: explain DeepFilterNet to a teammate
-
-1. Full-band real-time SE, not offline research-only.
-2. ERB path for efficient suppression.
-3. Multi-frame deep filter for fine structure.
-4. Complex STFT processing.
-5. Causal streaming with bounded state.
-6. Open weights / code → ONNX export possible (Ch. 06).
+1. 48 kHz full-band STFT, not a 16 kHz offline net.
+2. 32 ERB gains for the envelope.
+3. A multi-tap complex filter on the low bins only.
+4. Look-ahead counted in the 40 ms class of delay, separately from RTF.
+5. Causal state carried across hops.
+6. Weights pinned by filename or commit, then exported (Chapter 06).
 
 ## Pitfalls
 
 - Calling every mask network “DeepFilterNet.”
-- Ignoring ERB and only discussing U-Net masks.
-- Measuring quality on 16 kHz data while claiming full-band product parity.
-- Forgetting OLA / window latency in the “real-time” claim.
-- Mixing DF1/DF2/DF3 configs casually (next lesson).
+- Applying the 5-tap filter to all 481 bins and then wondering where the GMAC budget went.
+- Scoring 16 kHz PESQ and claiming the 48 kHz table.
+- Forgetting the 20 ms window inside the “10 ms frame” story.
+- Swapping DF, DF2, and DF3 checkpoints in one config (next lesson).
+
+## Mini-lab
+
+**Goal.** Enhance one file with the official CLI. If weights cannot download, still compute one deep-filter sum in NumPy and compare it to a one-tap mask.
+
+```bash
+pip install deepfilternet
+deepFilter --output-dir out/ noisy.wav
+```
+
+Documented flags you may need: `--model-base-dir` (local weights), `--pf` (post-filter, lesson 04-03), `--output-dir`, `--compensate-delay`. Input for the Rust `deep-filter` binary is 48 kHz wav.
+
+Offline fallback, two taps of the sum above:
+
+```bash
+python3 - << 'PY'
+import numpy as np
+Y_now = np.complex64(1.0 + 0.5j)
+Y_prev = np.complex64(0.2 - 0.1j)
+H0 = np.complex64(0.8 + 0.0j)
+H1 = np.complex64(0.1 - 0.2j)
+deep = H0 * Y_now + H1 * Y_prev
+mask = np.complex64(0.8) * Y_now
+print(deep)
+print(mask)
+print(round(abs(deep), 6), round(abs(mask), 6))
+PY
+```
+
+**Expected**. CLI: an enhanced wav under `out/` and a log line that reports timing or RTF. NumPy, always: deep-filter result `(0.8+0.35j)`, one-tap mask `(0.8+0.4j)`, magnitudes about `0.873212` and `0.894427`. The imaginary part moved because $$H_1$$ used $$Y_{\mathrm{prev}}$$; a mask cannot do that.
+
+**Failure modes**. No network, so the CLI cannot fetch weights — run the NumPy path and record the error, do not invent an output wav. Input that is not 48 kHz into the Rust binary. Reading a laptop RTF off the log and calling it a phone RTF. Forgetting `--output-dir` and then hunting the wav in the wrong folder.
 
 ## Exercises
 
-1. **Formula contrast.** Write single-frame Wiener enhancement vs multi-frame deep filter equations side by side; circle what is learned vs estimated.
-2. **Complexity intuition.** If ERB uses $$B\ll K$$ bands for $$K$$ STFT bins, argue why MAC count drops roughly with $$B/K$$ for the coarse stage.
-3. **Repo lab.** Clone the official DeepFilterNet repo; run a pretrained enhance on a WAV; record version tag and command line in your notes.
-4. **Causal audit.** In config/code, find look-ahead / frame hop; compute algorithmic latency lower bound.
+1. **Side by side.** Write the Wiener one-tap gain and the 5-tap sum. Circle learned quantities versus quantities a noise tracker would estimate.
+2. **Bins.** At 48 kHz with a 960-point FFT, which bin index is the last one included by a 4.8 kHz cutoff? How many complex taps per frame is that, at 5 taps?
+3. **MAC sketch.** The envelope head emits 32 numbers instead of 481. Give the ratio. Why is that not the whole GMAC story?
+4. **Delay audit.** Hop 10 ms, look-ahead 2 frames, window 20 ms. What algorithmic latency do you quote, and which CLI flag shifts output alignment rather than that latency?
+
+### Answer hints
+
+1. Wiener: $$M=\xi/(\xi+1)$$, one real (or complex) multiply, $$\xi$$ from a noise tracker. Deep filter: five complex $$W_i$$ from the net, dotted with five frames of $$X$$. Learned: $$W_i$$ and the ERB gains. Estimated in a classical system: $$\xi$$ or the noise PSD.
+2. Bin width 50 Hz, so index 96 lands on 4.8 kHz and is the count the 2023 demo uses (“lowest 96 bins”). $$96\times 5=480$$ complex taps per frame, before the high bins, which only receive a real gain.
+3. $$32/481\approx 0.0665$$. The STFT, the inverse ERB spread, and the 5-tap multiply on 96 bins are extra. DF2’s lesson is that grouping and kernel shape move wall-clock RTF even when GMAC barely changes.
+4. 40 ms. `--compensate-delay` realigns the file for offline scoring; it does not remove the look-ahead from a live call.
 
 ## Further reading
 
-- DeepFilterNet original paper (Schröter et al.) — ERB + deep filtering.
-- Official DeepFilterNet code repository README and model cards.
-- Background: ERB scale in auditory filter literature (Moore / Glasberg)—optional intuition.
-- Next: DeepFilterNet2 and DeepFilterNet3 papers (04-03).
+- Schröter et al., ICASSP 2022, [arXiv:2110.05588](https://arxiv.org/abs/2110.05588). ERB gains, deep filtering, the 1.778 M / 0.348 GMAC table.
+- Mack and Habets, “Deep Filtering,” IEEE Signal Processing Letters, 2020, as cited by that paper: the complex multi-frame filter DeepFilterNet adopts.
+- [Rikorose/DeepFilterNet](https://github.com/Rikorose/DeepFilterNet) README for the `deepFilter` CLI and the model card.
+- Next lesson: what DeepFilterNet2 and the DeepFilterNet3-associated 2023 citation change, at the same high level.

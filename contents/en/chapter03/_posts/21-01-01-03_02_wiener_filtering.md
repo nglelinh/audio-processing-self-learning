@@ -11,7 +11,13 @@ lesson_type: required
 draft: false
 ---
 
-Where spectral subtraction decides “subtract then floor,” the **Wiener filter** decides a continuous gain per bin from an estimated signal-to-noise ratio. It is the analytical bridge between classical subtractors and modern mask-based neural enhancers: DeepFilterNet-style models can be read as learned, data-driven cousins of time–frequency Wiener gains, with far richer features and multi-frame filters. This lesson develops the MMSE intuition, a priori / a posteriori SNR, decision-directed tracking, and practical speech Wiener variants used in VoIP stacks.
+Where spectral subtraction decides “subtract then floor,” the **Wiener filter** decides a continuous gain per bin from an estimated signal-to-noise ratio. The right-hand curve in the figure is that gain; the left-hand bars are the subtractor it replaces.
+
+![Wiener gain versus a priori SNR, beside the spectral-subtraction bars it softens]({{ site.imgurl }}/generated/spectral-subtraction-wiener.png)
+
+*Figure. The Wiener gain is \(1/2\) (\(-6\,\mathrm{dB}\)) when speech and noise power are equal, and it never becomes the hard holes of the subtraction bars on the left.*
+
+It is the analytical bridge between classical subtractors and modern mask-based neural enhancers: DeepFilterNet-style models can be read as learned, data-driven cousins of time–frequency Wiener gains, with far richer features and multi-frame filters. This lesson develops the MMSE intuition, a priori / a posteriori SNR, decision-directed tracking, and practical speech Wiener variants used in VoIP stacks.
 
 ## Learning objectives
 
@@ -126,6 +132,24 @@ for each frame ell:
 - Applying Wiener after a nonlinear AGC without accounting for changed noise PSD.
 - Confusing **echo** (correlated with far-end reference) with **noise** (no reference)—Wiener NS is not AEC.
 
+## Mini-lab
+
+**Goal.** Evaluate Wiener gains at a priori SNRs of \(-10\), \(0\), and \(+10\,\mathrm{dB}\).
+
+```python
+import numpy as np
+
+for snr_db in (-10, 0, 10):
+    xi = 10 ** (snr_db / 10.0)
+    G = xi / (xi + 1.0)
+    print(snr_db, "xi", round(float(xi), 4), "G", round(float(G), 3),
+          "G_dB", round(float(20 * np.log10(G)), 2))
+```
+
+**Expected.** \(-10\,\mathrm{dB}\) → \(\xi=0.1\), \(G\approx 0.091\) (\(-20.83\,\mathrm{dB}\)). \(0\,\mathrm{dB}\) → \(\xi=1\), \(G=0.5\) (\(-6.02\,\mathrm{dB}\)). \(+10\,\mathrm{dB}\) → \(\xi=10\), \(G\approx 0.909\) (\(-0.83\,\mathrm{dB}\)). The middle row is the point marked on the figure.
+
+**Failure modes.** Passing decibels straight into \(\xi/(\xi+1)\) (forgetting \(10^{\mathrm{SNR}/10}\)) makes the \(-10\,\mathrm{dB}\) gain larger than the \(+10\,\mathrm{dB}\) gain, which is the curve upside down. Using \(20\log_{10}\) to convert SNR to \(\xi\), or reporting \(10\log_{10} G\) instead of \(20\log_{10} G\), shifts the decibel column by about a factor of two. \(\gamma/(\gamma+1)\) is a different plug-in; this lab does not estimate \(\gamma\).
+
 ## Exercises
 
 1. **Algebra.** Show that $$G^{\mathrm{W}}=\xi/(\xi+1)$$ equals $$1-1/(\xi+1)$$ and interpret $$1-G$$ as the noise-attenuation factor.
@@ -133,9 +157,17 @@ for each frame ell:
 3. **Implement.** Code decision-directed Wiener on a WAV file; plot $$G(k,\ell)$$ as a spectrogram-like image; compare musical noise against spectral subtraction from 03-01.
 4. **Concept link.** In two paragraphs, explain why a neural IRM estimator can beat a decision-directed Wiener on non-stationary noise *without* abandoning the $$\xi/(\xi+1)$$ intuition.
 
+### Answer hints
+
+1. Subtract the two forms; \(1-G=1/(\xi+1)\) is the fraction of \(Y\) you attribute to noise.
+2. \(G(-6\,\mathrm{dB})=1/2\) when \(\xi=1\). The three requested gains are about \(0.091\), \(0.5\), and \(0.909\).
+3. Plot \(G\), not \(|Y|\). A twitchy \(\eta\) looks speckled; spectral subtraction looks like holes.
+4. The network is still aiming at a ratio of powers. It wins by estimating that ratio from more context than one decision-directed recursion, not by inventing a different gain shape.
+
 ## Further reading
 
 - N. Wiener, *Extrapolation, Interpolation, and Smoothing of Stationary Time Series* (classical foundation).
 - Y. Ephraim & D. Malah, “Speech enhancement using a minimum mean-square error short-time spectral amplitude estimator,” *IEEE TASSP*, 1984 (decision-directed SNR).
+- P. Scalart and J. V. Filho, “Speech enhancement based on a priori signal to noise estimation,” *ICASSP*, 1996 — the a priori SNR form used in speech Wiener filters.
 - P. C. Loizou, *Speech Enhancement: Theory and Practice* — textbook derivations of Wiener / MMSE estimators.
 - SpeexDSP / WebRTC Audio Processing Module noise-suppression overview (engineering instantiations).

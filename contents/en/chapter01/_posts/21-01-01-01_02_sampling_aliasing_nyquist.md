@@ -13,6 +13,10 @@ draft: false
 
 Every WebRTC track and every DeepFilterNet forward pass assumes a sample rate. Wrong rates create silent aliasing bugs that look like “model quality regressions.” This lesson makes the sampling theorem operational for speech NS engineers.
 
+![A spectrum copied at every sample rate, with copies overlapping when the signal is too wide]({{ site.imgurl }}/generated/sampling-nyquist.png)
+
+*Figure. Sampling repeats the spectrum every \(f_s\) hertz; overlap of those copies is aliasing, and it is not undone by a neural suppressor.*
+
 ## Learning objectives
 
 1. State the sampling theorem and the Nyquist rate / Nyquist frequency.
@@ -49,6 +53,15 @@ $$
 
 If the support of \(X_c\) is wider than \(f_s/2\), replicas **overlap**. The overlap region is irreversibly confused — **aliasing**.
 
+The identity you will use in the lab is one line of the replica sum. On the sample grid \(t=n/f_s\),
+
+$$
+\cos\!\left(2\pi\frac{f}{f_s}n\right)
+=\cos\!\left(2\pi\frac{f-mf_s}{f_s}n\right)
+$$
+
+because \(2\pi m n\) is an integer number of turns. Fold the representative into \([0,f_s/2]\) by reflecting at Nyquist if needed. For a 7 kHz cosine sampled at 8 kHz, take \(m=1\): \(|7000-8000|=1000\,\mathrm{Hz}\). The 7 kHz cosine and the 1 kHz cosine are the same sequence. A sine picks up a minus sign, \(\sin(2\pi\cdot 7n/8)=-\sin(2\pi\cdot 1n/8)\), because sine is odd under that full-turn shift. “Matches” means identical samples, not “sounds close.”
+
 ### Nyquist criterion
 
 If \(x_c\) is bandlimited with highest frequency \(B\) Hz, choose
@@ -82,7 +95,7 @@ $$
 | 16 kHz | 8 kHz | Wideband speech ML |
 | 48 kHz | 24 kHz | WebRTC/full-band device clock |
 
-Speech intelligibility energy is not uniform: vowels live lower; consonants need highs. 8 kHz shreds many fricatives. 16 kHz is a common **model native** rate. 48 kHz often matches **device** graphs. Your job is to resample **deliberately** between them.
+Speech intelligibility energy is not uniform: vowels live lower; consonants need highs. 8 kHz shreds many fricatives. 16 kHz is a common **model native** rate. 48 kHz often matches **device** graphs, and it is the full-band default of npm `deepfilternet3-noise-filter` 1.3.0, where Nyquist is 24 kHz. Your job is to resample **deliberately** between them. Feeding 48 kHz PCM to a 16 kHz STFT does not “give the net more resolution.” It assigns the wrong Hertz label to every bin and, without a low-pass near 8 kHz, folds 8–24 kHz energy into the band the model was trained to interpret as speech.
 
 ### Anti-alias filters
 
@@ -128,6 +141,26 @@ If compute scales roughly with samples/s (FFT + hop rate), jumping 16→48 kHz w
 4. Using FFT-based resample incorrectly (block boundary clicks).
 5. Forgetting anti-alias when downsampling for SI-SDR eval at another rate.
 
+## Mini-lab
+
+**Goal.** Sample a 7 kHz cosine at 8 kHz and show it is the same sequence as a 1 kHz cosine.
+
+```python
+import numpy as np
+
+fs = 8000
+n = np.arange(32)
+high = np.cos(2 * np.pi * 7000 * n / fs)
+low = np.cos(2 * np.pi * 1000 * n / fs)
+err = np.max(np.abs(high - low))
+print(f"{err:.3e}")
+print(np.round(high[:8], 6).tolist())
+```
+
+**Expected.** An error below `1e-12` (typically about `1.354e-14`). The first eight samples round to `[1.0, 0.707107, -0.0, -0.707107, -1.0, -0.707107, -0.0, 0.707107]`.
+
+**Failure modes.** Comparing sines and expecting a zero error without the sign flip. Declaring “no alias” because both arrays are float64. Low-pass filtering *after* the 8 kHz sampler and hoping the 7 kHz tone returns.
+
 ## Mini exercises
 
 1. Nyquist frequency at 48 kHz and 16 kHz?
@@ -136,8 +169,16 @@ If compute scales roughly with samples/s (FFT + hop rate), jumping 16→48 kHz w
 4. Write a 4-step checklist to convert a 48 kHz mono Float32 track to a 16 kHz model input safely.
 5. Why does \(\omega=\pi\) mean different Hz at different \(f_s\)?
 
+### Answer hints
+
+1. Nyquist frequency is \(f_s/2\): 24 kHz at 48 kHz, 8 kHz at 16 kHz.
+2. \(10\,\mathrm{kHz}\) at \(16\,\mathrm{kHz}\) folds once: \(16-10=6\,\mathrm{kHz}\).
+3. \(10\,\mathrm{ms}\) is 80, 160, and 480 samples.
+4. Confirm 48 kHz mono float; low-pass near 8 kHz; decimate by 3; check a 1 kHz sine is still 1 kHz and that energy above 8 kHz is gone.
+5. \(\omega=\pi\) is half a cycle per sample, which is \(f_s/2\) hertz. The digital frequency is normalized; the physical frequency is not.
+
 ## Further reading
 
 - Oppenheim & Schafer — sampling theorem and multirate chapters.
-- Standard DSP notes on decimation/interpolation.
+- Julius O. Smith, *Mathematics of the DFT*, https://www.dsprelated.com/freebooks/mdft/ — sampling and the frequency axis used by an FFT.
 - Web Audio API AudioContext `sampleRate` behavior; WebRTC getUserMedia constraints docs.

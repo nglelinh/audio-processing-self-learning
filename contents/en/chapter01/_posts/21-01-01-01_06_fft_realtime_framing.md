@@ -13,6 +13,10 @@ draft: false
 
 An FFT textbook ends at complexity; a product starts at the callback. This lesson places FFTs inside streaming STFT frames: hops per second, algorithmic latency, buffer reuse, and a DeepFilterNet-oriented case study pointer.
 
+![Overlapping analysis frames, each one a windowed FFT, added back on the synthesis side]({{ site.imgurl }}/generated/stft-ola.png)
+
+*Figure. Real-time FFT work is this picture on a clock: one new hop in, one windowed transform, overlap-add out. The basis is still the DFT basis; the schedule is the hop.*
+
 ## Learning objectives
 
 1. Budget FFT cost inside a frame callback / AudioWorklet quantum.
@@ -61,6 +65,16 @@ $$
 (per channel). Stereo without downmix doubles that.
 
 **Algorithmic buffering** is at least related to \(L\) and look-ahead frames; details in Ch. 02. Rule of thumb: larger \(L\) → better frequency detail, more delay.
+
+**One configuration, fully counted.** Take \(f_s=48\,\mathrm{kHz}\) (the full-band default of `deepfilternet3-noise-filter` 1.3.0), \(L=960\), \(R=480\). These are lesson numbers for the arithmetic, not a claim that Mezon’s unpublished graph uses this exact pair.
+
+$$
+T_{\mathrm{hop}}=\frac{480}{48000}=10\,\mathrm{ms},\qquad
+\frac{f_s}{R}=100\ \mathrm{hops/s},\qquad
+T_{\mathrm{win}}=\frac{960}{48000}=20\,\mathrm{ms}.
+$$
+
+Overlap is \((L-R)/L=1/2\). A causal implementation cannot run the first analysis FFT until 960 samples have arrived, so the buffering delay before that first transform is 20 ms. We will call that the algorithmic delay of *filling the analysis window*. Releasing samples earlier, or holding an extra look-ahead hop, changes the constant; it does not change the hop rate. Two transforms per hop (forward and inverse) give \(2\times 100=200\) FFTs per second per channel. The hop budget is 10 ms of wall clock. At 48 kHz a 128-sample AudioWorklet quantum is \(128/480=0.267\) of a hop, so you need \(480/128=3.75\) quanta to fill \(R\), and \(960/128=7.5\) quanta to fill \(L\). `DeepFilterNet3Core` still has to be fed on whatever hop the model card states; this count is how you check that card against the callback.
 
 ### AudioWorklet quanta vs STFT hops
 
@@ -113,6 +127,24 @@ Classical spectral subtraction on MCU: FFT~all. DFN-class on laptop: net~all. Mo
 4. Running stereo FFTs when model is mono.
 5. Forgetting that iFFT + OLA is part of the budget, not “free after the net.”
 
+## Mini-lab
+
+**Goal.** Count hops per second and the analysis-window delay for \(L=960\), \(R=480\) at 48 kHz.
+
+```python
+fs, L, R = 48_000, 960, 480
+hop_ms = 1_000 * R / fs
+win_ms = 1_000 * L / fs
+hops_per_s = fs / R
+ffts_per_s = 2 * hops_per_s
+print(f"hops_per_s={hops_per_s:.0f} hop_ms={hop_ms:.1f} win_ms={win_ms:.1f}")
+print(f"ffts_per_s={ffts_per_s:.0f} algo_delay_ms={win_ms:.1f}")
+```
+
+**Expected.** `hops_per_s=100 hop_ms=10.0 win_ms=20.0`, then `ffts_per_s=200 algo_delay_ms=20.0`. The delay printed here is the time to collect one analysis window, not a full-product mouth-to-ear figure.
+
+**Failure modes.** Setting algorithmic delay to the hop (10 ms) and forgetting the window must fill first. Counting one FFT per hop when the inverse is also on the clock. Copying \(L\) and \(R\) onto a model card that documents a different pair.
+
 ## Mini exercises
 
 1. \(f_s=16\,\mathrm{kHz}\), \(R=256\): hop ms and hops/s?
@@ -121,8 +153,16 @@ Classical spectral subtraction on MCU: FFT~all. DFN-class on laptop: net~all. Mo
 4. List state that must persist across hops for STFT-NS.
 5. Sketch a profiler plan separating STFT vs neural vs ISTFT time.
 
+### Answer hints
+
+1. \(256/16000=16\,\mathrm{ms}\), so hops/s \(=1000/16=62.5\).
+2. RTF 0.4 on a 16 ms hop allows \(6.4\,\mathrm{ms}\) of processing.
+3. A 10 ms hop at 48 kHz is 480 samples, and \(480/128=3.75\) quanta. You accumulate four quanta and still have a remainder unless the ring buffer stores the extra 0.25.
+4. OLA tail, analysis window, hop counter, and any recurrent state inside the suppressor.
+5. Three timers around analysis FFT, the neural forward, and iFFT plus overlap-add, reported as p95 over at least a few thousand hops.
+
 ## Further reading
 
-- DeepFilterNet / DeepFilterNet2 / DeepFilterNet3 papers — STFT / real-time configuration sections.
+- DeepFilterNet (arXiv:2110.05588), DeepFilterNet2 (arXiv:2205.05474), DeepFilterNet3 (arXiv:2305.08227) — STFT and real-time configuration sections. Reference code: https://github.com/Rikorose/DeepFilterNet.
 - MDN AudioWorkletProcessor documentation.
 - WebRTC APM overview (processing in framed blocks).
