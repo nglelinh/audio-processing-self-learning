@@ -1,9 +1,9 @@
 # Setup
-title:               "Your Course Title"
-description:         'Your Course Description'
-url:                 https://your-username.github.io
-baseurl:             '/your-repo-name'
-imgurl:              https://your-username.github.io/your-repo-name/img
+title:               "Real-Time Audio Noise Suppression: From DSP to DeepFilterNet"
+description:         "Bilingual self-learning course for Vietnamese software engineers: DSP foundations through DeepFilterNet and real-time product integration (Mezon NS)."
+url:                 https://nglelinh.github.io
+baseurl:             '/audio-processing-self-learning'
+imgurl:              https://nglelinh.github.io/audio-processing-self-learning/img
 paginate:            5
 permalink:           pretty
 
@@ -16,8 +16,8 @@ parallel_localization: true
 # Language-specific configurations
 t:
   en:
-    title: "Your Course Title"
-    description: "Your Course Description"
+    title: "Real-Time Audio Noise Suppression: From DSP to DeepFilterNet"
+    description: "From sampling and STFT to DeepFilterNet, on-device inference, and WebRTC/LiveKit integration — aligned with Mezon noise suppression."
     home: "Home"
     chapters: "Chapters"
     language: "Language"
@@ -25,8 +25,8 @@ t:
     required: "Required"
     optional: "Optional"
   vi:
-    title: "Tiêu đề Khóa học của bạn"
-    description: "Mô tả khóa học của bạn"
+    title: "Khử nhiễu âm thanh thời gian thực: Từ DSP đến DeepFilterNet"
+    description: "Từ lấy mẫu và STFT đến DeepFilterNet, suy luận trên thiết bị và tích hợp WebRTC/LiveKit — gắn với Mezon noise suppression."
     home: "Trang chủ"
     chapters: "Các chương"
     language: "Ngôn ngữ"
@@ -35,8 +35,8 @@ t:
     optional: "Tùy chọn"
 # About/contact
 author:
-  name:              Your Name
-  email:             your.email@example.com
+  name:              Nguyen Le Linh
+  email:             nglelinh@gmail.com
 
 # Gems
 plugins:
@@ -52,7 +52,7 @@ collections:
     permalink: /:categories/:title/
 
 # Custom vars
-version:             0.0.1
+version:             0.1.0
 markdown: kramdown
 
 # Analytics

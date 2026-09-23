@@ -3,51 +3,39 @@ layout: post
 title: introduction
 order: 3
 chapter: home
-owner: Your Name
+owner: Nguyen Le Linh
 ---
 
-# Welcome to [Your Course Name]
+# Welcome — Real-Time Audio Noise Suppression
 
-This course provides comprehensive coverage of [your subject area]. Whether you're a beginner or looking to deepen your knowledge, this course will guide you through the essential concepts and practical applications.
+This bilingual course takes you from first-principles DSP to shipping neural noise suppression in real-time call stacks. The intended audience is Vietnamese software engineers who already write code and want a rigorous, product-aware path into speech enhancement.
 
-## What You'll Learn
+## What you will learn
 
-Throughout this course, you will:
+- Frame-based audio processing, STFT/ISTFT, and latency budgets.
+- Classical NS ideas still used as front-ends or fallbacks.
+- DeepFilterNet-style deep filtering and how it differs from magnitude masks.
+- Real-time and on-device constraints (RTF, AudioWorklet, ORT/WASM).
+- Integration patterns with WebRTC and LiveKit.
+- Honest evaluation (SI-SDR, DNSMOS, listening).
 
-- Gain a solid understanding of fundamental concepts in [your subject]
-- Learn practical techniques and methodologies
-- Apply theoretical knowledge to real-world problems
-- Develop critical thinking and problem-solving skills
+## Capstone context
 
-## Course Structure
-
-The course is organized into chapters, each focusing on a specific topic. You can navigate through the content using the sidebar menu. Each chapter includes:
-
-- **Theoretical explanations** with clear examples
-- **Mathematical formulations** (where applicable)
-- **Practical exercises** to reinforce learning
-- **Real-world applications** and case studies
+Work is aligned with **Mezon** noise suppression: GitHub `mezonai/mezon-noise-suppression`, npm `deepfilternet3-noise-filter`. You will learn the techniques behind the product — not only how to call the package.
 
 ## Prerequisites
 
-To get the most out of this course, you should have:
+- Comfortable with TypeScript/JavaScript or similar; willingness to read short Python/Rust snippets.
+- No prior DSP course required.
+- Headphones recommended for listening comparisons.
 
-- Basic knowledge of [prerequisite 1]
-- Familiarity with [prerequisite 2]
-- [Any other prerequisites]
+## How to navigate
 
-## How to Use This Course
+1. Start at Chapter 00 for framing and the Mezon map.
+2. Follow 01 → 03 for foundations and models.
+3. Use 04 → 06 when you care about shipping.
+4. Chapter 07 before claiming quality wins; Chapter 08 for the capstone; Chapter 09 for reading paths.
 
-1. Start with Chapter 0 for an overview
-2. Progress through chapters sequentially or jump to topics of interest
-3. Complete exercises to test your understanding
-4. Refer to the reference materials for deeper exploration
+## Feedback
 
-## Support and Feedback
-
-If you have questions or feedback, please:
-- Open an issue on our [GitHub repository](https://github.com/your-username/your-repo-name)
-- Contact the instructor (see Authors page)
-- Join our community discussions
-
-Let's begin your learning journey!
+Open issues on [GitHub](https://github.com/nglelinh/audio-noise-suppression-self-learning) or contact Nguyen Le Linh (`nglelinh@gmail.com`).

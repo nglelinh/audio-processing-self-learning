@@ -3,64 +3,59 @@ layout: post
 title: contents
 chapter: home
 order: 1
-owner: Your Name
+owner: Nguyen Le Linh
 ---
 
-A comprehensive introduction to [your course subject], covering fundamental concepts, practical applications, and advanced topics.
+Real-time audio noise suppression for Vietnamese software engineers: **deep Fourier & audio DSP**, through DeepFilterNet and Mezon product integration.
 
-# Course Objectives
+# Course objectives
 
-- Provide students with a solid foundation in [subject area] to support their learning and professional development.
+- Build strong Fourier / DFT / FFT intuition and a full framed-audio pipeline (STFT/ISTFT, windows, OLA).
+- Connect classical NS / AEC / beamforming front-ends to modern neural SE.
+- Understand the DeepFilterNet family and when ultra-light streaming models fit.
+- Ship constraints: RTF, AudioWorklet, on-device ORT/tract/WASM, WebRTC / LiveKit.
+- Evaluate with SI-SDR, DNSMOS, listening tests, DNS Challenge-style suites.
+- Capstone: techniques behind `mezonai/mezon-noise-suppression` (`deepfilternet3-noise-filter`).
 
-- Enable students to understand key concepts and apply them to solve real-world problems.
+## Course outline
 
-- Develop analytical and critical thinking skills through hands-on exercises and projects.
+### Chapter 00 — Introduction & problem framing
+Noise types, realtime vs offline, course map, Mezon context.
 
-- Prepare students for advanced study or professional work in [related field].
+### Chapter 01 — Fourier & discrete transforms (deep)
+Continuous FT intuition → sampling, aliasing, Nyquist → DTFT / DFS / DFT → DFT as basis → FFT (radix-2, complexity) → FFT in realtime frames → engineer pitfalls checklist.
 
-## Course Outline
+### Chapter 02 — Audio processing pipeline
+PCM & rates → frames / hop / OLA → windowing & leakage → STFT/ISTFT for speech (DeepFilterNet tie-in) → time vs frequency filtering → reading spectrograms → pipeline latency–quality tradeoffs.
 
-The course is divided into the following chapters:
+### Chapter 03 — Classical NS / AEC / beamforming
+Spectral subtraction, Wiener, Kalman intuition, WebRTC APM, GSC/IVA as front-ends.
 
-### Chapter 0: Introduction
-- Overview of the course
-- Fundamental concepts
-- Course structure and expectations
+### Chapter 04 — Neural SE & DeepFilterNet family
+Complex spectrograms, deep filtering; survey pointers to successors and ultra-light streaming models; RNNoise bridge.
 
-### Chapter 1: [Topic 1]
-- Subtopic 1.1
-- Subtopic 1.2
-- Practical applications
+### Chapter 05 — Real-time constraints
+RTF, AudioWorklet / callbacks, ring buffers, underruns, streaming state.
 
-### Chapter 2: [Topic 2]
-- Subtopic 2.1
-- Subtopic 2.2
-- Case studies
+### Chapter 06 — On-device inference
+ONNX / tract / ORT, quantization, SIMD/WASM, packaging.
 
-### Chapter 3: [Topic 3]
-- Advanced concepts
-- Integration with previous topics
-- Real-world examples
+### Chapter 07 — Product integration
+WebRTC / LiveKit TrackProcessor, CDN model loading, Mezon npm surface.
 
-*Add more chapters as needed for your course*
+### Chapter 08 — Evaluation
+SI-SDR, DNSMOS, listening tests, DNS Challenge-style metrics.
 
-## Main Textbooks
+### Chapter 09 — Capstone
+Mezon NS architecture, techniques beyond the wrapper, optional Rust `df-core`, project brief.
 
-- [Author Name], [Book Title], [Publisher], [Year].
+### Chapter 10 — References & further paths
+Curated reading list and maintenance notes.
 
-- [Author Name], [Book Title], [Publisher], [Year].
+## Primary references (starter)
 
-## References
-
-- [Author Name], [Book Title], [Publisher], [Year].
-
-- [Author Name], [Book Title], [Publisher], [Year].
-
-- [Author Name], [Book Title], [Publisher], [Year].
-
-## Additional Resources
-
-- Online tutorials and documentation
-- Video lectures (if available)
-- Practice problems and solutions
-- Community forums and discussion groups
+- DeepFilterNet / DeepFilterNet2 / DeepFilterNet3 papers and official code.
+- DNS Challenge (datasets, DNSMOS, baselines).
+- WebRTC APM, SpeexDSP, RNNoise.
+- SI-SDR literature; ONNX Runtime / tract docs.
+- Standard DSP references for FT / DFT / FFT / STFT.

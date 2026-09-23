@@ -3,7 +3,7 @@ layout: post
 title: how to contribute
 chapter: home
 order: 2
-owner: Your Name
+owner: Nguyen Le Linh
 hidden: true
 ---
 
