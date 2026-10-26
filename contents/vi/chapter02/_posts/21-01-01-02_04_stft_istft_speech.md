@@ -162,3 +162,9 @@ print("max abs error", err)
 - Paper DeepFilterNet, DeepFilterNet2, DeepFilterNet3 — STFT, ERB, deep filtering. Bắt đầu ở [arXiv:2110.05588](https://arxiv.org/abs/2110.05588) và mã [github.com/Rikorose/DeepFilterNet](https://github.com/Rikorose/DeepFilterNet).
 - Julius O. Smith, *Spectral Audio Signal Processing* — định nghĩa STFT/ISTFT khớp cửa sổ.
 - Oppenheim & Schafer — nối filter bank với STFT.
+
+## Video tham khảo
+
+- [Short-Time Fourier Transform Explained Easily](https://www.youtube.com/watch?v=-Yxj3yfvY-4) — Valerio Velardo - The Sound of AI, tiếng Anh. **xem trước.** Xem frame phân tích và ý rằng biến đổi ngược phải hoàn tác chúng. Cặp đó là hợp đồng STFT/ISTFT cho tiếng nói.
+- [The Spectrogram and the Gabor Transform](https://www.youtube.com/watch?v=EfWnEldTyPA) — Steve Brunton, tiếng Anh. Cửa sổ trượt trên biến đổi Fourier là spectrogram. Dùng như bức tranh thời gian của tiếng nói mà front-end DeepFilterNet giả định.
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, tiếng Anh. Xem STFT vào dải ERB và ISTFT ra. Phần gắn DeepFilterNet của bài là khối này, chưa phải hàm loss.

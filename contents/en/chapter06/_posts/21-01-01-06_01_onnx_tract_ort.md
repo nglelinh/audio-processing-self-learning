@@ -130,3 +130,8 @@ for shape in [(1, 3, 224, 224), (1, 1, 96), (96,)]:
 - [tract](https://github.com/sonos/tract), the Rust inference library named in the package’s 1.3.0 notes.
 - npm [`deepfilternet3-noise-filter`](https://www.npmjs.com/package/deepfilternet3-noise-filter) and the [repository](https://github.com/mezonai/mezon-noise-suppression). Optional instructor checkout, not a course edit target: `/Users/nguyenlelinh/ncc/mezon-noise-suppression`.
 - DeepFilterNet export discussions. Verify any community ONNX file before you depend on it.
+
+## Video tham khảo
+
+- [Faster and Lighter Model Inference with ONNX Runtime from Cloud to Client](https://www.youtube.com/watch?v=WDww8ce12Mc) — Microsoft Developer, English. **xem trước.** Watch ONNX as the interchange file and ONNX Runtime as the engine that runs it on CPU, GPU, and the edge. Tract is the Rust engine in the lesson; this talk is the format and the dominant runtime.
+- [Introduction to ONNX Runtime](https://www.youtube.com/watch?v=Wp5PaRpudlk) — NVIDIA Developer, English. A second official introduction to the same runtime, useful for the execution-provider picture the lesson needs before any WASM build.

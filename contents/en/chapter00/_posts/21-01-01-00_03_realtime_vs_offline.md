@@ -154,3 +154,9 @@ print(f"quantum_ms={quantum_ms:.2f} quanta_per_hop={hop/128:.2f}")
 - DeepFilterNet2 (arXiv:2205.05474) and DeepFilterNet3 (arXiv:2305.08227) — real-time and causal sections. Code: https://github.com/Rikorose/DeepFilterNet.
 - WebRTC APM processing graph overview (where NS sits among AEC/AGC).
 - MDN AudioWorklet documentation (callback timing constraints).
+
+## Video tham khảo
+
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, English. **xem trước.** Watch the latency and real-time-factor claims next to the two-stage diagram; that is the ship-or-not test this lesson defines.
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, English. The complexity-versus-quality section shows why an offline score is not a streaming budget.
+- [Sonic Boom! Audio Programming on Android and Chrome (Google I/O'19)](https://www.youtube.com/watch?v=EeQr0zfvF04) — Google for Developers, English. The callback-latency measurements are the device half of the lesson: algorithmic look-ahead and the audio thread are different clocks.

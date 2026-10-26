@@ -108,3 +108,9 @@ print(f"ffts_per_s={ffts_per_s:.0f} algo_delay_ms={win_ms:.1f}")
 - DeepFilterNet (arXiv:2110.05588), DeepFilterNet2 (arXiv:2205.05474), DeepFilterNet3 (arXiv:2305.08227) — mục cấu hình STFT và real-time. Mã tham chiếu: https://github.com/Rikorose/DeepFilterNet.
 - MDN AudioWorkletProcessor.
 - Tổng quan WebRTC APM (xử lý theo khối khung).
+
+## Video tham khảo
+
+- [Short-Time Fourier Transform Explained Easily](https://www.youtube.com/watch?v=-Yxj3yfvY-4) — Valerio Velardo - The Sound of AI, tiếng Anh. **xem trước.** Xem bước từ một DFT của cả file sang một DFT mỗi frame. Hop đó là chỗ callback thời gian thực gọi FFT.
+- [Short-time Fourier Transform and the Spectogram](https://www.youtube.com/watch?v=NA0TwPsECUQ) — Barry Van Veen, tiếng Anh. Bài giảng xử lý tín hiệu về biến đổi ngắn hạn và spectrogram nó tạo ra; đó là FFT theo frame mà bài đặt lên đồng hồ.
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, tiếng Anh. Xem khối STFT ở đầu bộ khử nhân quả: FFT ở đây là ngân sách hop, không phải một dòng độ phức tạp trong giáo trình.

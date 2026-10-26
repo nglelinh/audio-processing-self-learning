@@ -111,3 +111,9 @@ Kiểu hỏng: “NS works” trên vòng chép; commit `DeepFilterNet3_onnx.tar
 3. Runtime ONNX ăn tar/ONNX CDN đã có. libDF là engine upstream. Cả hai cần file vàng.
 4. Không đi vẫn là capstone đủ nếu 09-01 và 09-04 là thật. Nói vậy.
 5. SI-SDR(wasm, rust) sau khi bù delay. Lab 13.80 là phương pháp, không phải điểm sản phẩm kỳ vọng.
+
+## Video tham khảo
+
+- [Zoom on Web: getting connected with advanced web technology](https://www.youtube.com/watch?v=nhTxJBgTywc) — Chrome for Developers, tiếng Anh. **xem trước.** Xem ghi chú Rust simd128 và cờ Emscripten. Nhánh df-core native vẫn phải đạt mốc WASM này hoặc giải thích vì sao thay nó.
+- [Faster and Lighter Model Inference with ONNX Runtime from Cloud to Client](https://www.youtube.com/watch?v=WDww8ce12Mc) — Microsoft Developer, tiếng Anh. ONNX Runtime là máy mà hộp WASM của bài đang dùng. Máy Rust phải nạp cùng loại đồ thị.
+- [Sonic Boom! Audio Programming on Android and Chrome (Google I/O'19)](https://www.youtube.com/watch?v=EeQr0zfvF04) — Google for Developers, tiếng Anh. Callback không quan tâm code đã chuyển sang Rust. Xem hạn mà lõi native vẫn phải kịp.

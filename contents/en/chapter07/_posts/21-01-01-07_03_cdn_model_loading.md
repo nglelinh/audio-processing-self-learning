@@ -167,3 +167,9 @@ https://example.com/df3/v2/models/DeepFilterNet3_onnx.tar.gz
 - MDN [HTTP caching](https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching) and [CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS).
 - Upstream [DeepFilterNet3_onnx.tar.gz](https://github.com/Rikorose/DeepFilterNet/blob/main/models/DeepFilterNet3_onnx.tar.gz).
 - Chapter 06 for quantization, SIMD, and packaging of the same pair.
+
+## Video tham khảo
+
+- [What is a CDN (Content Delivery Network) and How does a CDN Work?](https://www.youtube.com/watch?v=rIAIzf6utOc) — Cloudflare, English. **xem trước.** Watch caching at the edge versus going back to the origin. A WASM file and a model archive are the assets this lesson refuses to ship only inside the npm tarball.
+- [Faster and Lighter Model Inference with ONNX Runtime from Cloud to Client](https://www.youtube.com/watch?v=WDww8ce12Mc) — Microsoft Developer, English. The client-inference section is why those files exist: the runtime needs a graph and a engine, and both have to be loaded before the first hop.
+- [Quantization explained with PyTorch - Post-Training Quantization, Quantization-Aware Training](https://www.youtube.com/watch?v=0VdNflU08yA) — Umar Jamil, English. Smaller weights change the first-load story. Watch the accuracy trade before treating quantization as a free CDN win.

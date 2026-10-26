@@ -160,3 +160,9 @@ print("\n".join(f"{i}. {step}" for i, step in enumerate(order, 1)))
 - LiveKit: [TrackProcessor / setProcessor on LocalAudioTrack](https://docs.livekit.io/transport/media/publish/), and the docs home [https://docs.livekit.io/](https://docs.livekit.io/).
 - [mezonai/mezon-noise-suppression](https://github.com/mezonai/mezon-noise-suppression) and the [npm package](https://www.npmjs.com/package/deepfilternet3-noise-filter).
 - Chapter 05 for the worklet quantum and Chapter 06 for SIMD compile failures during `init`.
+
+## Video tham khảo
+
+- [Group calling architectures in WebRTC: MCU, SFU & P2P](https://www.youtube.com/watch?v=d2N0d6CKrbk) — Tsahi Levent-Levi, English. **xem trước.** LiveKit is an SFU: it forwards tracks without mixing them. This talk is that architecture. It is not a TrackProcessor tutorial; no accurate LiveKit-specific public tutorial survived verification.
+- [Revamping Audio Quality for RTC Part 1: Beryl Echo Cancellation | Sriram Srinivasan and Hoang Do](https://www.youtube.com/watch?v=lapq9zvUd-k) — @Scale, English. Local enhancement before encode is the moment a TrackProcessor has to finish. Watch that slot in a production chain.
+- [AudioWorklet :: What, Why, and How - Hongchan Choi](https://www.youtube.com/watch?v=g1L4O1smMC0) — WebAudio PDX, English. The processor callback is the thread a LiveKit audio processor still has to obey.

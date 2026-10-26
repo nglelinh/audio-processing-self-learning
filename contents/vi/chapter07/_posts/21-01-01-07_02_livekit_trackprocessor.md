@@ -162,3 +162,9 @@ print("\n".join(f"{i}. {step}" for i, step in enumerate(order, 1)))
 - LiveKit: [TrackProcessor / setProcessor on LocalAudioTrack](https://docs.livekit.io/transport/media/publish/), và trang chủ [https://docs.livekit.io/](https://docs.livekit.io/).
 - [mezonai/mezon-noise-suppression](https://github.com/mezonai/mezon-noise-suppression) và [gói npm](https://www.npmjs.com/package/deepfilternet3-noise-filter).
 - Chương 05 về quantum của worklet và Chương 06 về lỗi biên dịch SIMD trong `init`.
+
+## Video tham khảo
+
+- [Group calling architectures in WebRTC: MCU, SFU & P2P](https://www.youtube.com/watch?v=d2N0d6CKrbk) — Tsahi Levent-Levi, tiếng Anh. **xem trước.** LiveKit là một SFU: nó chuyển track mà không trộn. Bài nói này là kiến trúc đó. Nó không phải tutorial TrackProcessor; không có tutorial LiveKit công khai đủ đúng nào qua được bước kiểm chứng.
+- [Revamping Audio Quality for RTC Part 1: Beryl Echo Cancellation | Sriram Srinivasan and Hoang Do](https://www.youtube.com/watch?v=lapq9zvUd-k) — @Scale, tiếng Anh. Tăng cường cục bộ trước encode là lúc TrackProcessor phải xong. Xem khe đó trong chuỗi sản phẩm.
+- [AudioWorklet :: What, Why, and How - Hongchan Choi](https://www.youtube.com/watch?v=g1L4O1smMC0) — WebAudio PDX, tiếng Anh. Callback processor là luồng mà bộ xử lý audio LiveKit vẫn phải tuân theo.

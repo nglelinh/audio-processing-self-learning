@@ -100,3 +100,7 @@ A minimal protocol body that satisfies the checker will state the task in both l
 3. Do not ship on the keyboard row alone. The café loss and the quiet ties mean you either keep the old default or retest a middle level. Say which.
 4. Flip A/B on the duplicate. A rater who flips their own preference fails the check.
 5. CDN fallback with unchanged samples can be dogfood. A new default for `setSuppressionLevel` cannot.
+
+## Video tham khảo
+
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, English. **xem trước.** Watch the crowdsourced P.808 section: references, anchors, and screening. That is the listening discipline in the lesson, even when your grid is smaller than a full ITU lab.

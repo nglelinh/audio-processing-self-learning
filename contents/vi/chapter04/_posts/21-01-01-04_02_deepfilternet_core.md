@@ -139,3 +139,9 @@ PY
 - Mack và Habets, “Deep Filtering,” IEEE Signal Processing Letters, 2020, như paper đó trích: filter phức đa khung mà DeepFilterNet nhận.
 - README [Rikorose/DeepFilterNet](https://github.com/Rikorose/DeepFilterNet) cho CLI `deepFilter` và model card.
 - Bài sau: DeepFilterNet2 và citation 2023 gắn với DeepFilterNet3 đổi gì, ở cùng mức cao.
+
+## Video tham khảo
+
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, tiếng Anh. **xem trước.** Xem tầng bao ERB và deep filter phức trên các bin thấp. Phần tách đó là ý bài dẫn ra.
+- [DeepFilterNet Noise Suppression Demo](https://www.youtube.com/watch?v=EO7n96YwnyE) — Hendrik Schröter, tiếng Anh. Nghe sau sơ đồ để hai tầng thành âm thanh, không chỉ số khối.
+- [RNNoise, Neural Speech Enhancement, and the Browser](https://www.youtube.com/watch?v=nsscrYdrGRE) — W3C, tiếng Anh. Đối chiếu một nhúm gain theo băng với bộ lọc phức mà bài đang định nghĩa.

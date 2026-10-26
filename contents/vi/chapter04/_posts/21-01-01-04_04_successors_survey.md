@@ -131,3 +131,8 @@ PY
 - Bài 04-02 và 04-03, trích [arXiv:2110.05588](https://arxiv.org/abs/2110.05588), [arXiv:2205.05474](https://arxiv.org/abs/2205.05474) và [arXiv:2305.08227](https://arxiv.org/abs/2305.08227).
 - PDF bạn tự kiếm cho DPDFNet, DeepFilterGAN và HDF-Net. Trang này cố ý không có link cho chúng.
 - Chương 05 cho ràng buộc RTF và AudioWorklet mà mọi kế tục vẫn phải đạt.
+
+## Video tham khảo
+
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, tiếng Anh. **xem trước.** Xem khung ERB cộng deep filter. Bài đặt các mô hình kế tục cạnh hình này và không coi video là nguồn paper của chúng.
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, tiếng Anh. Các đoạn dữ liệu, nghe, và độ phức tạp là phương pháp so sánh. Không mô hình kế tục nào trong bài có bài nói riêng đã kiểm chứng ở đây.

@@ -139,3 +139,9 @@ PY
 - Mack and Habets, “Deep Filtering,” IEEE Signal Processing Letters, 2020, as cited by that paper: the complex multi-frame filter DeepFilterNet adopts.
 - [Rikorose/DeepFilterNet](https://github.com/Rikorose/DeepFilterNet) README for the `deepFilter` CLI and the model card.
 - Next lesson: what DeepFilterNet2 and the DeepFilterNet3-associated 2023 citation change, at the same high level.
+
+## Video tham khảo
+
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, English. **xem trước.** Watch the ERB envelope stage and the complex deep filter on the lower bins. That split is the idea the lesson derives.
+- [DeepFilterNet Noise Suppression Demo](https://www.youtube.com/watch?v=EO7n96YwnyE) — Hendrik Schröter, English. Listen after the diagram so the two stages are a sound, not only a block count.
+- [RNNoise, Neural Speech Enhancement, and the Browser](https://www.youtube.com/watch?v=nsscrYdrGRE) — W3C, English. Contrast a handful of band gains with the complex filter the lesson is defining.

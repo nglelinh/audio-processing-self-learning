@@ -164,3 +164,8 @@ print("measured error power", np.round(err ** 2, 4))
 - SpeexDSP echo canceller / preprocessor docs (related classical stack).
 - Haykin, *Adaptive Filter Theory* — NLMS / frequency-domain adaptive filters.
 - Hybrid AENR survey pointers: ULCNet + adaptive filter / Align-ULCNet (name-level; residual echo + noise).
+
+## Video tham khảo
+
+- [Revamping Audio Quality for RTC Part 1: Beryl Echo Cancellation | Sriram Srinivasan and Hoang Do](https://www.youtube.com/watch?v=lapq9zvUd-k) — @Scale, English. **xem trước.** Watch the loudspeaker-to-microphone path and where echo removal sits in a real-time audio chain. That placement is the WebRTC APM context of the lesson.
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, English. The echo section shows noise suppression and echo cancellation as neighbors, which is why this lesson refuses to collapse them into one switch.

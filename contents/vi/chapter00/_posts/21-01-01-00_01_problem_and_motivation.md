@@ -152,3 +152,9 @@ print(f"remaining_ms={budget_ms - window_ms - hop_ms:.1f} rtf={8/20:.2f}")
 - Tài liệu WebRTC Audio Processing Module (APM) — mục noise suppression.
 - Schröter và cộng sự, DeepFilterNet (arXiv:2110.05588), DeepFilterNet2 (arXiv:2205.05474), DeepFilterNet3 (arXiv:2305.08227) — phần mở đầu về vì sao khử nhiễu nhân quả là bài toán sản phẩm. Repo: https://github.com/Rikorose/DeepFilterNet.
 - Trang tổng quan DNS Challenge (dataset và track).
+
+## Video tham khảo
+
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, tiếng Anh. **xem trước.** Xem cách sản phẩm gọi coi nhiễu nền là phàn nàn của người dùng trước khi chọn bộ lọc; đó là bài toán bài này đặt ra.
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, tiếng Anh. Tác giả nêu bộ khử nhiễu full-band nhân quả với độ trễ vài mili giây, đúng ràng buộc thời gian thực bài này đối chiếu với khử nhiễu offline.
+- [DeepFilterNet Noise Suppression Demo](https://www.youtube.com/watch?v=EO7n96YwnyE) — Hendrik Schröter, tiếng Anh. Nghe trước–sau mà bài này muốn bạn hình dung: nhiễu văn phòng và nhiễu không dừng trên bộ khử chạy thật, chưa phải bảng metric.

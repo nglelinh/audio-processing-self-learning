@@ -131,3 +131,8 @@ PY
 - Lessons 04-02 and 04-03, which cite [arXiv:2110.05588](https://arxiv.org/abs/2110.05588), [arXiv:2205.05474](https://arxiv.org/abs/2205.05474), and [arXiv:2305.08227](https://arxiv.org/abs/2305.08227).
 - The PDFs you obtain yourself for DPDFNet, DeepFilterGAN, and HDF-Net. This page intentionally has no link for them.
 - Chapter 05 for the RTF and AudioWorklet constraints any successor still has to meet.
+
+## Video tham khảo
+
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, English. **xem trước.** Watch the ERB-plus-deep-filter skeleton. The lesson sets successors next to this picture and does not treat the video as a source for their papers.
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, English. The dataset, listening, and complexity sections are the comparison method. No named successor in the lesson has its own verified talk here.

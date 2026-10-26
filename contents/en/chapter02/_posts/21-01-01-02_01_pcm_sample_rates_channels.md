@@ -186,3 +186,8 @@ print("10 ms mono s16 @ 16 kHz", nbytes(0.010, 16000, 1, 2))
 - Web Audio API `AudioBuffer` / `AudioWorkletProcessor` buffer formats.
 - WebRTC media track constraints and PCM notes.
 - DeepFilterNet full-band framing: [arXiv:2110.05588](https://arxiv.org/abs/2110.05588), [github.com/Rikorose/DeepFilterNet](https://github.com/Rikorose/DeepFilterNet).
+
+## Video tham khảo
+
+- [Xiph.Org Video Presentations: Digital Show & Tell](https://xiph.org/video/vid2.shtml) — Xiph.Org, English. **xem trước.** Official Xiph.Org presentation of PCM sampling, bit depth, and reconstruction. Watch it before debugging a 16 kHz tensor fed from a 48 kHz callback.
+- [Aliasing and the Sampling Theorem Simplified](https://www.youtube.com/watch?v=KuaannH5pnM) — Barry Van Veen, English. The Nyquist wrap is the silent failure when a channel is resampled to the wrong rate.

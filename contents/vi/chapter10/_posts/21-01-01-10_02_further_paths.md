@@ -112,3 +112,9 @@ Kiểu hỏng: ba hướng trong một tháng; chủ đề cuối tuần không 
 3. Lỗ thật: tiền tố `v2/`, hoặc khác nhau giữa `setEnabled(false)` và tải asset thất bại.
 4. Liên kết file, không phải repo riêng bạn không chia sẻ được.
 5. Audio thật để SI-SDR là `n/a`. Lab khôi phục DSP thuần có thể để DNSMOS là `n/a`.
+
+## Video tham khảo
+
+- [The Fast Fourier Transform (FFT)](https://www.youtube.com/watch?v=E8HeD-MUrjY) — Steve Brunton, tiếng Anh. **xem trước.** Đường cổ điển bắt đầu ở đây: giá DFT, rồi FFT bạn có thể cài.
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, tiếng Anh. Đường neural là kiến trúc này cộng các paper, không phải khảo sát mới các mô hình không tên.
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, tiếng Anh. Đường sản phẩm là dữ liệu, bài nghe, và ngân sách độ phức tạp trên một cuộc gọi thật.

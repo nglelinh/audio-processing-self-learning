@@ -129,3 +129,9 @@ PY
 - Schröter et al., Interspeech 2023, [arXiv:2305.08227](https://arxiv.org/abs/2305.08227), cho số RTF 0,19 của vòng tract.
 - Valin, [arXiv:1709.08243](https://arxiv.org/abs/1709.08243), baseline hybrid nhỏ (bài 04-06).
 - Nguồn gốc bạn tự mở cho GTCRN, FastEnhancer, μNet và Fast-ULCNet. Không cái nào được link ở đây.
+
+## Video tham khảo
+
+- [RNNoise, Neural Speech Enhancement, and the Browser](https://www.youtube.com/watch?v=nsscrYdrGRE) — W3C, tiếng Anh. **xem trước.** Xem bộ khử đủ nhỏ cho trình duyệt và Raspberry Pi. Ngân sách đó là bài toán streaming siêu nhẹ, không gắn paper vào các tên trong shortlist.
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, tiếng Anh. Đồ thị độ phức tạp đối chất lượng là thứ mô hình siêu nhẹ phải sống sót trước khi cái tên trong shortlist có ý nghĩa.
+- [Zoom on Web: getting connected with advanced web technology](https://www.youtube.com/watch?v=nhTxJBgTywc) — Chrome for Developers, tiếng Anh. Đoạn SIMD cho thấy vì sao mô hình rất nhỏ vẫn cần runtime vector hóa nếu hop chỉ vài mili giây.

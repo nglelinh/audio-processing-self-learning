@@ -172,3 +172,8 @@ print("10 ms mono s16 @ 16 kHz", nbytes(0.010, 16000, 1, 2))
 - Web Audio `AudioBuffer` / buffer `AudioWorkletProcessor`.
 - Ràng buộc media track WebRTC và ghi chú PCM.
 - Framing full-band DeepFilterNet: [arXiv:2110.05588](https://arxiv.org/abs/2110.05588), [github.com/Rikorose/DeepFilterNet](https://github.com/Rikorose/DeepFilterNet).
+
+## Video tham khảo
+
+- [Xiph.Org Video Presentations: Digital Show & Tell](https://xiph.org/video/vid2.shtml) — Xiph.Org, tiếng Anh. **xem trước.** Trang video Xiph.Org về PCM, độ sâu bit và khôi phục. Xem trước khi debug tensor 16 kHz nhận từ callback 48 kHz.
+- [Aliasing and the Sampling Theorem Simplified](https://www.youtube.com/watch?v=KuaannH5pnM) — Barry Van Veen, tiếng Anh. Nếp gấp Nyquist là lỗi im khi một kênh bị resample sai rate.

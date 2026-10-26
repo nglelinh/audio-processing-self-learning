@@ -100,3 +100,7 @@ Thân protocol tối thiểu thỏa checker sẽ nêu nhiệm vụ cả hai ngô
 3. Đừng ship chỉ vì hàng bàn phím. Quán thua và yên hòa nghĩa là giữ mặc định cũ hoặc test lại mức giữa. Nói rõ bạn chọn gì.
 4. Đảo A/B trên bản lặp. Người chấm đổi chính lựa chọn của mình thì trượt kiểm tra.
 5. Fallback CDN mà mẫu không đổi thì dogfood được. Mặc định mới của `setSuppressionLevel` thì không.
+
+## Video tham khảo
+
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, tiếng Anh. **xem trước.** Xem đoạn P.808 thuê đám đông: tham chiếu, mốc, và sàng. Đó là kỷ luật nghe của bài, kể cả khi lưới của bạn nhỏ hơn một lab ITU đầy đủ.

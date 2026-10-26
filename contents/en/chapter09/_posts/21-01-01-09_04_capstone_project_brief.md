@@ -102,3 +102,9 @@ After the commands, add a milestone checklist to `capstone/design/sketch.md` wit
 3. Use the URLs in lesson 10-01. Do not invent a successor paper.
 4. The common miss is M2 on the shared repo, or M3 with a fake SI-SDR.
 5. At 0 dB, $$\|gn\| = \|s\|$$, so `g` is larger and the noise is more visible in the printout.
+
+## Video tham khảo
+
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, English. **xem trước.** Watch what a measured noise-suppression result contains: data, a listening check, and a complexity number. The capstone is that shape on a small clip set.
+- [DeepFilterNet Noise Suppression Demo](https://www.youtube.com/watch?v=EO7n96YwnyE) — Hendrik Schröter, English. The before-and-after is the listening half of the demo day artifact.
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, English. Use the system diagram as the design you have to defend, including latency, not only the sound.

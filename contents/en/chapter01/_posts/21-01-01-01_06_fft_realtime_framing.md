@@ -166,3 +166,9 @@ print(f"ffts_per_s={ffts_per_s:.0f} algo_delay_ms={win_ms:.1f}")
 - DeepFilterNet (arXiv:2110.05588), DeepFilterNet2 (arXiv:2205.05474), DeepFilterNet3 (arXiv:2305.08227) — STFT and real-time configuration sections. Reference code: https://github.com/Rikorose/DeepFilterNet.
 - MDN AudioWorkletProcessor documentation.
 - WebRTC APM overview (processing in framed blocks).
+
+## Video tham khảo
+
+- [Short-Time Fourier Transform Explained Easily](https://www.youtube.com/watch?v=-Yxj3yfvY-4) — Valerio Velardo - The Sound of AI, English. **xem trước.** Watch the slide from one DFT of the whole file to one DFT per frame. That hop is where a real-time callback actually calls the FFT.
+- [Short-time Fourier Transform and the Spectogram](https://www.youtube.com/watch?v=NA0TwPsECUQ) — Barry Van Veen, English. A signal-processing lecture on the short-time transform and the spectrogram it produces, which is the framed FFT this lesson places on a clock.
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, English. Watch the STFT block at the front of a causal enhancer: the FFT here is a hop budget, not a textbook complexity line.

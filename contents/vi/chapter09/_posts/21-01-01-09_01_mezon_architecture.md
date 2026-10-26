@@ -127,3 +127,9 @@ Kiểu hỏng: bước thứ chín gọi lớp riêng; nhét `v2/` vào chính `
 3. Chỉ bộ đếm và thời gian. Không mẫu, không bản ghi lời trong room.
 4. Đường publish LiveKit dùng processor và `setProcessor`. Trang WebAudio tự viết có thể dùng core. Đừng bịa thêm phương thức.
 5. Bài khóa đọc README và API công khai. Thí nghiệm nằm ở fork hoặc harness của bạn.
+
+## Video tham khảo
+
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, tiếng Anh. **xem trước.** Xem STFT trên thiết bị và hệ số thời gian thực. Đường Mezon công khai là bộ khử này trong trình duyệt, không phải một sơ đồ riêng thứ hai.
+- [Group calling architectures in WebRTC: MCU, SFU & P2P](https://www.youtube.com/watch?v=d2N0d6CKrbk) — Tsahi Levent-Levi, tiếng Anh. SFU chuyển track đã publish. Đó là nửa máy chủ của tour kiến trúc.
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, tiếng Anh. Một stack gọi đã ship là chuẩn so cho điều 'trên thiết bị, trước encode' phải sống sót.

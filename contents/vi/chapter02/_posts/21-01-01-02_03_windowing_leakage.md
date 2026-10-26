@@ -144,3 +144,9 @@ print("hann sidelobe dB", round(float(sidelobe_db(han)), 1))
 - Oppenheim & Schafer — cửa sổ và phân tích phổ.
 - Julius O. Smith, *Spectral Audio Signal Processing* — mức sidelobe và độ rộng búp chính.
 - Cấu hình STFT DeepFilterNet: [arXiv:2110.05588](https://arxiv.org/abs/2110.05588).
+
+## Video tham khảo
+
+- [Lecture 13: Spectral Leakage, Windowing, with Examples of Hanning and Hamming Windows](https://www.youtube.com/watch?v=tCWU9C-LdJQ) — Bahga Lab IIT Delhi, tiếng Anh. **xem trước.** Xem búp phụ cửa sổ chữ nhật đối Hann và Hamming. Đánh đổi búp chính với rò phổ là cả bài.
+- [The more general uncertainty principle, regarding Fourier transforms](https://www.youtube.com/watch?v=MBnnXbOM5S4) — 3Blue1Brown, tiếng Anh. Cửa sổ ngắn hơn là quan sát ngắn hơn. Đoạn bất định nói vì sao búp chính phải rộng ra.
+- [Short-Time Fourier Transform Explained Easily](https://www.youtube.com/watch?v=-Yxj3yfvY-4) — Valerio Velardo - The Sound of AI, tiếng Anh. Bước nhân cửa sổ cho thấy cùng một taper trên frame tiếng nói, chỗ rò phổ sau này thành musical noise.

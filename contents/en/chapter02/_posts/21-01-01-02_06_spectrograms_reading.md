@@ -178,3 +178,9 @@ for h in (1, 2, 3):
 - Oppenheim & Schafer, and Julius O. Smith’s spectral audio notes — what a short-time magnitude actually measures.
 - Speech processing textbooks’ spectrogram chapters (standard DSP/speech notes).
 - DNS Challenge visualization examples (dataset pages) and DeepFilterNet paper figures; read the axes before comparing them to a 48 kHz linear STFT.
+
+## Video tham khảo
+
+- [The Spectrogram and the Gabor Transform](https://www.youtube.com/watch?v=EfWnEldTyPA) — Steve Brunton, English. **xem trước.** Watch how a sliding window becomes a time-frequency image. Read axes before colors; that is the spectrogram this lesson asks you to trust.
+- [Speech Acoustics 5 - vowel formants](https://www.youtube.com/watch?v=glnUFa2fLyE) — Listen Lab, English. Watch the dark bands, not every harmonic. Formants are the speech structure a noise suppressor must not erase.
+- [Coding Adventure: Analyzing Audio](https://www.youtube.com/watch?v=08mmKNLQVHU) — Sebastian Lague, English. The short-time section shows a voice sliced into frames and drawn as a spectrogram, including how a single full-file FFT lies about timing.

@@ -141,3 +141,9 @@ for snr_db in (-10, 0, 10):
 - P. Scalart và J. V. Filho, “Speech enhancement based on a priori signal to noise estimation,” *ICASSP*, 1996 — dạng SNR tiên nghiệm dùng trong Wiener tiếng nói.
 - Loizou, *Speech Enhancement: Theory and Practice*.
 - SpeexDSP / WebRTC APM — hiện thực kỹ thuật.
+
+## Video tham khảo
+
+- [Lec 22: Causal IIR Wiener Filter](https://www.youtube.com/watch?v=K_U0yeVdblU) — NPTEL IIT Guwahati, tiếng Anh. **xem trước.** Xem gain phụ thuộc độ nhiễu của phép đo. Gain từng bin của bài là luật liên tục này trên biên độ STFT, không phải phép trừ cứng.
+- [Wiener Filter Demonstration](https://www.youtube.com/watch?v=U71siegOD48) — Greg Malysa, tiếng Anh. Demo ngắn một bộ lọc Wiener đang chạy. Coi đó là hành vi bộ ước lượng, rồi tự ánh xạ gain lên bin tiếng nói.
+- [Spectral Subtraction In Python - Alexx Mitchell](https://www.youtube.com/watch?v=Xb--68NlxS0) — The Audio Programmer, tiếng Anh. Giữ sơ đồ trừ phổ cạnh gain Wiener để đối chiếu của bài (sàn sau khi trừ đối gain SNR liên tục) còn nhìn thấy.

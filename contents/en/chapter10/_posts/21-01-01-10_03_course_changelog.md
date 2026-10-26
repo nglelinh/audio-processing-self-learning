@@ -126,3 +126,9 @@ Failure modes: editing a PNG in an image editor and skipping the script, so the 
 3. If the build is not installed, say “jekyll not run” rather than inventing a clean log.
 4. EN and VI paths both listed. Figure line “none” unless the diagram changes.
 5. `python3 scripts/generate_course_figures.py` writes `img/generated/<name>.png`. Lessons use `{{ site.imgurl }}/generated/<name>.png`.
+
+## Video tham khảo
+
+- [Faster and Lighter Model Inference with ONNX Runtime from Cloud to Client](https://www.youtube.com/watch?v=WDww8ce12Mc) — Microsoft Developer, English. **xem trước.** Runtime and packaging details move. Watch the client-inference path this course cites, and treat a version pin in a lesson as something the changelog has to revisit.
+- [Group calling architectures in WebRTC: MCU, SFU & P2P](https://www.youtube.com/watch?v=d2N0d6CKrbk) — Tsahi Levent-Levi, English. SFU, MCU, and mesh vocabulary is the WebRTC half of the integration lessons. When a client SDK renames a hook, this architecture is what the prose still has to describe correctly.
+- [What is a CDN (Content Delivery Network) and How does a CDN Work?](https://www.youtube.com/watch?v=rIAIzf6utOc) — Cloudflare, English. Cache and origin behavior is the asset half of the changelog: a model URL that used to be fresh can be a stale edge copy.

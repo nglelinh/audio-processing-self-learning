@@ -131,3 +131,9 @@ PY
 - Lesson 05-03 for the ring that holds the tail between 128-sample quanta.
 - ONNX Runtime I/O binding docs, for feeding state tensors back without rebuilding the session.
 - MDN, [AudioWorklet](https://developer.mozilla.org/en-US/docs/Web/API/AudioWorklet), for processor lifetime: a new worklet is a new state, and the first hop is a cold start.
+
+## Video tham khảo
+
+- [Gated Recurrent Unit | GRU | Explained in detail](https://www.youtube.com/watch?v=IBs8D8PWMc8) — Learn With Jay, English. **xem trước.** Watch the update gate that keeps state across steps. A streaming enhancer's GRU vector is that state between hops.
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, English. The encoder GRU is the recurrent state the lesson says you must not reset mid-call.
+- [RNNoise, Neural Speech Enhancement, and the Browser](https://www.youtube.com/watch?v=nsscrYdrGRE) — W3C, English. A small GRU emitting gains per frame is the same streaming-state idea at teaching scale.

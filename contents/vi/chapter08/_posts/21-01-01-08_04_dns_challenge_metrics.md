@@ -123,3 +123,8 @@ Số 13.80 ở đây là float lab bài 08-01, dán để kiểu cột rõ. Nó 
 3. Ví dụ chính sách: “trên golden set 12 clip này, fail nếu trung bình DNSMOS theo điều kiện giảm quá epsilon đã ghi trong báo cáo.” Epsilon là của bạn.
 4. Chỉ giọng tác giả; chỉ quán. Giữ ngoài những người nói khác và một điều kiện bàn phím hoặc quạt bạn không chỉnh trên đó.
 5. WER có thể tăng khi bộ khử hại phụ âm mà metric thích. Giữ ghi chú nghe.
+
+## Video tham khảo
+
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, tiếng Anh. **xem trước.** Xem đoạn challenge: cặp tổng hợp, bài nghe, và bộ dự đoán khách quan được báo cùng nhau. Một trung bình SI-SDR là thứ bài nói này không dừng lại.
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, tiếng Anh. Chỗ nhắc dữ liệu huấn luyện là một mô hình ngồi trên chất liệu DNS. Dùng bài nói như một dòng trong bộ metric, không phải cả bộ.

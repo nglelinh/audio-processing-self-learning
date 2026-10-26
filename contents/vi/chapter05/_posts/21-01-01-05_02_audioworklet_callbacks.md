@@ -149,3 +149,8 @@ PY
 - MDN, [AudioWorklet](https://developer.mozilla.org/en-US/docs/Web/API/AudioWorklet) và tham chiếu `AudioWorkletProcessor.process`.
 - Bài 05-01 cho RTF và ngân sách hop 10 ms; bài 05-03 cho ring hấp thụ 3,75 quantum.
 - [mezonai/mezon-noise-suppression](https://github.com/mezonai/mezon-noise-suppression) cho `DeepFilterNoiseFilterProcessor` và `setSuppressionLevel` như bề mặt sản phẩm, không phải mã của bài này.
+
+## Video tham khảo
+
+- [AudioWorklet :: What, Why, and How - Hongchan Choi](https://www.youtube.com/watch?v=g1L4O1smMC0) — WebAudio PDX, tiếng Anh. **xem trước.** Hongchan Choi nói vì sao luồng audio không được chờ luồng chính. Xem addModule, processor, và callback.
+- [Sonic Boom! Audio Programming on Android and Chrome (Google I/O'19)](https://www.youtube.com/watch?v=EeQr0zfvF04) — Google for Developers, tiếng Anh. Nửa Chrome cho AudioWorklet cộng WebAssembly trên cùng callback, với độ trễ khứ hồi đã đo.

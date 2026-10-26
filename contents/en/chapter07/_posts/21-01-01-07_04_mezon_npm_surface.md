@@ -199,3 +199,9 @@ setProcessor -> LiveKit LocalAudioTrack
 - Upstream [DeepFilterNet](https://github.com/Rikorose/DeepFilterNet), including Schröter et al., ICASSP 2022, arXiv:2110.05588.
 - LiveKit [TrackProcessor / setProcessor on LocalAudioTrack](https://docs.livekit.io/transport/media/publish/).
 - [tract](https://github.com/sonos/tract) and [ONNX Runtime](https://onnxruntime.ai/docs/) for the runtime side of Chapter 06.
+
+## Video tham khảo
+
+- [DeepFilterNet Noise Suppression Demo](https://www.youtube.com/watch?v=EO7n96YwnyE) — Hendrik Schröter, English. **xem trước.** Listen to the suppressor the package is a vehicle for. The lesson maps public methods onto this behavior, not onto a private API tour.
+- [Group calling architectures in WebRTC: MCU, SFU & P2P](https://www.youtube.com/watch?v=d2N0d6CKrbk) — Tsahi Levent-Levi, English. Track forwarding is the LiveKit side of the public surface. The video explains the SFU; it does not document the npm types.
+- [AudioWorklet :: What, Why, and How - Hongchan Choi](https://www.youtube.com/watch?v=g1L4O1smMC0) — WebAudio PDX, English. The audio callback is where the package's processor has to return in time.

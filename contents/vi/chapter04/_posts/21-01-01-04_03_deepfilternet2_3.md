@@ -116,3 +116,9 @@ PY
 - Schröter et al., Interspeech 2023, [arXiv:2305.08227](https://arxiv.org/abs/2305.08227), citation DeepFilterNet3 của README.
 - [Rikorose/DeepFilterNet](https://github.com/Rikorose/DeepFilterNet) cho checkpoint và `deepFilter`.
 - [mezonai/mezon-noise-suppression](https://github.com/mezonai/mezon-noise-suppression) chỉ cho phần đóng gói AudioWorklet.
+
+## Video tham khảo
+
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, tiếng Anh. **xem trước.** Đây là khung mà DeepFilterNet2 và DeepFilterNet3 giữ lại. Xem STFT, gain ERB và deep filter trước các thay đổi loss và post-filter của bài.
+- [DeepFilterNet Noise Suppression Demo](https://www.youtube.com/watch?v=EO7n96YwnyE) — Hendrik Schröter, tiếng Anh. Demo khử nhiễu của tác giả. Chấm bằng tai; các số DF2 và DF3 trong bài nằm ở paper, không nằm trong soundtrack này.
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, tiếng Anh. Xem cách một mô hình đời sau được chấp nhận: cùng bài toán, ngân sách độ phức tạp, và bài nghe. Đó là phép so bài muốn cho DF2 và DF3.

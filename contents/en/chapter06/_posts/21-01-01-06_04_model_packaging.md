@@ -138,3 +138,9 @@ double-prefix risk
 - [ONNX Runtime documentation](https://onnxruntime.ai/docs/) on optimized model artifacts.
 - Upstream archive [DeepFilterNet3_onnx.tar.gz](https://github.com/Rikorose/DeepFilterNet/blob/main/models/DeepFilterNet3_onnx.tar.gz).
 - Chapter 07 for LiveKit `TrackProcessor` loading and CDN failure policy.
+
+## Video tham khảo
+
+- [Faster and Lighter Model Inference with ONNX Runtime from Cloud to Client](https://www.youtube.com/watch?v=WDww8ce12Mc) — Microsoft Developer, English. **xem trước.** Watch the path from a trained graph to a smaller file a client can load. Packaging in the lesson is this file plus the WASM and the cache, not a new network.
+- [What is a CDN (Content Delivery Network) and How does a CDN Work?](https://www.youtube.com/watch?v=rIAIzf6utOc) — Cloudflare, English. A CDN caches that file near the user. Watch cache versus origin; a model archive is just a large static asset.
+- [Quantization explained with PyTorch - Post-Training Quantization, Quantization-Aware Training](https://www.youtube.com/watch?v=0VdNflU08yA) — Umar Jamil, English. Quantization is the size lever inside the package. Watch the accuracy cost before you celebrate the smaller download.

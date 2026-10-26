@@ -126,3 +126,9 @@ Kiểu hỏng: sửa PNG trong trình ảnh rồi bỏ script, lần sinh sau s�
 3. Nếu chưa cài build, ghi “jekyll not run” thay vì bịa log sạch.
 4. Cả đường EN và VI. Dòng hình là “none” trừ khi sơ đồ đổi.
 5. `python3 scripts/generate_course_figures.py` ghi `img/generated/<name>.png`. Bài dùng `{{ site.imgurl }}/generated/<name>.png`.
+
+## Video tham khảo
+
+- [Faster and Lighter Model Inference with ONNX Runtime from Cloud to Client](https://www.youtube.com/watch?v=WDww8ce12Mc) — Microsoft Developer, tiếng Anh. **xem trước.** Chi tiết runtime và đóng gói thay đổi. Xem đường suy luận client mà khóa trích dẫn, và coi một ghim phiên bản trong bài là thứ changelog phải xem lại.
+- [Group calling architectures in WebRTC: MCU, SFU & P2P](https://www.youtube.com/watch?v=d2N0d6CKrbk) — Tsahi Levent-Levi, tiếng Anh. Từ vựng SFU, MCU và mesh là nửa WebRTC của các bài tích hợp. Khi SDK client đổi tên một hook, kiến trúc này vẫn là thứ văn bản phải mô tả đúng.
+- [What is a CDN (Content Delivery Network) and How does a CDN Work?](https://www.youtube.com/watch?v=rIAIzf6utOc) — Cloudflare, tiếng Anh. Hành vi cache và origin là nửa asset của changelog: URL mô hình từng mới có thể là bản copy cũ ở biên.

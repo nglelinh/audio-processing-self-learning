@@ -168,3 +168,9 @@ print(peak64, peak512, fs / n_win, fs / 512)
 - Oppenheim & Schafer — relationships among DTFT/DFS/DFT.
 - Julius O. Smith, *Mathematics of the DFT*, https://ccrma.stanford.edu/~jos/mdft/ — DFT, DTFT, and zero-padding.
 - DeepFilterNet (arXiv:2110.05588) and the reference repo https://github.com/Rikorose/DeepFilterNet for the frame length the weights actually saw. RNNoise’s public docs are the classical comparison for a smaller FFT.
+
+## Video tham khảo
+
+- [The Discrete Fourier Transform (DFT)](https://www.youtube.com/watch?v=nl9TZanwbBk) — Steve Brunton, English. **xem trước.** He argues the DFT is a finite Fourier series, not an infinite integral. That naming point is the DTFT–DFS–DFT map this lesson draws.
+- [Computing the DFT Matrix](https://www.youtube.com/watch?v=Xw4voABxU5c) — Steve Brunton, English. Watch the matrix that samples the same tones the DFT definition uses, so the finite sum becomes an inner product per bin.
+- [Chương 3.1: Biến đổi Fourier rời rạc (DFT)](https://www.youtube.com/watch?v=bC5umvKV8bE) — Tín hiệu và hệ thống UEt, Vietnamese. A Vietnamese lecture on the DFT sum. Use it beside the English lectures when you want the same definition in the course's other language.

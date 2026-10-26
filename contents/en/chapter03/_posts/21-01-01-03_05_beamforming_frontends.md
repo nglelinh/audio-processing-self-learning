@@ -145,3 +145,7 @@ for deg in (0, 45):
 - WebRTC / mobile multi-mic AEC+BF engineering notes (platform docs).
 - Survey hybrids: GSC–DeepFilterNet2 (drone ego-noise), IVA+GTCRN dual-channel SE (name-level pointers).
 - DeepFilterNet2 paper — mono neural stage often used *after* classical spatial cleaning.
+
+## Video tham khảo
+
+- [What is Beamforming? ("the best explanation I’ve ever heard")](https://www.youtube.com/watch?v=A1n5Hhwtz78) — Iain Explains Signals, Systems, and Digital Comms, English. **xem trước.** Watch the delay that lines up one direction before the sum. Delay-and-sum is the front-end geometry this lesson starts from; GSC and IVA are what you reach for when that sum is not enough.

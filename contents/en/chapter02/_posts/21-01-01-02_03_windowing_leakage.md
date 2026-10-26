@@ -148,3 +148,9 @@ print("hann sidelobe dB", round(float(sidelobe_db(han)), 1))
 - Oppenheim & Schafer — windows and spectral analysis.
 - Julius O. Smith, *Spectral Audio Signal Processing* — sidelobe level and main-lobe width.
 - DeepFilterNet STFT configuration: [arXiv:2110.05588](https://arxiv.org/abs/2110.05588).
+
+## Video tham khảo
+
+- [Lecture 13: Spectral Leakage, Windowing, with Examples of Hanning and Hamming Windows](https://www.youtube.com/watch?v=tCWU9C-LdJQ) — Bahga Lab IIT Delhi, English. **xem trước.** Watch the rectangular sidelobes against Hann and Hamming. That main-lobe versus leakage trade is the whole lesson.
+- [The more general uncertainty principle, regarding Fourier transforms](https://www.youtube.com/watch?v=MBnnXbOM5S4) — 3Blue1Brown, English. A shorter window is a shorter observation. The uncertainty section says why the main lobe must widen.
+- [Short-Time Fourier Transform Explained Easily](https://www.youtube.com/watch?v=-Yxj3yfvY-4) — Valerio Velardo - The Sound of AI, English. The window-multiply step shows the same taper on a speech frame, which is where leakage becomes musical noise later.

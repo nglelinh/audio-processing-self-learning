@@ -117,3 +117,9 @@ Use the token `passthrough` even if your line is “Rust: not attempted, so not 
 3. Typical overclaim: SI-SDR language on a real clip, or DNSMOS without a version.
 4. `capstone/design`, `audio`, `metrics`, `notes`. No path under the shared Mezon tree.
 5. Report the mean and set RTF p95 to `n/a`. Do not invent a percentile.
+
+## Video tham khảo
+
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, English. **xem trước.** The metric and integration sections are the checklist: a number, a listening note, and the stack you actually joined.
+- [Sonic Boom! Audio Programming on Android and Chrome (Google I/O'19)](https://www.youtube.com/watch?v=EeQr0zfvF04) — Google for Developers, English. Glitches and callback overruns are the failure you inject on purpose. Watch how they are measured, then do the smaller version in the lab.
+- [DeepFilterNet Noise Suppression Demo](https://www.youtube.com/watch?v=EO7n96YwnyE) — Hendrik Schröter, English. Keep a backup recording in the spirit of this demo: demo day needs sound if the live callback fails.

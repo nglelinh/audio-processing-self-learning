@@ -139,3 +139,9 @@ PY
 - Source and the 8-bit weights: [github.com/xiph/rnnoise](https://github.com/xiph/rnnoise).
 - SpeexDSP’s MMSE suppressor, the classical baseline in that paper.
 - Schröter et al., [arXiv:2110.05588](https://arxiv.org/abs/2110.05588) and [arXiv:2205.05474](https://arxiv.org/abs/2205.05474), for the 32-band ERB contrast and the PESQ 2.33 versus 3.08 table.
+
+## Video tham khảo
+
+- [RNNoise, Neural Speech Enhancement, and the Browser](https://www.youtube.com/watch?v=nsscrYdrGRE) — W3C, English. **xem trước.** This is the teaching bridge: DSP features, a small GRU, and gains, running in a browser with almost no look-ahead.
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, English. Watch the larger ERB-plus-filter model this lesson says RNNoise does not match on published scores.
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, English. Use the product results as the scale RNNoise is not claiming to replace.

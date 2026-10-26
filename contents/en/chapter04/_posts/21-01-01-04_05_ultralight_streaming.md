@@ -129,3 +129,9 @@ PY
 - Schröter et al., Interspeech 2023, [arXiv:2305.08227](https://arxiv.org/abs/2305.08227), for the RTF 0.19 tract-loop figure.
 - Valin, [arXiv:1709.08243](https://arxiv.org/abs/1709.08243), as the tiny hybrid baseline (lesson 04-06).
 - Primary sources you open yourself for GTCRN, FastEnhancer, μNet, and Fast-ULCNet. None are linked here.
+
+## Video tham khảo
+
+- [RNNoise, Neural Speech Enhancement, and the Browser](https://www.youtube.com/watch?v=nsscrYdrGRE) — W3C, English. **xem trước.** Watch a suppressor small enough for a browser and a Raspberry Pi. That budget is the ultra-light streaming problem, without attaching papers to the shortlist names.
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, English. The complexity-versus-quality plot is what an ultra-light model has to survive before the name on the shortlist matters.
+- [Zoom on Web: getting connected with advanced web technology](https://www.youtube.com/watch?v=nhTxJBgTywc) — Chrome for Developers, English. The SIMD section shows why a tiny model still needs a vectorized runtime if the hop is a few milliseconds.

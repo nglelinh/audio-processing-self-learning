@@ -112,3 +112,9 @@ Failure modes: three paths in one month; a weekend topic with no artifact; an RT
 3. A real gap: the `v2/` prefix, or the difference between `setEnabled(false)` and a failed asset load.
 4. Link files, not private repos you cannot share.
 5. Real audio leaves SI-SDR as `n/a`. A pure DSP reconstruction lab can leave DNSMOS as `n/a`.
+
+## Video tham khảo
+
+- [The Fast Fourier Transform (FFT)](https://www.youtube.com/watch?v=E8HeD-MUrjY) — Steve Brunton, English. **xem trước.** The classical path starts here: DFT cost, then the FFT you can implement.
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, English. The neural path is this architecture plus the papers, not a new survey of unnamed models.
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, English. The product path is datasets, listening tests, and a complexity budget on a real call.

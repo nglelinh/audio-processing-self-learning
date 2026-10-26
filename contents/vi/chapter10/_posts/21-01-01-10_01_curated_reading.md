@@ -116,3 +116,9 @@ Mười hai gạch là ba thẻ nhân bốn gạch. Kiểu hỏng: câu claim tr
 3. Đừng mô tả file bạn chưa thấy. “not stated” được phép.
 4. Reddy, Gopal và Cutler cho một predictor, không cho vạch ship của Mezon. Lệch miền là kiểu hỏng.
 5. DPDFNet, DeepFilterGAN, HDF-Net, FastEnhancer, μNet, Fast-ULCNet, GTCRN.
+
+## Video tham khảo
+
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, tiếng Anh. **xem trước.** Xem cạnh paper DeepFilterNet trong danh sách đọc. Bài nói đi theo sơ đồ khối của paper; nó không thay PDF.
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, tiếng Anh. Các phần DNS Challenge và DNSMOS khớp các mục dữ liệu và metric trong cùng danh sách.
+- [But what is the Fourier Transform?  A visual introduction.](https://www.youtube.com/watch?v=spUNpyF58BY) — 3Blue1Brown, tiếng Anh. Dùng biến đổi trực quan như trực giác dưới các bài đọc DSP, rồi quay lại công thức.

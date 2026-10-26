@@ -146,3 +146,9 @@ print("max |linear[:8] - circular|", np.max(np.abs(y_lin[:8] - y_circ)))
 - Oppenheim & Schafer — lọc, tích chập FFT, xử lý STFT.
 - Julius O. Smith, *Spectral Audio Signal Processing* — overlap-add và overlap-save.
 - Tăng cường tiếng nói cổ điển (Wiener / spectral subtraction) là cầu sang chương 03. Boll, 1979, là bài kinh điển của phép trừ phổ; dạng Wiener cho tiếng nói là bài sau.
+
+## Video tham khảo
+
+- [But what is a convolution?](https://www.youtube.com/watch?v=KuXjwB4LzSA) — 3Blue1Brown, tiếng Anh. **xem trước.** Xem định lý tích chập: lọc là trung bình có trọng số trượt trong thời gian và là phép nhân trong tần số. Đó là lựa chọn miền của bài.
+- [Spectral Subtraction In Python - Alexx Mitchell](https://www.youtube.com/watch?v=Xb--68NlxS0) — The Audio Programmer, tiếng Anh. Sơ đồ là luật biên độ từng bin, tức lọc miền tần số dưới một ước lượng nhiễu chứ không phải FIR cố định.
+- [Lec 22: Causal IIR Wiener Filter](https://www.youtube.com/watch?v=K_U0yeVdblU) — NPTEL IIT Guwahati, tiếng Anh. Đây là dẫn xuất Wiener nhân quả cổ điển, không phải mask tiếng nói. Xem gain co lại khi đo nhiễu; gain từng bin của bài là ý đó trên STFT.

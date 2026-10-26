@@ -171,3 +171,9 @@ for snr_db in (-10, 0, 10):
 - P. Scalart and J. V. Filho, “Speech enhancement based on a priori signal to noise estimation,” *ICASSP*, 1996 — the a priori SNR form used in speech Wiener filters.
 - P. C. Loizou, *Speech Enhancement: Theory and Practice* — textbook derivations of Wiener / MMSE estimators.
 - SpeexDSP / WebRTC Audio Processing Module noise-suppression overview (engineering instantiations).
+
+## Video tham khảo
+
+- [Lec 22: Causal IIR Wiener Filter](https://www.youtube.com/watch?v=K_U0yeVdblU) — NPTEL IIT Guwahati, English. **xem trước.** Watch the gain that depends on how noisy the measurement is. The lesson's per-bin speech gain is this continuous rule on STFT magnitudes, not a hard subtract.
+- [Wiener Filter Demonstration](https://www.youtube.com/watch?v=U71siegOD48) — Greg Malysa, English. A short demonstration of a Wiener filter at work. Treat it as the estimator's behavior, then map the gain onto speech bins yourself.
+- [Spectral Subtraction In Python - Alexx Mitchell](https://www.youtube.com/watch?v=Xb--68NlxS0) — The Audio Programmer, English. Keep the subtraction diagram beside the Wiener gain so the lesson's contrast (floor after subtract versus a continuous SNR gain) stays visible.

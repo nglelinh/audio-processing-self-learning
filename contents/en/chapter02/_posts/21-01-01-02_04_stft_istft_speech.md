@@ -174,3 +174,9 @@ print("max abs error", err)
 - DeepFilterNet, DeepFilterNet2, DeepFilterNet3 papers — STFT, ERB, deep filtering sections. Start at [arXiv:2110.05588](https://arxiv.org/abs/2110.05588) and the reference code [github.com/Rikorose/DeepFilterNet](https://github.com/Rikorose/DeepFilterNet).
 - Julius O. Smith, *Spectral Audio Signal Processing* — STFT and ISTFT definitions consistent with the windows.
 - Oppenheim & Schafer — filter banks / STFT connections.
+
+## Video tham khảo
+
+- [Short-Time Fourier Transform Explained Easily](https://www.youtube.com/watch?v=-Yxj3yfvY-4) — Valerio Velardo - The Sound of AI, English. **xem trước.** Watch analysis frames and the idea that an inverse transform has to undo them. That pair is the STFT/ISTFT contract for speech.
+- [The Spectrogram and the Gabor Transform](https://www.youtube.com/watch?v=EfWnEldTyPA) — Steve Brunton, English. A moving window on a Fourier transform is the spectrogram. Use it as the speech-time picture DeepFilterNet's front end assumes.
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, English. Watch the STFT into ERB bands and the inverse STFT out. The lesson's DeepFilterNet tie-in is this block, not the training loss.

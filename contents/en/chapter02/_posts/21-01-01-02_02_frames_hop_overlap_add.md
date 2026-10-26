@@ -190,3 +190,9 @@ print("peak deviation", float(np.max(np.abs(mid - mid[0]))))
 - Oppenheim & Schafer — STFT / filterbank / OLA sections.
 - Julius O. Smith, *Spectral Audio Signal Processing* — COLA and the Hann identity.
 - DeepFilterNet framing: [arXiv:2110.05588](https://arxiv.org/abs/2110.05588), [github.com/Rikorose/DeepFilterNet](https://github.com/Rikorose/DeepFilterNet).
+
+## Video tham khảo
+
+- [Short-Time Fourier Transform Explained Easily](https://www.youtube.com/watch?v=-Yxj3yfvY-4) — Valerio Velardo - The Sound of AI, English. **xem trước.** Watch the frame, the hop, and the window multiply. Overlap-add is how those windowed frames become a waveform again.
+- [Short-time Fourier Transform and the Spectogram](https://www.youtube.com/watch?v=NA0TwPsECUQ) — Barry Van Veen, English. The short-time transform lecture shows why successive frames must overlap if the spectrogram is going to invert.
+- [But what is a convolution?](https://www.youtube.com/watch?v=KuXjwB4LzSA) — 3Blue1Brown, English. The FFT section is the part to watch: convolution in time is multiplication in frequency, and overlap-add is how a long signal is stitched back.

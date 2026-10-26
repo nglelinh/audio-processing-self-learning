@@ -165,3 +165,8 @@ print(np.round(mag[order], 1).tolist())
 - Alan V. Oppenheim & Ronald W. Schafer, *Discrete-Time Signal Processing* — Fourier transform overview chapters (any recent edition).
 - Julius O. Smith, *Mathematics of the DFT*, https://ccrma.stanford.edu/~jos/mdft/ — sinusoids as a basis, before any STFT code.
 - DeepFilterNet (arXiv:2110.05588) — skim that enhancement runs in an STFT / deep-filtering domain. Motivation only in this lesson.
+
+## Video tham khảo
+
+- [But what is the Fourier Transform?  A visual introduction.](https://www.youtube.com/watch?v=spUNpyF58BY) — 3Blue1Brown, English. **xem trước.** Watch the winding picture before the integral: each frequency is a coordinate, which is the intuition this lesson writes as a transform.
+- [The more general uncertainty principle, regarding Fourier transforms](https://www.youtube.com/watch?v=MBnnXbOM5S4) — 3Blue1Brown, English. The sound-wave section is the time-versus-frequency tradeoff the lesson needs before any window length is chosen.

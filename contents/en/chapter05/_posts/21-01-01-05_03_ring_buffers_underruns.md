@@ -161,3 +161,8 @@ PY
 - Lesson 05-01 for the p95 that predicts the overrun, and lesson 05-02 for the 128-sample producer.
 - MDN, [AudioWorklet](https://developer.mozilla.org/en-US/docs/Web/API/AudioWorklet), for the thread that must not block when `free` is zero.
 - JACK or PipeWire buffer-size notes, as a second vocabulary for “period versus ring depth,” not as an API you must call.
+
+## Video tham khảo
+
+- [Sonic Boom! Audio Programming on Android and Chrome (Google I/O'19)](https://www.youtube.com/watch?v=EeQr0zfvF04) — Google for Developers, English. **xem trước.** Watch the hardware callback size against the work you wish you could do in bigger blocks. The ring buffer in the lesson is the seam between those two sizes; this talk is the clocks, not a line-by-line buffer.
+- [AudioWorklet :: What, Why, and How - Hongchan Choi](https://www.youtube.com/watch?v=g1L4O1smMC0) — WebAudio PDX, English. The process callback is the reader that must not block. An empty read is the underrun the lesson names.

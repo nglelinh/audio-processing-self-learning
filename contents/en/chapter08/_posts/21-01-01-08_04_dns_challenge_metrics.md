@@ -123,3 +123,8 @@ The 13.80 here is the lesson 08-01 lab float, pasted so the column type is obvio
 3. Example policy: “on this 12-clip golden set, fail if the per-condition DNSMOS mean drops by more than the epsilon written in the report.” The epsilon is yours.
 4. Only the author’s voice; only café. Hold out other talkers and a keyboard or fan condition you do not tune on.
 5. WER can rise when the suppressor damages consonants the metric likes. Keep the listening note.
+
+## Video tham khảo
+
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, English. **xem trước.** Watch the challenge section: synthetic pairs, a listening test, and an objective predictor reported together. A single SI-SDR mean is what this talk refuses to stop at.
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, English. The training-data mention is a model sitting on DNS material. Use the talk as one row in the suite, not as the suite itself.

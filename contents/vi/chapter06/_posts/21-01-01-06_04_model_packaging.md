@@ -138,3 +138,9 @@ double-prefix risk
 - [Tài liệu ONNX Runtime](https://onnxruntime.ai/docs/) về artifact mô hình đã tối ưu.
 - Kho upstream [DeepFilterNet3_onnx.tar.gz](https://github.com/Rikorose/DeepFilterNet/blob/main/models/DeepFilterNet3_onnx.tar.gz).
 - Chương 07 về tải bằng TrackProcessor của LiveKit và chính sách khi CDN lỗi.
+
+## Video tham khảo
+
+- [Faster and Lighter Model Inference with ONNX Runtime from Cloud to Client](https://www.youtube.com/watch?v=WDww8ce12Mc) — Microsoft Developer, tiếng Anh. **xem trước.** Xem đường từ đồ thị đã huấn luyện tới file nhỏ hơn mà client tải được. Đóng gói trong bài là file này cộng WASM và cache, không phải mạng mới.
+- [What is a CDN (Content Delivery Network) and How does a CDN Work?](https://www.youtube.com/watch?v=rIAIzf6utOc) — Cloudflare, tiếng Anh. CDN cache file đó gần người dùng. Xem cache đối origin; kho mô hình chỉ là asset tĩnh lớn.
+- [Quantization explained with PyTorch - Post-Training Quantization, Quantization-Aware Training](https://www.youtube.com/watch?v=0VdNflU08yA) — Umar Jamil, tiếng Anh. Lượng tử hóa là đòn bẩy kích thước trong gói. Xem giá độ chính xác trước khi mừng file tải nhỏ hơn.

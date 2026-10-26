@@ -166,3 +166,9 @@ print(f"remaining_ms={budget_ms - window_ms - hop_ms:.1f} rtf={8/20:.2f}")
 - WebRTC Audio Processing Module (APM) documentation — noise suppression overview.
 - Schröter et al., DeepFilterNet (arXiv:2110.05588), DeepFilterNet2 (arXiv:2205.05474), DeepFilterNet3 (arXiv:2305.08227) — introductions for why causal enhancement is the product problem. Repo: https://github.com/Rikorose/DeepFilterNet.
 - DNS Challenge overview pages (dataset and track motivation).
+
+## Video tham khảo
+
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, English. **xem trước.** Watch how a calling product treats background noise as a user complaint before any filter is chosen; that is the problem this lesson frames.
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, English. The author states a full-band causal enhancer with a few milliseconds of latency, which is the real-time constraint the lesson contrasts with offline enhancement.
+- [DeepFilterNet Noise Suppression Demo](https://www.youtube.com/watch?v=EO7n96YwnyE) — Hendrik Schröter, English. Listen to the before-and-after the lesson is motivating: office and non-stationary noise on a live suppressor, not a metric table.

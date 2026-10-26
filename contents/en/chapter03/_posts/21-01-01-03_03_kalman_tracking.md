@@ -137,3 +137,8 @@ for r in (0.1, 10.0):
 - Adaptive filter chapters in Haykin, *Adaptive Filter Theory* (NLMS/RLS as practical AEC engines).
 - WebRTC Audio Processing Module overview (engineering AEC+NS chain).
 - Survey pointers on hybrid Kalman/ULCNet AENR (Align-ULCNet and related ULCNet hybrid papers—name-level).
+
+## Video tham khảo
+
+- [Why Use Kalman Filters? | Understanding Kalman Filters, Part 1](https://www.youtube.com/watch?v=mwn8xhgNpFY) — MATLAB, English. **xem trước.** Watch the predict-then-correct picture. A noise tracker that only updates a floor is the same two-step idea with a much smaller state.
+- [Kalman Filter - VISUALLY EXPLAINED!](https://www.youtube.com/watch?v=-DiZGpAh7T4) — Kapil Sachdeva, English. The visual update is the part to watch: uncertainty shrinks when a measurement arrives, which is the intuition behind a recursive speech tracker.

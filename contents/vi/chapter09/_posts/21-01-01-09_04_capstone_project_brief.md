@@ -102,3 +102,9 @@ Sau các lệnh, thêm checklist mốc vào `capstone/design/sketch.md` với M0
 3. Dùng URL ở bài 10-01. Đừng bịa bài báo kế tục.
 4. Trượt hay gặp là M2 trên repo chung, hoặc M3 với SI-SDR giả.
 5. Ở 0 dB, $$\|gn\| = \|s\|$$, nên `g` lớn hơn và nhiễu hiện rõ hơn trên bản in.
+
+## Video tham khảo
+
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, tiếng Anh. **xem trước.** Xem một kết quả khử nhiễu đã đo gồm gì: dữ liệu, bài nghe, và một số độ phức tạp. Capstone là hình đó trên một tập clip nhỏ.
+- [DeepFilterNet Noise Suppression Demo](https://www.youtube.com/watch?v=EO7n96YwnyE) — Hendrik Schröter, tiếng Anh. Trước–sau là nửa nghe của hiện vật ngày demo.
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, tiếng Anh. Dùng sơ đồ hệ thống như thiết kế bạn phải bảo vệ, gồm độ trễ, không chỉ âm thanh.

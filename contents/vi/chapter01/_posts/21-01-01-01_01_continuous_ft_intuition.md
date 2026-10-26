@@ -128,3 +128,8 @@ print(np.round(mag[order], 1).tolist())
 - Oppenheim & Schafer, *Discrete-Time Signal Processing* — các chương tổng quan Fourier.
 - Julius O. Smith, *Mathematics of the DFT*, https://ccrma.stanford.edu/~jos/mdft/ — sinusoid như cơ sở, trước khi viết STFT.
 - DeepFilterNet (arXiv:2110.05588) — enhancement chạy trên miền STFT / deep filtering. Bài này chỉ lấy động cơ.
+
+## Video tham khảo
+
+- [But what is the Fourier Transform?  A visual introduction.](https://www.youtube.com/watch?v=spUNpyF58BY) — 3Blue1Brown, tiếng Anh. **xem trước.** Xem hình quấn tín hiệu trước tích phân: mỗi tần số là một tọa độ, đúng trực giác bài này viết thành biến đổi.
+- [The more general uncertainty principle, regarding Fourier transforms](https://www.youtube.com/watch?v=MBnnXbOM5S4) — 3Blue1Brown, tiếng Anh. Đoạn sóng âm là đánh đổi thời gian–tần số mà bài cần trước khi chọn độ dài cửa sổ.

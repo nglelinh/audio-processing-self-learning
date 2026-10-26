@@ -160,3 +160,9 @@ for p95_ms in (6.0, 12.0):
 - Public GitHub README: `mezonai/mezon-noise-suppression`.
 - npm landing page: `deepfilternet3-noise-filter`.
 - DeepFilterNet (arXiv:2110.05588), DeepFilterNet2 (arXiv:2205.05474), DeepFilterNet3 (arXiv:2305.08227) for algorithmic context, not Mezon-specific claims.
+
+## Video tham khảo
+
+- [But what is the Fourier Transform?  A visual introduction.](https://www.youtube.com/watch?v=spUNpyF58BY) — 3Blue1Brown, English. **xem trước.** Start here for the frequency-domain picture the map's early chapters formalize before any suppressor appears.
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, English. This is the neural destination of the map: STFT in, real-time full-band enhancement out.
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, English. Watch the path from open datasets to a shipped calling feature; later chapters follow that evaluation loop.
