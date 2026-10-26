@@ -140,3 +140,9 @@ max_abs_error=0.00393701
 - Jacob et al., quantization for integer-arithmetic-only inference, the standard mobile reference.
 - FastEnhancer / faster-enhancer.c notes on INT8 enhancement runtimes (survey pointers only).
 - DeepFilterNet model-size and real-time discussion in the upstream repository.
+
+## Video tham khảo
+
+- [Quantization explained with PyTorch - Post-Training Quantization, Quantization-Aware Training](https://www.youtube.com/watch?v=0VdNflU08yA) — Umar Jamil, English. **xem trước.** Watch post-training quantization and quantization-aware training, including why a min-max range punishes every small gain when one outlier is huge.
+- [Faster and Lighter Model Inference with ONNX Runtime from Cloud to Client](https://www.youtube.com/watch?v=WDww8ce12Mc) — Microsoft Developer, English. The INT8 section is quantization landing in ONNX Runtime, which is the path a speech model takes after the PyTorch explanation.
+- [Enable Model Quantization for ONNX and TensorRT!](https://www.youtube.com/watch?v=phmFvMOHt4I) — Nicolai Nielsen Tech, English. Watch a quantized ONNX graph actually load. Treat TensorRT as optional; the lesson's risk is the speech model, not the GPU vendor.

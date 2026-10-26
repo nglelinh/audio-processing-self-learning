@@ -150,3 +150,9 @@ print("max |linear[:8] - circular|", np.max(np.abs(y_lin[:8] - y_circ)))
 - Oppenheim & Schafer — filtering, FFT convolution, STFT processing.
 - Julius O. Smith, *Spectral Audio Signal Processing* — overlap-add and overlap-save.
 - Classical speech enhancement (Wiener / spectral subtraction) as the bridge to Ch. 03. Boll, 1979, is the subtraction classic; the Wiener speech form is the next lesson.
+
+## Video tham khảo
+
+- [But what is a convolution?](https://www.youtube.com/watch?v=KuXjwB4LzSA) — 3Blue1Brown, English. **xem trước.** Watch the convolution theorem: a filter is a moving weighted average in time and a multiply in frequency. That is the domain choice in the lesson.
+- [Spectral Subtraction In Python - Alexx Mitchell](https://www.youtube.com/watch?v=Xb--68NlxS0) — The Audio Programmer, English. The diagram is a per-bin magnitude rule, which is frequency-domain filtering under a noise estimate rather than a fixed FIR.
+- [Lec 22: Causal IIR Wiener Filter](https://www.youtube.com/watch?v=K_U0yeVdblU) — NPTEL IIT Guwahati, English. This is the classical causal Wiener derivation, not a speech mask. Watch the gain that shrinks when the measurement is noisy; the lesson's per-bin speech gain is that idea on an STFT.

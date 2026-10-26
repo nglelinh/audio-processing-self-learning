@@ -127,3 +127,9 @@ Failure modes: a ninth step that names a private class; putting `v2/` inside `cd
 3. Counters and timings only. No samples, no transcripts of the room.
 4. LiveKit publish path uses the processor and `setProcessor`. A custom WebAudio page may use the core. Do not invent further methods.
 5. Course tasks read the public README and API. Experiments go in your fork or harness.
+
+## Video tham khảo
+
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, English. **xem trước.** Watch the on-device STFT and the real-time factor. The public Mezon path is this enhancer in the browser, not a second private diagram.
+- [Group calling architectures in WebRTC: MCU, SFU & P2P](https://www.youtube.com/watch?v=d2N0d6CKrbk) — Tsahi Levent-Levi, English. The SFU forwards the published track. That is the server half of the architecture tour.
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, English. A shipped calling stack is the comparison for what 'on device, before encode' has to survive.

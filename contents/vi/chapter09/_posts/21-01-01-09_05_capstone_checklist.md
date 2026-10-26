@@ -117,3 +117,9 @@ Dùng token `passthrough` kể cả khi dòng của bạn là “Rust: not attem
 3. Nhận quá điển hình: ngôn ngữ SI-SDR trên clip thật, hoặc DNSMOS không có phiên bản.
 4. `capstone/design`, `audio`, `metrics`, `notes`. Không đường dưới cây Mezon chung.
 5. Báo trung bình và đặt RTF p95 là `n/a`. Đừng bịa phân vị.
+
+## Video tham khảo
+
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, tiếng Anh. **xem trước.** Các đoạn metric và tích hợp là checklist: một số, một ghi chú nghe, và stack bạn thật sự nối vào.
+- [Sonic Boom! Audio Programming on Android and Chrome (Google I/O'19)](https://www.youtube.com/watch?v=EeQr0zfvF04) — Google for Developers, tiếng Anh. Glitch và callback quá hạn là lỗi bạn cố ý tiêm. Xem chúng được đo thế nào, rồi làm bản nhỏ hơn trong lab.
+- [DeepFilterNet Noise Suppression Demo](https://www.youtube.com/watch?v=EO7n96YwnyE) — Hendrik Schröter, tiếng Anh. Giữ một bản ghi dự phòng theo tinh thần demo này: ngày demo cần tiếng nếu callback trực tiếp hỏng.

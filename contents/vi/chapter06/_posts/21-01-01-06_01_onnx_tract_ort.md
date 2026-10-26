@@ -130,3 +130,8 @@ for shape in [(1, 3, 224, 224), (1, 1, 96), (96,)]:
 - [tract](https://github.com/sonos/tract), thư viện suy luận Rust được ghi chú 1.3.0 của gói nêu tên.
 - npm [`deepfilternet3-noise-filter`](https://www.npmjs.com/package/deepfilternet3-noise-filter) và [kho mã](https://github.com/mezonai/mezon-noise-suppression). Checkout tùy chọn của giảng viên, không phải đích sửa của khóa: `/Users/nguyenlelinh/ncc/mezon-noise-suppression`.
 - Thảo luận export DeepFilterNet. Hãy xác minh mọi file ONNX cộng đồng trước khi phụ thuộc vào nó.
+
+## Video tham khảo
+
+- [Faster and Lighter Model Inference with ONNX Runtime from Cloud to Client](https://www.youtube.com/watch?v=WDww8ce12Mc) — Microsoft Developer, tiếng Anh. **xem trước.** Xem ONNX là file trao đổi và ONNX Runtime là máy chạy nó trên CPU, GPU và biên. Tract là máy Rust trong bài; bài nói này là định dạng và runtime phổ biến.
+- [Introduction to ONNX Runtime](https://www.youtube.com/watch?v=Wp5PaRpudlk) — NVIDIA Developer, tiếng Anh. Bài giới thiệu chính thức thứ hai về cùng runtime, hữu ích cho bức tranh execution provider mà bài cần trước mọi bản WASM.

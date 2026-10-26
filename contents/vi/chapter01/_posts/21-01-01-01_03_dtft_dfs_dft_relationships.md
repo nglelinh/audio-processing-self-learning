@@ -117,3 +117,9 @@ print(peak64, peak512, fs / n_win, fs / 512)
 - Oppenheim & Schafer — quan hệ DTFT/DFS/DFT.
 - Julius O. Smith, *Mathematics of the DFT*, https://ccrma.stanford.edu/~jos/mdft/ — DFT, DTFT, và zero-padding.
 - DeepFilterNet (arXiv:2110.05588) và repo https://github.com/Rikorose/DeepFilterNet cho độ dài khung mà trọng số thực sự thấy. Tài liệu công khai của RNNoise là mốc so sánh FFT ngắn hơn.
+
+## Video tham khảo
+
+- [Chương 3.1: Biến đổi Fourier rời rạc (DFT)](https://www.youtube.com/watch?v=bC5umvKV8bE) — Tín hiệu và hệ thống UEt, tiếng Việt. **xem trước.** Bài giảng tiếng Việt về tổng DFT. Xem cạnh bài tiếng Anh khi cần cùng định nghĩa bằng ngôn ngữ kia của khóa.
+- [The Discrete Fourier Transform (DFT)](https://www.youtube.com/watch?v=nl9TZanwbBk) — Steve Brunton, tiếng Anh. Ông lập luận DFT là chuỗi Fourier hữu hạn, không phải tích phân vô hạn. Điểm đặt tên đó là bản đồ DTFT–DFS–DFT của bài.
+- [Computing the DFT Matrix](https://www.youtube.com/watch?v=Xw4voABxU5c) — Steve Brunton, tiếng Anh. Xem ma trận lấy mẫu các tone trong định nghĩa DFT, để tổng hữu hạn thành tích trong trên từng bin.

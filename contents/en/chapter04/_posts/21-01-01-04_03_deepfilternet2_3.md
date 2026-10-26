@@ -116,3 +116,9 @@ PY
 - Schröter et al., Interspeech 2023, [arXiv:2305.08227](https://arxiv.org/abs/2305.08227), the README’s DeepFilterNet3 citation.
 - [Rikorose/DeepFilterNet](https://github.com/Rikorose/DeepFilterNet) for checkpoints and `deepFilter`.
 - [mezonai/mezon-noise-suppression](https://github.com/mezonai/mezon-noise-suppression) for the AudioWorklet packaging only.
+
+## Video tham khảo
+
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, English. **xem trước.** This is the framework DeepFilterNet2 and DeepFilterNet3 keep. Watch the STFT, ERB gains, and deep filter before the lesson's loss and post-filter changes.
+- [DeepFilterNet Noise Suppression Demo](https://www.youtube.com/watch?v=EO7n96YwnyE) — Hendrik Schröter, English. The author's noise-suppression demo. Judge it by ear; the DF2 and DF3 numbers in the lesson stay in the papers, not in this soundtrack.
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, English. Watch how a later model is accepted: same task, a complexity budget, and a listening test. That is the comparison the lesson wants for DF2 and DF3.

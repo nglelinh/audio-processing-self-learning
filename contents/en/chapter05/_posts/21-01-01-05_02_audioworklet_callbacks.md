@@ -149,3 +149,8 @@ PY
 - MDN, [AudioWorklet](https://developer.mozilla.org/en-US/docs/Web/API/AudioWorklet) and the `AudioWorkletProcessor.process` reference.
 - Lesson 05-01 for RTF and the 10 ms hop budget; lesson 05-03 for the ring that absorbs the 3.75 quanta.
 - [mezonai/mezon-noise-suppression](https://github.com/mezonai/mezon-noise-suppression) for `DeepFilterNoiseFilterProcessor` and `setSuppressionLevel` as a product surface, not as this lesson’s code.
+
+## Video tham khảo
+
+- [AudioWorklet :: What, Why, and How - Hongchan Choi](https://www.youtube.com/watch?v=g1L4O1smMC0) — WebAudio PDX, English. **xem trước.** Hongchan Choi on why the audio thread cannot wait on the main thread. Watch addModule, the processor, and the callback.
+- [Sonic Boom! Audio Programming on Android and Chrome (Google I/O'19)](https://www.youtube.com/watch?v=EeQr0zfvF04) — Google for Developers, English. The Chrome half shows AudioWorklet plus WebAssembly on the same callback, with measured round-trip latency.

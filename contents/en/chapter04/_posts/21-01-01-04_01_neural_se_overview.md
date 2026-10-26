@@ -132,3 +132,9 @@ PY
 - Schröter et al., DeepFilterNet2, IWAENC 2022, [arXiv:2205.05474](https://arxiv.org/abs/2205.05474).
 - Schröter et al., Interspeech 2023, [arXiv:2305.08227](https://arxiv.org/abs/2305.08227); the README associates this citation with DeepFilterNet3. Code: [Rikorose/DeepFilterNet](https://github.com/Rikorose/DeepFilterNet).
 - Valin, [arXiv:1709.08243](https://arxiv.org/abs/1709.08243), [xiph/rnnoise](https://github.com/xiph/rnnoise). DNS Challenge overviews for the mixture protocol.
+
+## Video tham khảo
+
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, English. **xem trước.** Watch the move from a DSP suppressor to a trained model, including the losses and tests that decide whether the model actually helped.
+- [RNNoise, Neural Speech Enhancement, and the Browser](https://www.youtube.com/watch?v=nsscrYdrGRE) — W3C, English. A hybrid of DSP features and a small recurrent net. Use it as the small end of the masking-versus-mapping map.
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, English. Real-valued envelope gains plus a complex filter are two of the neural SE families this lesson names.

@@ -171,3 +171,9 @@ https://example.com/df3/v2/models/DeepFilterNet3_onnx.tar.gz
 - MDN [HTTP caching](https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching) và [CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS).
 - Upstream [DeepFilterNet3_onnx.tar.gz](https://github.com/Rikorose/DeepFilterNet/blob/main/models/DeepFilterNet3_onnx.tar.gz).
 - Chương 06 về lượng tử hóa, SIMD, và đóng gói cùng cặp file đó.
+
+## Video tham khảo
+
+- [What is a CDN (Content Delivery Network) and How does a CDN Work?](https://www.youtube.com/watch?v=rIAIzf6utOc) — Cloudflare, tiếng Anh. **xem trước.** Xem cache ở biên đối với việc quay về origin. File WASM và kho mô hình là các asset bài không muốn chỉ nằm trong tarball npm.
+- [Faster and Lighter Model Inference with ONNX Runtime from Cloud to Client](https://www.youtube.com/watch?v=WDww8ce12Mc) — Microsoft Developer, tiếng Anh. Đoạn suy luận phía client nói vì sao các file đó tồn tại: runtime cần đồ thị và máy chạy, và cả hai phải được tải trước hop đầu.
+- [Quantization explained with PyTorch - Post-Training Quantization, Quantization-Aware Training](https://www.youtube.com/watch?v=0VdNflU08yA) — Umar Jamil, tiếng Anh. Trọng số nhỏ hơn đổi câu chuyện lần tải đầu. Xem đánh đổi độ chính xác trước khi coi lượng tử hóa là chiến thắng CDN miễn phí.

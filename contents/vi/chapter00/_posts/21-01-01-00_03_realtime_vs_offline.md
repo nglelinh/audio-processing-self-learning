@@ -128,3 +128,9 @@ print(f"quantum_ms={quantum_ms:.2f} quanta_per_hop={hop/128:.2f}")
 - DeepFilterNet2 (arXiv:2205.05474) và DeepFilterNet3 (arXiv:2305.08227) — mục real-time / causal. Mã: https://github.com/Rikorose/DeepFilterNet.
 - Tổng quan đồ thị xử lý WebRTC APM.
 - Tài liệu MDN AudioWorklet (ràng buộc thời gian callback).
+
+## Video tham khảo
+
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, tiếng Anh. **xem trước.** Xem các khẳng định độ trễ và hệ số thời gian thực cạnh sơ đồ hai tầng; đó là phép thử ship hay không mà bài định nghĩa.
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, tiếng Anh. Đoạn độ phức tạp đối chất lượng cho thấy điểm offline không phải ngân sách streaming.
+- [Sonic Boom! Audio Programming on Android and Chrome (Google I/O'19)](https://www.youtube.com/watch?v=EeQr0zfvF04) — Google for Developers, tiếng Anh. Số đo độ trễ callback là nửa thiết bị của bài: look-ahead thuật toán và audio thread là hai đồng hồ khác nhau.

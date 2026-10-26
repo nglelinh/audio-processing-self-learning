@@ -170,3 +170,9 @@ print("clipped bins", clipped.tolist())
 - Berouti / Makhoul — over-subtraction & floor (xem Loizou, *Speech Enhancement*).
 - Tài liệu SpeexDSP preprocessor (Xiph).
 - Đối chiếu: ước lượng Ephraim–Malah / Wiener (03-02), RNNoise (04-06).
+
+## Video tham khảo
+
+- [Spectral Subtraction In Python - Alexx Mitchell](https://www.youtube.com/watch?v=Xb--68NlxS0) — The Audio Programmer, tiếng Anh. **xem trước.** Xem sơ đồ thuật toán: ước lượng biên độ nhiễu, trừ, rồi sàn. Musical noise là bin âm nếu sàn đặt ngây thơ.
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, tiếng Anh. Dùng phần mở đầu để nghe vì sao sản phẩm sau này thay bộ khử cổ điển này, sau khi bạn đã làm được nó.
+- [DeepFilterNet Noise Suppression Demo](https://www.youtube.com/watch?v=EO7n96YwnyE) — Hendrik Schröter, tiếng Anh. Nghe sau sơ đồ. Demo là bộ khử đời sau, hữu ích như âm thanh mà spectral subtraction muốn tới mà chưa tới.

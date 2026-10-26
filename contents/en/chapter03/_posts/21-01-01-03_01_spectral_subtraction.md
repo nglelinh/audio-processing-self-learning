@@ -182,3 +182,9 @@ print("clipped bins", clipped.tolist())
 - M. Berouti, R. Schwartz, J. Makhoul — over-subtraction / spectral floor refinements (cite by name; standard textbook treatment in Loizou, *Speech Enhancement*).
 - SpeexDSP preprocessor documentation (Xiph) — production classical NS pointer.
 - Contrast next: Ephraim–Malah / Wiener estimators (lesson 03-02) and RNNoise’s hybrid design (lesson 04-06).
+
+## Video tham khảo
+
+- [Spectral Subtraction In Python - Alexx Mitchell](https://www.youtube.com/watch?v=Xb--68NlxS0) — The Audio Programmer, English. **xem trước.** Watch the algorithm diagram: estimate a noise magnitude, subtract, and floor. Musical noise is what a negative bin becomes if the floor is naive.
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, English. Use the opening to hear why a product eventually replaced this classical suppressor, after you can implement it.
+- [DeepFilterNet Noise Suppression Demo](https://www.youtube.com/watch?v=EO7n96YwnyE) — Hendrik Schröter, English. Listen after the diagram. The demo is a later suppressor, useful as the sound spectral subtraction is trying and failing to reach.

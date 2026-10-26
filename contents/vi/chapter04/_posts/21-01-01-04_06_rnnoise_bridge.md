@@ -139,3 +139,9 @@ PY
 - Mã nguồn và trọng số 8 bit: [github.com/xiph/rnnoise](https://github.com/xiph/rnnoise).
 - Bộ khử MMSE của SpeexDSP, baseline cổ điển trong paper đó.
 - Schröter et al., [arXiv:2110.05588](https://arxiv.org/abs/2110.05588) và [arXiv:2205.05474](https://arxiv.org/abs/2205.05474), cho đối chiếu 32 băng ERB và bảng PESQ 2,33 so với 3,08.
+
+## Video tham khảo
+
+- [RNNoise, Neural Speech Enhancement, and the Browser](https://www.youtube.com/watch?v=nsscrYdrGRE) — W3C, tiếng Anh. **xem trước.** Đây là cầu giảng: đặc trưng DSP, GRU nhỏ, và các gain, chạy trong trình duyệt với look-ahead rất ngắn.
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, tiếng Anh. Xem mô hình ERB cộng bộ lọc lớn hơn, mô hình bài nói RNNoise không sánh bằng trên điểm đã công bố.
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, tiếng Anh. Dùng kết quả sản phẩm như thang mà RNNoise không nhận là sẽ thay thế.

@@ -161,3 +161,8 @@ PY
 - Bài 05-01 cho p95 dự báo overrun, và bài 05-02 cho producer 128 mẫu.
 - MDN, [AudioWorklet](https://developer.mozilla.org/en-US/docs/Web/API/AudioWorklet), cho luồng không được chặn khi `free` bằng không.
 - Ghi chú kích thước buffer của JACK hoặc PipeWire, như từ vựng thứ hai cho “kỳ đối với độ sâu ring”, không phải API bạn phải gọi.
+
+## Video tham khảo
+
+- [Sonic Boom! Audio Programming on Android and Chrome (Google I/O'19)](https://www.youtube.com/watch?v=EeQr0zfvF04) — Google for Developers, tiếng Anh. **xem trước.** Xem kích thước callback phần cứng đối khối lớn hơn mà bạn muốn xử lý. Ring buffer trong bài là đường nối hai kích thước đó; bài nói này là các đồng hồ, không phải buffer từng dòng.
+- [AudioWorklet :: What, Why, and How - Hongchan Choi](https://www.youtube.com/watch?v=g1L4O1smMC0) — WebAudio PDX, tiếng Anh. Callback process là bên đọc, không được chặn. Lần đọc rỗng là underrun bài gọi tên.

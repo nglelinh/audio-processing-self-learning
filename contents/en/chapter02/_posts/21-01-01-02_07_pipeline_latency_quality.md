@@ -182,3 +182,9 @@ print("RTF if process() takes 12 ms", rtf(12.0, hop_ms))
 - DeepFilterNet real-time framing, [arXiv:2110.05588](https://arxiv.org/abs/2110.05588) and [github.com/Rikorose/DeepFilterNet](https://github.com/Rikorose/DeepFilterNet).
 - WebRTC APM overview: [modules/audio_processing](https://webrtc.googlesource.com/src/+/refs/heads/main/modules/audio_processing/).
 - MDN AudioWorklet performance guidance — quanta versus your hop.
+
+## Video tham khảo
+
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, English. **xem trước.** Watch the stated latency next to the two enhancement stages. Algorithmic delay is how late the audio is; the multiply-add rate is whether the CPU keeps up.
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, English. The complexity section is the quality side of the same trade: a heavier model can win a test and still miss a hop.
+- [Sonic Boom! Audio Programming on Android and Chrome (Google I/O'19)](https://www.youtube.com/watch?v=EeQr0zfvF04) — Google for Developers, English. Measured callback latency is the pipeline budget the STFT hop has to fit inside.

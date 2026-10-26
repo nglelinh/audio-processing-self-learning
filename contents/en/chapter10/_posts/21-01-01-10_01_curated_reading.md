@@ -116,3 +116,9 @@ Twelve bullets is three cards times four bullets. Failure modes: a card whose cl
 3. Do not describe a file you have not seen. “not stated” is allowed.
 4. Reddy, Gopal, and Cutler give a predictor, not a Mezon ship line. Domain shift is the failure mode.
 5. DPDFNet, DeepFilterGAN, HDF-Net, FastEnhancer, μNet, Fast-ULCNet, GTCRN.
+
+## Video tham khảo
+
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, English. **xem trước.** Watch this beside the DeepFilterNet paper on the reading list. The talk follows the paper's block diagram; it does not replace the PDF.
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, English. The DNS Challenge and DNSMOS portions match the dataset and metric readings in the same list.
+- [But what is the Fourier Transform?  A visual introduction.](https://www.youtube.com/watch?v=spUNpyF58BY) — 3Blue1Brown, English. Use the visual transform as the intuition under the DSP readings, then return to the formulas.

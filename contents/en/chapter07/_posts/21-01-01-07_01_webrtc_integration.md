@@ -169,3 +169,9 @@ browser_ns=False
 - [MDN: MediaStreamTrack](https://developer.mozilla.org/en-US/docs/Web/API/MediaStreamTrack).
 - LiveKit docs on publish: [TrackProcessor / setProcessor on LocalAudioTrack](https://docs.livekit.io/transport/media/publish/). Docs home: [https://docs.livekit.io/](https://docs.livekit.io/).
 - Chapter 03 for AEC and Chapter 05 for the AudioWorklet budget.
+
+## Video tham khảo
+
+- [Revamping Audio Quality for RTC Part 1: Beryl Echo Cancellation | Sriram Srinivasan and Hoang Do](https://www.youtube.com/watch?v=lapq9zvUd-k) — @Scale, English. **xem trước.** Watch the mouth-to-ear chain: capture, enhancement, encode, network, decode, render. The lesson's insertion points are positions on this chain.
+- [Group calling architectures in WebRTC: MCU, SFU & P2P](https://www.youtube.com/watch?v=d2N0d6CKrbk) — Tsahi Levent-Levi, English. Mesh, MCU, and SFU decide whether the server ever sees decoded audio. Inserting suppression before encode only helps if the forwarded track is the one you cleaned.
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, English. The integration section is a shipped suppressor meeting a real calling stack, including echo and loss beside the noise model.

@@ -149,3 +149,8 @@ print("measured error power", np.round(err ** 2, 4))
 - SpeexDSP echo canceller / preprocessor.
 - Haykin, *Adaptive Filter Theory*.
 - Con trỏ hybrid AENR: ULCNet + adaptive filter / Align-ULCNet.
+
+## Video tham khảo
+
+- [Revamping Audio Quality for RTC Part 1: Beryl Echo Cancellation | Sriram Srinivasan and Hoang Do](https://www.youtube.com/watch?v=lapq9zvUd-k) — @Scale, tiếng Anh. **xem trước.** Xem đường loa tới micro và chỗ gỡ echo trong chuỗi audio thời gian thực. Vị trí đó là ngữ cảnh WebRTC APM của bài.
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, tiếng Anh. Đoạn echo cho thấy khử nhiễu và khử echo là hàng xóm, nên bài không gộp chúng thành một công tắc.

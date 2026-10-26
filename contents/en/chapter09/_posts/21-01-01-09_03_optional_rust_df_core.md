@@ -111,3 +111,9 @@ Failure modes: “NS works” on a copy loop; committing `DeepFilterNet3_onnx.ta
 3. ONNX runtimes consume the tar/ONNX the CDN already has. libDF is the upstream engine. Both need a golden.
 4. No-go is a complete capstone if 09-01 and 09-04 are real. Say so.
 5. SI-SDR(wasm, rust) after delay compensation. The 13.80 lab is the method, not the expected product score.
+
+## Video tham khảo
+
+- [Zoom on Web: getting connected with advanced web technology](https://www.youtube.com/watch?v=nhTxJBgTywc) — Chrome for Developers, English. **xem trước.** Watch the Rust simd128 note and the Emscripten flag. A native df-core stretch still has to meet this WASM baseline or explain why it replaced it.
+- [Faster and Lighter Model Inference with ONNX Runtime from Cloud to Client](https://www.youtube.com/watch?v=WDww8ce12Mc) — Microsoft Developer, English. ONNX Runtime is the engine the lesson's WASM box is already using. A Rust engine has to load the same kind of graph.
+- [Sonic Boom! Audio Programming on Android and Chrome (Google I/O'19)](https://www.youtube.com/watch?v=EeQr0zfvF04) — Google for Developers, English. The callback does not care that the code moved to Rust. Watch the deadline the native core still has to hit.

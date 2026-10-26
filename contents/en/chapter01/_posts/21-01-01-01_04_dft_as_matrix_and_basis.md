@@ -157,3 +157,9 @@ print(f"time={energy_time:.6f} freq={energy_freq:.6f}")
 - Oppenheim & Schafer — DFT properties, Parseval, eigenreading of DFT.
 - Library docs for your FFT (normalization flags).
 - Julius O. Smith, *Mathematics of the DFT*, https://ccrma.stanford.edu/~jos/mdft/ — the DFT matrix, orthogonality, and Parseval.
+
+## Video tham khảo
+
+- [Computing the DFT Matrix](https://www.youtube.com/watch?v=Xw4voABxU5c) — Steve Brunton, English. **xem trước.** This is the matrix whose rows are the complex tones. Watch how a bin is one inner product, which is the change of basis in the lesson.
+- [The Discrete Fourier Transform (DFT)](https://www.youtube.com/watch?v=nl9TZanwbBk) — Steve Brunton, English. The opening derives that matrix multiplication before any FFT speedup, which is the object this lesson asks you to debug with.
+- [Chương 3.1: Biến đổi Fourier rời rạc (DFT)](https://www.youtube.com/watch?v=bC5umvKV8bE) — Tín hiệu và hệ thống UEt, Vietnamese. Vietnamese walk-through of the DFT sum. Pair it with the matrix video when the bin index is the thing that breaks.

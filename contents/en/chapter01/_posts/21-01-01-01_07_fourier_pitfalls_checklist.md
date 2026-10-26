@@ -203,3 +203,9 @@ assert nyquist_hz(512, 16000) == 8000.0
 - Oppenheim & Schafer — windows, scaling, DFT pitfalls chapters.
 - DeepFilterNet (arXiv:2110.05588), DeepFilterNet2 (arXiv:2205.05474), DeepFilterNet3 (arXiv:2305.08227) — configuration and real-time notes. Julius O. Smith, https://ccrma.stanford.edu/~jos/mdft/, for the DFT symmetries the asserts check.
 - ORT / browser profiling docs (high level) for separating STFT vs net costs.
+
+## Video tham khảo
+
+- [11: Spectral Analysis Part 1 - Intro to Neural Computation](https://www.youtube.com/watch?v=4ip-4ai6kN8) — MIT OpenCourseWare, English. **xem trước.** The lecture's point is that calling an FFT is easy to do wrong. Watch the axis, scaling, and window warnings before you retrain a model.
+- [Lecture 13: Spectral Leakage, Windowing, with Examples of Hanning and Hamming Windows](https://www.youtube.com/watch?v=tCWU9C-LdJQ) — Bahga Lab IIT Delhi, English. Hann versus rectangular sidelobes are the leakage half of the checklist.
+- [Xiph.Org Video Presentations: Digital Show & Tell](https://xiph.org/video/vid2.shtml) — Xiph.Org, English. Official Xiph.Org presentation of sampling and reconstruction. Use it when a frequency axis is wrong because the rate, not the network, moved.

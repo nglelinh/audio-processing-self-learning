@@ -178,3 +178,9 @@ print("RTF if process() takes 12 ms", rtf(12.0, hop_ms))
 - Framing realtime DeepFilterNet, [arXiv:2110.05588](https://arxiv.org/abs/2110.05588) và [github.com/Rikorose/DeepFilterNet](https://github.com/Rikorose/DeepFilterNet).
 - Tổng quan WebRTC APM: [modules/audio_processing](https://webrtc.googlesource.com/src/+/refs/heads/main/modules/audio_processing/).
 - Hướng dẫn hiệu năng AudioWorklet trên MDN — quantum so với hop của bạn.
+
+## Video tham khảo
+
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, tiếng Anh. **xem trước.** Xem độ trễ được nêu cạnh hai tầng tăng cường. Độ trễ thuật toán là audio muộn bao lâu; tốc độ nhân-cộng là CPU có theo kịp không.
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, tiếng Anh. Đoạn độ phức tạp là nửa chất lượng của cùng đánh đổi: mô hình nặng hơn có thể thắng bài test mà vẫn trễ hop.
+- [Sonic Boom! Audio Programming on Android and Chrome (Google I/O'19)](https://www.youtube.com/watch?v=EeQr0zfvF04) — Google for Developers, tiếng Anh. Độ trễ callback đo được là ngân sách pipeline mà hop STFT phải nằm trong đó.

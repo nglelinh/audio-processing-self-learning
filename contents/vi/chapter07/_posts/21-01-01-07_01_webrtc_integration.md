@@ -173,3 +173,9 @@ browser_ns=False
 - [MDN: MediaStreamTrack](https://developer.mozilla.org/en-US/docs/Web/API/MediaStreamTrack).
 - Tài liệu LiveKit về publish: [TrackProcessor / setProcessor on LocalAudioTrack](https://docs.livekit.io/transport/media/publish/). Trang chủ tài liệu: [https://docs.livekit.io/](https://docs.livekit.io/).
 - Chương 03 về AEC và Chương 05 về ngân sách AudioWorklet.
+
+## Video tham khảo
+
+- [Revamping Audio Quality for RTC Part 1: Beryl Echo Cancellation | Sriram Srinivasan and Hoang Do](https://www.youtube.com/watch?v=lapq9zvUd-k) — @Scale, tiếng Anh. **xem trước.** Xem chuỗi miệng-tới-tai: thu, tăng cường, mã hóa, mạng, giải mã, phát. Các điểm chèn của bài là các vị trí trên chuỗi này.
+- [Group calling architectures in WebRTC: MCU, SFU & P2P](https://www.youtube.com/watch?v=d2N0d6CKrbk) — Tsahi Levent-Levi, tiếng Anh. Mesh, MCU và SFU quyết định máy chủ có thấy audio đã giải mã hay không. Chèn khử nhiễu trước encode chỉ có ích nếu track được chuyển tiếp là track bạn đã làm sạch.
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, tiếng Anh. Đoạn tích hợp là bộ khử đã ship gặp một stack gọi thật, gồm echo và mất gói cạnh mô hình nhiễu.

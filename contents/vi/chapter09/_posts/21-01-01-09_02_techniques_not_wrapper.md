@@ -114,3 +114,9 @@ Kiểu hỏng: giả thuyết không có luật fail; thành công chỉ là “
 3. MVP là bảng và AB. Phần kéo là thiết bị thứ hai hoặc Rust. Huấn luyện không phải cái nào.
 4. Phương án đã loại nên có “không làm gì” và “vá repo chung” (bác).
 5. Chính sách mức không chỉnh gain ERB. Harness đánh giá cũng không. Nói thẳng vậy.
+
+## Video tham khảo
+
+- [Short-Time Fourier Transform Explained Easily](https://www.youtube.com/watch?v=-Yxj3yfvY-4) — Valerio Velardo - The Sound of AI, tiếng Anh. **xem trước.** Frame và hop là kỹ thuật đo được. Xem chúng trước khi đổi tên gói được tính là capstone.
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, tiếng Anh. Vòng đánh giá (dữ liệu, nghe, độ phức tạp) là thí nghiệm bài yêu cầu bạn viết ra.
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, tiếng Anh. Bản thân mô hình là một kỹ thuật trong thực đơn: gain ERB cộng deep filter, với độ trễ bạn trích được.

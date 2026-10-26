@@ -116,3 +116,9 @@ Failure modes: a hypothesis with no fail rule; success defined only as “SI-SDR
 3. MVP is the table and the AB. Stretch is a second device or Rust. Training is neither.
 4. Alternatives should include “do nothing” and “patch the shared repo” (rejected).
 5. A level policy does not retune ERB gains. An eval harness does not either. Say that plainly.
+
+## Video tham khảo
+
+- [Short-Time Fourier Transform Explained Easily](https://www.youtube.com/watch?v=-Yxj3yfvY-4) — Valerio Velardo - The Sound of AI, English. **xem trước.** Framing and the hop are a technique you can measure. Watch them before renaming a package counts as a capstone.
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, English. The evaluation loop (data, listening, complexity) is the experiment the lesson asks you to write down.
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, English. The model itself is one technique on the menu: ERB gains plus a deep filter, with a latency you can cite.

@@ -133,3 +133,9 @@ for p95_ms in (6.0, 12.0):
 - README GitHub công khai: `mezonai/mezon-noise-suppression`.
 - Trang npm: `deepfilternet3-noise-filter`.
 - DeepFilterNet (arXiv:2110.05588), DeepFilterNet2 (arXiv:2205.05474), DeepFilterNet3 (arXiv:2305.08227) cho ngữ cảnh thuật toán, không phải khẳng định riêng Mezon.
+
+## Video tham khảo
+
+- [But what is the Fourier Transform?  A visual introduction.](https://www.youtube.com/watch?v=spUNpyF58BY) — 3Blue1Brown, tiếng Anh. **xem trước.** Xem trước hình miền tần số mà các chương đầu của lộ trình viết thành định nghĩa, trước khi có bộ khử nhiễu.
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, tiếng Anh. Đây là đích neural của lộ trình: STFT vào, khử nhiễu full-band thời gian thực ra.
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, tiếng Anh. Xem đường từ dữ liệu mở tới tính năng gọi đã ship; các chương sau đi theo vòng đánh giá đó.

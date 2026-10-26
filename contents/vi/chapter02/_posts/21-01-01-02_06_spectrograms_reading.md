@@ -163,3 +163,9 @@ for h in (1, 2, 3):
 - Oppenheim & Schafer, và ghi chú phổ của Julius O. Smith — biên độ thời gian ngắn thực sự đo cái gì.
 - Chương spectrogram trong giáo trình xử lý tiếng nói / DSP.
 - Ảnh minh họa DNS Challenge và hình trong paper DeepFilterNet; đọc trục trước khi so với STFT tuyến tính 48 kHz.
+
+## Video tham khảo
+
+- [The Spectrogram and the Gabor Transform](https://www.youtube.com/watch?v=EfWnEldTyPA) — Steve Brunton, tiếng Anh. **xem trước.** Xem cửa sổ trượt thành ảnh thời gian–tần số. Đọc trục trước màu; đó là spectrogram bài yêu cầu bạn tin.
+- [Speech Acoustics 5 - vowel formants](https://www.youtube.com/watch?v=glnUFa2fLyE) — Listen Lab, tiếng Anh. Xem các dải đậm, không phải từng họa âm. Formant là cấu trúc tiếng nói mà bộ khử nhiễu không được xóa.
+- [Coding Adventure: Analyzing Audio](https://www.youtube.com/watch?v=08mmKNLQVHU) — Sebastian Lague, tiếng Anh. Đoạn ngắn hạn cho thấy tiếng nói bị cắt frame rồi vẽ spectrogram, kể cả cách một FFT cả file nói dối về thời điểm.

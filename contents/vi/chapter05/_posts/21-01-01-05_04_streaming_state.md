@@ -131,3 +131,9 @@ PY
 - Bài 05-03 cho ring giữ đuôi giữa các quantum 128 mẫu.
 - Tài liệu I/O binding của ONNX Runtime, để đưa tensor state trở lại mà không dựng lại session.
 - MDN, [AudioWorklet](https://developer.mozilla.org/en-US/docs/Web/API/AudioWorklet), cho đời processor: worklet mới là state mới, và hop đầu là cold start.
+
+## Video tham khảo
+
+- [Gated Recurrent Unit | GRU | Explained in detail](https://www.youtube.com/watch?v=IBs8D8PWMc8) — Learn With Jay, tiếng Anh. **xem trước.** Xem cổng cập nhật giữ trạng thái qua các bước. Vector GRU của bộ khử streaming là trạng thái giữa các hop.
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, tiếng Anh. GRU encoder là trạng thái hồi tiếp mà bài nói không được xóa giữa cuộc gọi.
+- [RNNoise, Neural Speech Enhancement, and the Browser](https://www.youtube.com/watch?v=nsscrYdrGRE) — W3C, tiếng Anh. GRU nhỏ phát gain mỗi frame là cùng ý trạng thái streaming ở thang giảng.

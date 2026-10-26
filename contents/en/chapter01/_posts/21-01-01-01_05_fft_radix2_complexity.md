@@ -165,3 +165,9 @@ for N in (256, 1024):
 - Cooley & Tukey FFT lineage overviews (classic DSP references; Oppenheim & Schafer FFT sections).
 - Julius O. Smith, *Mathematics of the DFT*, https://ccrma.stanford.edu/~jos/mdft/ — FFT factorization as a faster DFT, not a different transform.
 - ONNX STFT / DFT operator docs when using ORT graphs.
+
+## Video tham khảo
+
+- [The Fast Fourier Transform (FFT)](https://www.youtube.com/watch?v=E8HeD-MUrjY) — Steve Brunton, English. **xem trước.** Watch the contrast between the dense DFT and the factored FFT; the lesson's O(N log N) claim is this argument.
+- [The Fast Fourier Transform Algorithm](https://www.youtube.com/watch?v=toj_IoCQE-4) — Steve Brunton, English. The radix-2 split is the part to watch: half-size transforms and twiddle factors, which is where the log factor comes from.
+- [Computing the DFT Matrix](https://www.youtube.com/watch?v=Xw4voABxU5c) — Steve Brunton, English. Keep this as the O(N²) baseline the FFT is not allowed to change numerically.

@@ -117,3 +117,9 @@ for N in (256, 1024):
 - Tổng quan dòng Cooley–Tukey; mục FFT trong Oppenheim & Schafer.
 - Julius O. Smith, *Mathematics of the DFT*, https://ccrma.stanford.edu/~jos/mdft/ — FFT là cách tính DFT nhanh hơn, không phải biến đổi khác.
 - Tài liệu toán tử STFT/DFT ONNX khi dùng ORT.
+
+## Video tham khảo
+
+- [The Fast Fourier Transform (FFT)](https://www.youtube.com/watch?v=E8HeD-MUrjY) — Steve Brunton, tiếng Anh. **xem trước.** Xem đối chiếu DFT dày và FFT phân tích thừa số; khẳng định O(N log N) của bài là lập luận này.
+- [The Fast Fourier Transform Algorithm](https://www.youtube.com/watch?v=toj_IoCQE-4) — Steve Brunton, tiếng Anh. Xem bước tách radix-2: biến đổi nửa kích thước và twiddle; hệ số log ra từ đó.
+- [Computing the DFT Matrix](https://www.youtube.com/watch?v=Xw4voABxU5c) — Steve Brunton, tiếng Anh. Giữ video này như mốc O(N²) mà FFT không được đổi về mặt số.

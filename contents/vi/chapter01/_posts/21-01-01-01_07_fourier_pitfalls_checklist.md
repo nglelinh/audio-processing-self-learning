@@ -129,3 +129,9 @@ assert nyquist_hz(512, 16000) == 8000.0
 - Oppenheim & Schafer — cửa sổ, scale, bẫy DFT.
 - DeepFilterNet (arXiv:2110.05588), DeepFilterNet2 (arXiv:2205.05474), DeepFilterNet3 (arXiv:2305.08227) — cấu hình và ghi chú real-time. Julius O. Smith, https://ccrma.stanford.edu/~jos/mdft/, cho các đối xứng DFT mà assert kiểm.
 - Tài liệu profile ORT / trình duyệt để tách chi phí STFT vs net.
+
+## Video tham khảo
+
+- [11: Spectral Analysis Part 1 - Intro to Neural Computation](https://www.youtube.com/watch?v=4ip-4ai6kN8) — MIT OpenCourseWare, tiếng Anh. **xem trước.** Ý bài giảng là gọi FFT rất dễ sai. Xem cảnh báo trục, tỉ lệ và cửa sổ trước khi huấn luyện lại mô hình.
+- [Lecture 13: Spectral Leakage, Windowing, with Examples of Hanning and Hamming Windows](https://www.youtube.com/watch?v=tCWU9C-LdJQ) — Bahga Lab IIT Delhi, tiếng Anh. Búp phụ Hann đối cửa sổ chữ nhật là nửa rò phổ của checklist.
+- [Xiph.Org Video Presentations: Digital Show & Tell](https://xiph.org/video/vid2.shtml) — Xiph.Org, tiếng Anh. Trang video Xiph.Org về lấy mẫu và khôi phục. Dùng khi trục tần số sai vì rate đổi, không phải vì mạng.

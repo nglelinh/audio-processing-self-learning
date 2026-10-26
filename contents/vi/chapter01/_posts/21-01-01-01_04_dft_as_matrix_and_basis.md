@@ -117,3 +117,9 @@ print(f"time={energy_time:.6f} freq={energy_freq:.6f}")
 - Oppenheim & Schafer — tính chất DFT, Parseval.
 - Tài liệu thư viện FFT (cờ chuẩn hóa).
 - Julius O. Smith, *Mathematics of the DFT*, https://ccrma.stanford.edu/~jos/mdft/ — ma trận DFT, trực giao, và Parseval.
+
+## Video tham khảo
+
+- [Computing the DFT Matrix](https://www.youtube.com/watch?v=Xw4voABxU5c) — Steve Brunton, tiếng Anh. **xem trước.** Đây là ma trận có hàng là các tone phức. Xem mỗi bin là một tích trong — đúng phép đổi cơ sở của bài.
+- [The Discrete Fourier Transform (DFT)](https://www.youtube.com/watch?v=nl9TZanwbBk) — Steve Brunton, tiếng Anh. Phần mở đầu dựng phép nhân ma trận trước mọi tăng tốc FFT; đó là đối tượng bài yêu cầu bạn debug.
+- [Chương 3.1: Biến đổi Fourier rời rạc (DFT)](https://www.youtube.com/watch?v=bC5umvKV8bE) — Tín hiệu và hệ thống UEt, tiếng Việt. Phần tiếng Việt đi tổng DFT. Ghép với video ma trận khi chính chỉ số bin là chỗ hỏng.

@@ -203,3 +203,9 @@ setProcessor -> LiveKit LocalAudioTrack
 - Upstream [DeepFilterNet](https://github.com/Rikorose/DeepFilterNet), gồm Schröter và cộng sự, ICASSP 2022, arXiv:2110.05588.
 - LiveKit [TrackProcessor / setProcessor on LocalAudioTrack](https://docs.livekit.io/transport/media/publish/).
 - [tract](https://github.com/sonos/tract) và [ONNX Runtime](https://onnxruntime.ai/docs/) cho phía runtime của Chương 06.
+
+## Video tham khảo
+
+- [DeepFilterNet Noise Suppression Demo](https://www.youtube.com/watch?v=EO7n96YwnyE) — Hendrik Schröter, tiếng Anh. **xem trước.** Nghe bộ khử mà gói npm là phương tiện. Bài ánh xạ các method công khai lên hành vi này, không phải một tour API riêng.
+- [Group calling architectures in WebRTC: MCU, SFU & P2P](https://www.youtube.com/watch?v=d2N0d6CKrbk) — Tsahi Levent-Levi, tiếng Anh. Chuyển tiếp track là phía LiveKit của bề mặt công khai. Video giải thích SFU; nó không ghi kiểu của npm.
+- [AudioWorklet :: What, Why, and How - Hongchan Choi](https://www.youtube.com/watch?v=g1L4O1smMC0) — WebAudio PDX, tiếng Anh. Callback audio là chỗ processor của gói phải trả về đúng hạn.

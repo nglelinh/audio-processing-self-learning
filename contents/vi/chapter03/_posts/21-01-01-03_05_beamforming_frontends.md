@@ -130,3 +130,7 @@ for deg in (0, 45):
 - Ghi chú kỹ thuật multi-mic WebRTC / mobile.
 - Hybrid khảo sát: GSC–DeepFilterNet2, IVA+GTCRN (mức tên).
 - DeepFilterNet2 — tầng neural mono thường *sau* làm sạch không gian.
+
+## Video tham khảo
+
+- [What is Beamforming? ("the best explanation I’ve ever heard")](https://www.youtube.com/watch?v=A1n5Hhwtz78) — Iain Explains Signals, Systems, and Digital Comms, tiếng Anh. **xem trước.** Xem độ trễ căn một hướng trước khi cộng. Delay-and-sum là hình học front-end bài bắt đầu; GSC và IVA là bước sau khi phép cộng đó không đủ.

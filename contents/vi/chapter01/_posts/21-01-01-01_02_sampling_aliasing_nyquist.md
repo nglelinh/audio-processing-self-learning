@@ -115,3 +115,8 @@ print(np.round(high[:8], 6).tolist())
 - Oppenheim & Schafer — định lý lấy mẫu và đa tốc độ.
 - Julius O. Smith, *Mathematics of the DFT*, https://www.dsprelated.com/freebooks/mdft/ — lấy mẫu và trục tần số mà FFT dùng.
 - Web Audio `sampleRate`; tài liệu ràng buộc getUserMedia WebRTC.
+
+## Video tham khảo
+
+- [Aliasing and the Sampling Theorem Simplified](https://www.youtube.com/watch?v=KuaannH5pnM) — Barry Van Veen, tiếng Anh. **xem trước.** Xem cách tần số liên tục gấp vào một khoảng 2π; nếp gấp đó là bug aliasing khi sai sample rate.
+- [Xiph.Org Video Presentations: Digital Show & Tell](https://xiph.org/video/vid2.shtml) — Xiph.Org, tiếng Anh. Trang video chính thức của Xiph.Org về lấy mẫu, độ sâu bit và khôi phục. Dùng để tách giới hạn sample rate thật khỏi huyền thoại bậc thang.

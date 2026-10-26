@@ -142,3 +142,9 @@ max_abs_error=0.00393701
 - Jacob và cộng sự, lượng tử hóa cho suy luận chỉ số nguyên, tài liệu tham chiếu mobile kinh điển.
 - Ghi chú FastEnhancer / faster-enhancer.c về runtime tăng cường INT8 (chỉ là con trỏ khảo sát).
 - Thảo luận dung lượng và realtime của DeepFilterNet trong kho upstream.
+
+## Video tham khảo
+
+- [Quantization explained with PyTorch - Post-Training Quantization, Quantization-Aware Training](https://www.youtube.com/watch?v=0VdNflU08yA) — Umar Jamil, tiếng Anh. **xem trước.** Xem lượng tử hóa sau huấn luyện và lượng tử hóa có nhận biết lúc huấn luyện, gồm vì sao khoảng min-max phạt mọi gain nhỏ khi một outlier rất lớn.
+- [Faster and Lighter Model Inference with ONNX Runtime from Cloud to Client](https://www.youtube.com/watch?v=WDww8ce12Mc) — Microsoft Developer, tiếng Anh. Đoạn INT8 là lượng tử hóa đi vào ONNX Runtime, đường một mô hình tiếng nói đi sau phần giải thích PyTorch.
+- [Enable Model Quantization for ONNX and TensorRT!](https://www.youtube.com/watch?v=phmFvMOHt4I) — Nicolai Nielsen Tech, tiếng Anh. Xem một đồ thị ONNX đã lượng tử hóa được nạp. Coi TensorRT là tùy chọn; rủi ro của bài là mô hình tiếng nói, không phải hãng GPU.

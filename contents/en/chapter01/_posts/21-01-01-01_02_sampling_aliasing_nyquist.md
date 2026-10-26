@@ -182,3 +182,8 @@ print(np.round(high[:8], 6).tolist())
 - Oppenheim & Schafer — sampling theorem and multirate chapters.
 - Julius O. Smith, *Mathematics of the DFT*, https://www.dsprelated.com/freebooks/mdft/ — sampling and the frequency axis used by an FFT.
 - Web Audio API AudioContext `sampleRate` behavior; WebRTC getUserMedia constraints docs.
+
+## Video tham khảo
+
+- [Aliasing and the Sampling Theorem Simplified](https://www.youtube.com/watch?v=KuaannH5pnM) — Barry Van Veen, English. **xem trước.** Watch the wrap from continuous frequency into one 2π interval; that fold is the aliasing bug a wrong sample rate hides.
+- [Xiph.Org Video Presentations: Digital Show & Tell](https://xiph.org/video/vid2.shtml) — Xiph.Org, English. Official Xiph.Org presentation of sampling, bit depth, and reconstruction. Use it to separate a real sample-rate limit from the stair-step myth.

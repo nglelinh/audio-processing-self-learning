@@ -125,3 +125,8 @@ for r in (0.1, 10.0):
 - Haykin, *Adaptive Filter Theory* (NLMS/RLS).
 - Tổng quan WebRTC Audio Processing Module.
 - Con trỏ hybrid Kalman/ULCNet AENR (Align-ULCNet, mức tên).
+
+## Video tham khảo
+
+- [Why Use Kalman Filters? | Understanding Kalman Filters, Part 1](https://www.youtube.com/watch?v=mwn8xhgNpFY) — MATLAB, tiếng Anh. **xem trước.** Xem hình dự đoán rồi hiệu chỉnh. Bộ theo dõi nhiễu chỉ cập nhật sàn là cùng ý hai bước với trạng thái nhỏ hơn nhiều.
+- [Kalman Filter - VISUALLY EXPLAINED!](https://www.youtube.com/watch?v=-DiZGpAh7T4) — Kapil Sachdeva, tiếng Anh. Xem bước cập nhật hình: độ bất định co lại khi có đo mới; đó là trực giác của bộ theo dõi tiếng nói đệ quy.

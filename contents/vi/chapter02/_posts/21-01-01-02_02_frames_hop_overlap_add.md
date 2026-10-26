@@ -178,3 +178,9 @@ print("peak deviation", float(np.max(np.abs(mid - mid[0]))))
 - Oppenheim & Schafer — STFT / filterbank / OLA.
 - Julius O. Smith, *Spectral Audio Signal Processing* — COLA và đồng nhất thức Hann.
 - Framing DeepFilterNet: [arXiv:2110.05588](https://arxiv.org/abs/2110.05588), [github.com/Rikorose/DeepFilterNet](https://github.com/Rikorose/DeepFilterNet).
+
+## Video tham khảo
+
+- [Short-Time Fourier Transform Explained Easily](https://www.youtube.com/watch?v=-Yxj3yfvY-4) — Valerio Velardo - The Sound of AI, tiếng Anh. **xem trước.** Xem frame, hop và phép nhân cửa sổ. Overlap-add là cách các frame đã cửa sổ hóa thành sóng trở lại.
+- [Short-time Fourier Transform and the Spectogram](https://www.youtube.com/watch?v=NA0TwPsECUQ) — Barry Van Veen, tiếng Anh. Bài biến đổi ngắn hạn cho thấy các frame liên tiếp phải chồng nếu spectrogram cần nghịch đảo.
+- [But what is a convolution?](https://www.youtube.com/watch?v=KuXjwB4LzSA) — 3Blue1Brown, tiếng Anh. Xem đoạn FFT: tích chập miền thời gian là nhân miền tần số, và overlap-add là cách ghép lại tín hiệu dài.
