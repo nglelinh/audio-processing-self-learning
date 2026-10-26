@@ -15,4 +15,13 @@
 
     checkbox.checked = false;
   }, false);
+
+  // A link inside <summary> should navigate. Stop the click before it toggles
+  // the disclosure (some browsers activate <summary> even when the target is a link).
+  var chapterLinks = sidebar.querySelectorAll('.sidebar-chapter-link');
+  for (var i = 0; i < chapterLinks.length; i++) {
+    chapterLinks[i].addEventListener('click', function(e) {
+      e.stopPropagation();
+    });
+  }
 })(document);

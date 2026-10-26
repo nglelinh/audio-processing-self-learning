@@ -669,3 +669,124 @@ a.pagination-item:hover {
   }
 }
 
+/*
+ * Chapter submenus
+ *
+ * Each chapter is a native <details> disclosure. The chapter title links to
+ * the chapter index; the caret toggles the lesson list. Lessons come from
+ * the chapter category and stay inside the existing 14rem drawer.
+ */
+
+.sidebar-chapter {
+  margin: 0;
+  border-top: 1px solid rgba(255,255,255,.1);
+}
+
+.sidebar-chapter-summary {
+  display: flex;
+  align-items: stretch;
+  list-style: none;
+  cursor: pointer;
+}
+
+.sidebar-chapter-summary::-webkit-details-marker {
+  display: none;
+}
+
+.sidebar-chapter-summary::marker {
+  content: "";
+}
+
+.sidebar-chapter-link {
+  flex: 1 1 auto;
+  display: block;
+  min-width: 0;
+  padding: .5rem .25rem .5rem 1rem;
+  color: #fff;
+  line-height: 1.35;
+  text-decoration: none;
+  word-wrap: break-word;
+}
+
+.sidebar-chapter-link.active,
+.sidebar-chapter-link:hover,
+.sidebar-chapter-link:focus {
+  text-decoration: none;
+  background-color: rgba(255,255,255,.1);
+}
+
+.sidebar-chapter-caret {
+  flex: 0 0 2.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-chapter-caret::before {
+  content: "";
+  width: .4rem;
+  height: .4rem;
+  margin-left: -.2rem;
+  border-right: 2px solid rgba(255,255,255,.75);
+  border-bottom: 2px solid rgba(255,255,255,.75);
+  transform: rotate(-45deg);
+}
+
+.sidebar-chapter[open] > .sidebar-chapter-summary .sidebar-chapter-caret::before {
+  margin-top: -.2rem;
+  margin-left: 0;
+  transform: rotate(45deg);
+}
+
+.sidebar-lessons {
+  padding-bottom: .25rem;
+}
+
+.sidebar-lesson {
+  display: flex;
+  gap: .35rem;
+  align-items: baseline;
+  padding: .35rem .7rem .35rem 1rem;
+  color: rgba(255,255,255,.88);
+  font-size: .92em;
+  line-height: 1.35;
+  text-decoration: none;
+}
+
+.sidebar-lesson:hover,
+.sidebar-lesson:focus,
+.sidebar-lesson.active {
+  color: #fff;
+  text-decoration: none;
+  background-color: rgba(255,255,255,.1);
+}
+
+.sidebar-lesson.active {
+  font-weight: 600;
+}
+
+.sidebar-lesson-order {
+  flex: 0 0 1.15rem;
+  color: rgba(255,255,255,.45);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.sidebar-lesson.active .sidebar-lesson-order {
+  color: rgba(255,255,255,.85);
+}
+
+.sidebar-lesson-title {
+  min-width: 0;
+  word-wrap: break-word;
+}
+
+@media (min-width: 48em) {
+  .sidebar-chapter-link {
+    padding-left: 1.5rem;
+  }
+  .sidebar-lesson {
+    padding-left: 1.5rem;
+  }
+}
+
