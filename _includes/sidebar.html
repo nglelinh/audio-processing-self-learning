@@ -19,22 +19,43 @@
     {% assign current_lang = page.lang | default: site.default_lang %}
     {% assign pages_list = site.pages | where: "lang", current_lang | sort: "chapter" %}
     
-    <!-- Hiển thị các chương có sẵn cho ngôn ngữ hiện tại -->
+    <!-- Mỗi chương là một mục menu; bài học lấy từ category chapterXX, lọc theo ngôn ngữ, xếp theo order. -->
     {% for node in pages_list %}
       {% if node.title != null and node.chapter %}
         {% if node.layout == "page" %}
           {% assign is_hidden = node.hidden | default: false %}
           {% unless is_hidden %}
-            <a class="sidebar-nav-item{% if page.url == node.url %} active{% endif %}" href="{{ node.url | absolute_url }}">
-              {{node.chapter}}. {{ node.title }}
-              {% if node.lesson_type %}
-                {% if node.lesson_type == 'required' %}
-                  <span class="lesson-badge required">{% t required %}</span>
-                {% elsif node.lesson_type == 'optional' %}
-                  <span class="lesson-badge optional">{% t optional %}</span>
-                {% endif %}
-              {% endif %}
-            </a>
+            {% assign cat_name = node.chapter | prepend: "chapter" %}
+            {% assign chapter_posts = site.categories[cat_name] | where: "lang", current_lang | sort: "order" %}
+            {% if chapter_posts.size > 0 %}
+              <details class="sidebar-chapter"{% if page.chapter == node.chapter %} open{% endif %}>
+                <summary class="sidebar-chapter-summary">
+                  <a class="sidebar-chapter-link{% if page.url == node.url %} active{% endif %}" href="{{ node.url | absolute_url }}"{% if page.url == node.url %} aria-current="page"{% endif %}>
+                    {{ node.chapter }}. {{ node.title }}
+                    {% if node.lesson_type %}
+                      {% if node.lesson_type == 'required' %}
+                        <span class="lesson-badge required">{% t required %}</span>
+                      {% elsif node.lesson_type == 'optional' %}
+                        <span class="lesson-badge optional">{% t optional %}</span>
+                      {% endif %}
+                    {% endif %}
+                  </a>
+                  <span class="sidebar-chapter-caret" aria-hidden="true"></span>
+                </summary>
+                <div class="sidebar-lessons">
+                  {% for post in chapter_posts %}
+                    <a class="sidebar-lesson{% if page.url == post.url %} active{% endif %}" href="{{ post.url | absolute_url }}"{% if page.url == post.url %} aria-current="page"{% endif %}>
+                      <span class="sidebar-lesson-order">{{ post.order }}</span>
+                      <span class="sidebar-lesson-title">{{ post.title }}</span>
+                    </a>
+                  {% endfor %}
+                </div>
+              </details>
+            {% else %}
+              <a class="sidebar-nav-item{% if page.url == node.url %} active{% endif %}" href="{{ node.url | absolute_url }}"{% if page.url == node.url %} aria-current="page"{% endif %}>
+                {{ node.chapter }}. {{ node.title }}
+              </a>
+            {% endif %}
           {% endunless %}
         {% endif %}
       {% endif %}
