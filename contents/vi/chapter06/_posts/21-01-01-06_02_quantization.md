@@ -11,81 +11,81 @@ lesson_type: required
 draft: false
 ---
 
-**Lượng tử hóa** thu nhỏ trọng số và thường làm suy luận tăng cường tiếng nói nhanh hơn. Điều đó quyết định dung lượng tải WASM (WebAssembly — mã nhị phân chạy trong trình duyệt) và hệ số realtime trên CPU. Nó cũng có thể làm hỏng tiếng nói hoặc làm state hồi tiếp trôi. Lỗi nguy hiểm không nằm ở trọng số lớn. Nó nằm ở gain gần 0, vì các gain đó nhân thẳng lên bin tần số. Bài này trình bày INT8 ở mức kỹ sư, hiệu chuẩn trên tiếng nói chứ không trên ảnh, và một lab số tự chấm.
+**Lượng tử hóa (quantization)** giúp thu nhỏ dung lượng trọng số và thường đẩy nhanh tốc độ suy luận của mô hình tăng cường giọng nói. Điều này ảnh hưởng trực tiếp tới dung lượng tải xuống của bản WASM (WebAssembly — mã nhị phân chạy trong trình duyệt) và hệ số thời gian thực trên CPU. Tuy nhiên, lượng tử hóa không cẩn thận có thể làm méo giọng nói hoặc gây trôi trạng thái hồi tiếp. Rủi ro lớn nhất không nằm ở các trọng số có giá trị lớn mà nằm ở các hệ số khuếch đại (gain) gần 0, vì chúng nhân trực tiếp lên từng bin tần số. Bài học này trình bày lượng tử hóa INT8 ở góc độ kỹ thuật triển khai, cách hiệu chuẩn trên dữ liệu giọng nói thay vì ảnh, kèm một bài lab số học tự kiểm chứng.
 
 ![Trọng số đã lượng tử hóa được đóng vào kho mô hình trước khi trình duyệt tải WASM]({{ site.imgurl }}/generated/onnx-wasm-path.png)
 
-*Figure. Quantization happens before the WASM the browser loads.*
+*Hình. Quá trình lượng tử hóa diễn ra trước bước đóng gói và biên dịch WASM mà trình duyệt sẽ tải về.*
 
 ## Mục tiêu học tập
 
-Bạn phân biệt lượng tử hóa INT8 động và tĩnh, tính thang đối xứng cùng sai số tuyệt đối lớn nhất trên một vector gain, giải thích vì sao bin có gain gần 0 gây hỏng nghe rõ nhất, và thiết kế cổng nghe A/B cộng SI-SDR trước khi ship trọng số đã lượng tử.
+Sau bài học này, bạn sẽ phân biệt được lượng tử hóa INT8 động và tĩnh, tính được hệ số tỉ lệ đối xứng cùng sai số tuyệt đối lớn nhất trên một véctơ gain, giải thích được vì sao các bin có gain gần 0 gây suy giảm chất lượng nghe rõ rệt nhất, và thiết kế được quy trình kiểm duyệt kết hợp nghe thử A/B với SI-SDR trước khi phát hành trọng số lượng tử hóa.
 
 ## Kế hoạch 60 phút
 
-- **0–10 phút** — Dung lượng và hệ số realtime của một lượt tải WASM họ DeepFilter.
-- **10–25 phút** — INT8 đối xứng, thang theo tensor đối với thang theo kênh.
-- **25–40 phút** — Audio hiệu chuẩn, vì sao thống kê ImageNet không mang sang.
-- **40–50 phút** — Gain gần 0, nhiễu dư, trôi state.
-- **50–60 phút** — Mini-lab, bẫy, bài tập.
+- **0–10 phút** — Dung lượng tải và hệ số thời gian thực của bản WASM họ DeepFilter.
+- **10–25 phút** — Lượng tử hóa INT8 đối xứng, tỉ lệ theo tensor so với tỉ lệ theo kênh.
+- **25–40 phút** — Dữ liệu âm thanh hiệu chuẩn và vì sao không thể dùng thống kê của ImageNet.
+- **40–50 phút** — Các bin gain gần 0, nhiễu dư và hiện tượng trôi trạng thái.
+- **50–60 phút** — Thực hành mini-lab, bẫy thường gặp và làm bài tập.
 
 ## Giải thích cốt lõi
 
-### Thang bạn sẽ code
+### Công thức tỉ lệ lượng tử hóa
 
-Giá trị float \(g\) ánh xạ sang mã nguyên \(q\) với thang \(s\) và zero-point tùy chọn \(z\):
+Một giá trị dấu phẩy động \(g\) được ánh xạ sang mã số nguyên \(q\) thông qua hệ số tỉ lệ \(s\) và điểm không (zero-point) tùy chọn \(z\):
 
 $$
 g \approx s\,(q - z).
 $$
 
-Với vector gain đối xứng, không zero-point:
+Với véctơ gain sử dụng lượng tử hóa đối xứng (không có zero-point):
 
 $$
 s = \frac{\max_i |g_i|}{127}, \qquad q_i = \mathrm{clip}\big(\mathrm{round}(g_i / s), -128, 127\big), \qquad \hat g_i = s\, q_i.
 $$
 
-Sai số khôi phục mỗi phần tử thường không quá khoảng nửa bước, \(s/2\), khi phép làm tròn đúng kỳ vọng. Kernel GEMM nhân số nguyên rồi đưa về thang float. Thang **theo kênh** trên convolution thường thắng một thang thô cho cả tensor, vì một kênh ngoại lai nếu không sẽ phình \(s\) của mọi kênh.
+Khi phép làm tròn hoạt động chuẩn, sai số khôi phục trên mỗi phần tử không vượt quá khoảng nửa bước lượng tử \(s/2\). Các nhân tính toán GEMM sẽ thực hiện phép nhân trên số nguyên rồi quy đổi ngược về thang số thực. Đối với lớp tích chập (convolution), dùng hệ số tỉ lệ **theo từng kênh (per-channel)** thường vượt trội so với dùng một hệ số duy nhất cho cả tensor, bởi một kênh có giá trị ngoại lai lớn sẽ làm phình hệ số \(s\) của toàn bộ các kênh còn lại.
 
-### Chỗ sai số thành tiếng nghe được
+### Nơi sai số lượng tử hóa trở thành tạp âm nghe thấy được
 
-Giả sử gain đỉnh là \(1\). Khi đó \(s = 1/127 \approx 0.00787\), và sai số tuyệt đối chỉ vài phần nghìn. So với bin đầy thang thì chẳng là gì. So với bin có gain thật \(0.004\), một mã là toàn bộ tín hiệu. Vector trong mini-lab \([1.0,\ 0.5,\ 0.02,\ 0.004,\ 0.0]\) lượng tử thành mã \([127,\ 64,\ 3,\ 1,\ 0]\). Bin \(0.004\) nhảy tới \(1/127 \approx 0.00787\). Đó gần như là gấp đôi một bin yếu, còn sai số tuyệt đối lớn nhất của vector khoảng \(0.00394\), đến từ nửa bước của \(0.5\), không phải từ bin đầy thang.
+Giả sử giá trị gain lớn nhất bằng \(1\). Khi đó \(s = 1/127 \approx 0.00787\), và sai số tuyệt đối chỉ ở mức vài phần nghìn. So với một bin có biên độ đầy thang, sai số này không đáng kể; nhưng với một bin có gain thực là \(0.004\), chỉ một mức mã nguyên đã tương đương toàn bộ tín hiệu. Trong bài mini-lab, véctơ \([1.0,\ 0.5,\ 0.02,\ 0.004,\ 0.0]\) được lượng tử hóa thành các mã \([127,\ 64,\ 3,\ 1,\ 0]\). Bin \(0.004\) bị đẩy lên thành \(1/127 \approx 0.00787\) — tức gần gấp đôi giá trị thật của một bin yếu — trong khi sai số tuyệt đối lớn nhất trên cả véctơ là khoảng \(0.00394\), xuất phát từ nửa bước làm tròn ở giá trị \(0.5\) chứ không phải ở bin đầy thang.
 
-Trong khử nhiễu, những gain nhỏ đó là bin do nhiễu thống trị và các họa âm yếu. Ép một họa âm về mã \(0\) thì nguyên âm bị mỏng. Làm tròn bin gần im lên một quantum thì bạn rò một sàn tonal đều, nguồn thường gặp của nhiễu nhạc. Sai số trọng số trong convolution còn bị các lớp sau lọc. Sai số gain nhân thẳng lên bin STFT rồi bị overlap-add cộng dồn. Hãy hiệu chuẩn và nghe đầu gain ngay cả khi bạn để nó ở float32.
+Trong khử nhiễu giọng nói, những giá trị gain nhỏ đó đại diện cho các bin bị nhiễu lấn át và các họa âm yếu. Ép một họa âm về mã \(0\) sẽ khiến nguyên âm nghe mỏng và khô; ngược lại, làm tròn một bin gần im lặng lên 1 mức lượng tử sẽ làm rò rỉ một nền âm đơn điệu (tonal floor) — nguyên nhân phổ biến gây nhiễu nhạc (musical noise). Sai số trọng số trong lớp tích chập còn được các lớp phía sau làm mượt bớt, nhưng sai số ở đầu ra gain lại nhân thẳng vào các bin STFT rồi được cộng dồn ở bước overlap-add. Vì vậy, cần hiệu chuẩn cẩn thận và nghe kiểm tra trực tiếp đầu ra gain, kể cả khi giữ riêng nhánh này ở `float32`.
 
-### Các cách làm
+### Các phương pháp lượng tử hóa
 
-| Chế độ | Ý | Ưu | Nhược |
+| Chế độ | Nguyên lý | Ưu điểm | Hạn chế |
 |--------|---|----|-------|
-| Động | Kích hoạt được lượng tử lúc chạy | Dễ thử | Chi phí thêm; trễ biến thiên |
-| PTQ tĩnh | Hiệu chuẩn khoảng giá trị offline | Suy luận nhanh | Cần audio đại diện |
-| QAT | Train kèm nhiễu lượng tử | Chất lượng tốt khi hội tụ | Tốn kém |
-| Chỉ trọng số | Trọng số INT8 hoặc INT4, kích hoạt float | Giảm dung lượng đơn giản | Tăng tốc ít hơn |
+| Động (Dynamic) | Lượng tử hóa giá trị kích hoạt ngay khi chạy | Dễ thử nghiệm | Phát sinh chi phí tính toán thêm; độ trễ biến động |
+| PTQ tĩnh (Static PTQ) | Hiệu chuẩn dải giá trị trước khi triển khai | Suy luận nhanh | Cần tập âm thanh hiệu chuẩn mang tính đại diện |
+| QAT | Huấn luyện có mô phỏng nhiễu lượng tử | Chất lượng tốt khi hội tụ | Chi phí huấn luyện cao |
+| Chỉ trọng số (Weight-only) | Lưu trọng số ở INT8 hoặc INT4, giữ kích hoạt dạng float | Giảm dung lượng đơn giản | Mức tăng tốc thấp hơn |
 
-Với tăng cường streaming, lượng tử hóa sau train kiểu tĩnh trong toolchain ONNX Runtime là thí nghiệm đầu hợp lý. Chuyển sang train có nhận biết lượng tử khi SI-SDR hoặc bài nghe tụt. Lượng tử hóa là bước **đóng gói**: nó chạy trước khi nén kho và trước khi trình duyệt biên dịch WASM (bài 06-04, bài 07-03). Đừng lượng tử một đồ thị mà STFT vẫn lệch với sản phẩm.
+Với bài toán tăng cường giọng nói streaming, lượng tử hóa sau huấn luyện dạng tĩnh (Static PTQ) bằng bộ công cụ của ONNX Runtime là bước thử nghiệm đầu tiên hợp lý. Chỉ nên chuyển sang huấn luyện có nhận biết lượng tử hóa (QAT) nếu chỉ số SI-SDR hoặc kết quả nghe thử bị sụt giảm rõ rệt. Lượng tử hóa là công đoạn thuộc khâu **đóng gói**: nó phải thực hiện trước khi nén tệp mô hình và trước khi trình duyệt biên dịch WASM (bài 06-04, bài 07-03). Không nên lượng tử hóa một đồ thị khi bước STFT vẫn còn lệch với môi trường sản phẩm.
 
-ONNX ở đây vẫn là định dạng trao đổi đồ thị. File đã lượng tử đi vào kho, rồi mới tới WASM.
+Trong quy trình này, ONNX vẫn giữ vai trò định dạng trao đổi đồ thị: tệp sau khi lượng tử hóa được đưa vào gói mô hình rồi mới tới bước chạy trên WASM.
 
-### Hiệu chuẩn là tiếng nói, không phải ImageNet
+### Tập hiệu chuẩn phải là giọng nói, không phải ImageNet
 
-Tập chỉ toàn white noise cho ra thang lệch babble quán cà phê và tiếng near-end. Hãy gồm im lặng, chỉ nhiễu, tiếng nói gần to, mix SNR thấp, và clip kiểu echo dư nếu echo nằm trong phạm vi. Một phút mix kiểu DNS đủ đa dạng là mức tối thiểu để học. Sản phẩm dùng tập rộng hơn và đóng băng tập đó. Nếu không, bạn gặp pumping hoặc nhiễu dư gắt mà điểm trên tiếng sạch không thấy.
+Nếu chỉ hiệu chuẩn trên nhiễu trắng (white noise), hệ số tỉ lệ thu được sẽ sai lệch khi gặp tạp âm đám đông (babble) ở quán cà phê hoặc giọng nói gần micro. Tập hiệu chuẩn cần bao phủ đầy đủ các tình huống: khoảng lặng, chỉ có nhiễu, giọng nói gần âm lượng lớn, bản trộn SNR thấp và đoạn mẫu có tiếng vọng dư nếu hệ thống có xử lý vọng. Một phút bản trộn đa dạng kiểu DNS là mức tối thiểu để thực hành; trong môi trường sản phẩm cần tập dữ liệu rộng hơn và được đóng băng cố định. Nếu bỏ qua bước này, mô hình dễ gặp hiện tượng bơm tiếng (pumping) hoặc nhiễu dư gắt mà các phép đo trên giọng sạch không phát hiện ra.
 
-### Phần thường giữ float32
+### Các thành phần thường giữ nguyên `float32`
 
-Cổng elementwise nhạy, đầu gain cuối, và lớp rất nhỏ nơi chi phí INT8 lớn hơn lợi ích thường ở lại float. Lớp đầu và lớp cuối là heuristic phổ biến, không phải định lý. Hãy kiểm. State hồi tiếp là trường hợp riêng: tràn số mà ở mạng thuận chỉ là một click trên một bin có thể rung đến hết cuộc gọi. Theo dõi khoảng state trên stream 30 phút (bài 05-04).
+Các cổng tính toán theo từng phần tử (elementwise) nhạy cảm, tầng xuất hệ số gain cuối cùng và những lớp quá nhỏ (nơi chi phí chuyển đổi INT8 lớn hơn lợi ích mang lại) thường được giữ lại ở `float32`. Nguyên tắc giữ lớp đầu và lớp cuối là kinh nghiệm thực tiễn phổ biến chứ không phải định lý cố định, nên vẫn cần đo kiểm thực tế. Trạng thái hồi tiếp là trường hợp đặc biệt cần lưu ý: một lỗi tràn số vốn chỉ gây ra một tiếng tách nhỏ trên mạng truyền thẳng lại có thể tích lũy và dao động đến hết cuộc gọi trong mạng hồi tiếp. Cần theo dõi dải giá trị trạng thái trên luồng âm thanh liên tục dài 30 phút (bài 05-04).
 
-### Cổng xác nhận
+### Cổng kiểm duyệt trước khi phát hành
 
-1. Delta SI-SDR và DNSMOS so với mô hình float trên tập đóng băng (Chương 08).
-2. Từ mười clip ghép đôi trở lên, buộc chọn, gồm các trường hợp gain gần 0.
-3. Stream dài để bắt trôi state.
-4. Hệ số realtime trên thiết bị đích, không chỉ vì file nhỏ hơn.
+1. Đo độ chênh lệch SI-SDR và DNSMOS so với mô hình `float` trên tập kiểm thử đóng băng (Chương 08).
+2. Nghe thử bắt buộc chọn (forced-choice) trên tối thiểu 10 cặp đoạn âm thanh, bao gồm cả các trường hợp có gain gần 0.
+3. Chạy thử trên luồng âm thanh dài để phát hiện sớm hiện tượng trôi trạng thái.
+4. Đo trực tiếp hệ số thời gian thực trên thiết bị đích, không suy diễn tốc độ chỉ từ việc dung lượng tệp giảm.
 
-Ghi chú khảo sát về FastEnhancer và faster-enhancer.c cho thấy kernel INT8 hợp nhất có thể đổi hệ số realtime khá nhiều. Lượng tử hóa sau train của ORT thường đổi ít hơn. Hãy đo. Mức 20–30% mà README gói gán cho SIMD (bài 06-03) là một khoản tăng tốc khác, không phải kết quả lượng tử hóa.
+Các ghi chú khảo sát về FastEnhancer và `faster-enhancer.c` cho thấy các nhân tính toán INT8 hợp nhất có thể cải thiện hệ số thời gian thực đáng kể, trong khi PTQ mặc định của ORT thường cho mức cải thiện khiêm tốn hơn — do đó luôn cần tự đo đạc. Ngoài ra, mức tăng tốc 20–30% mà README của gói gán cho SIMD (bài 06-03) là một cơ chế tối ưu khác, không phải kết quả của lượng tử hóa.
 
 ## Mini-lab
 
-Chạy `python3 quant_gain.py` với script sau. Script dùng `round` của Python (làm tròn nửa về số chẵn), khớp các mã bên dưới.
+Lưu đoạn mã sau thành `quant_gain.py` và chạy bằng lệnh `python3 quant_gain.py`. Script sử dụng hàm `round` của Python (quy tắc làm tròn nửa về số chẵn), khớp với các mã đầu ra bên dưới.
 
 ```python
 g = [1.0, 0.5, 0.02, 0.004, 0.0]
@@ -98,7 +98,7 @@ print(f"q={q}")
 print(f"max_abs_error={err:.8f}")
 ```
 
-**Expected**
+**Kết quả kỳ vọng**
 
 ```text
 scale=0.00787402
@@ -106,45 +106,45 @@ q=[127, 64, 3, 1, 0]
 max_abs_error=0.00393701
 ```
 
-**Failure modes**
+**Lỗi thường gặp**
 
-- Chia cho \(128\). Đầu dương của INT8 có dấu là \(127\), nên mã đầy thang là \(127\), không phải \(128\).
-- Chỉ báo sai số tương đối trên bin \(1.0\) rồi kết luận bộ lượng tử vô hại. Bin \(0.004\) mới là ca khử nhiễu tiếng nói.
-- Lượng tử trước khi STFT đã khớp. Lệch một bin tần số sẽ bị nướng vào thang.
-- Giả định bài đồ chơi dùng cùng zero-point với bộ lượng tử tĩnh của ORT trong sản phẩm. Công cụ sản phẩm có thể dùng zero-point affine; lab cố ý đối xứng.
+- Chia nhầm cho \(128\): biên dương của kiểu INT8 có dấu là \(127\), nên mã đầy thang phải là \(127\) chứ không phải \(128\).
+- Chỉ kiểm tra sai số tương đối trên bin \(1.0\) rồi kết luận bộ lượng tử hóa vô hại, trong khi bin \(0.004\) mới là trường hợp tiêu biểu của khử nhiễu giọng nói.
+- Lượng tử hóa trước khi đồng bộ chuẩn hóa STFT, khiến độ lệch dù chỉ một bin tần số bị đóng cứng vào hệ số tỉ lệ.
+- Nhầm lẫn rằng bài lab minh họa dùng cùng cơ chế zero-point với bộ lượng tử hóa tĩnh của ORT trong sản phẩm; công cụ thực tế có thể dùng lược đồ affine có zero-point, còn bài lab chủ đích dùng lược đồ đối xứng.
 
 ## Bẫy thường gặp
 
-- Chỉ hiệu chuẩn trên white noise.
-- Ship INT8 mà không ghi delta chất lượng cho đội hỗ trợ.
-- Bỏ qua tràn số trong tensor state.
-- Coi file `.tar.gz` nhỏ hơn là bằng chứng AudioWorklet đã vào ngân sách.
+- Chỉ hiệu chuẩn mô hình trên dữ liệu nhiễu trắng.
+- Phát hành mô hình INT8 nhưng không ghi lại độ chênh lệch chất lượng cho nhóm hỗ trợ kỹ thuật.
+- Bỏ qua nguy cơ tràn số bên trong các tensor trạng thái.
+- Coi tệp `.tar.gz` có dung lượng nhỏ hơn là bằng chứng cho thấy AudioWorklet đã đáp ứng ngân sách thời gian thực.
 
 ## Bài tập
 
-1. Tính lại thang đối xứng cho trọng số nằm trong \([-0.8,\ 0.8]\). \(s\) bằng bao nhiêu, và \(0.8\) nhận mã nào?
-2. Liệt kê tám loại clip cho tập hiệu chuẩn sau train kiểu Mezon.
-3. Thiết kế phiếu nghe mù float đối với INT8, có ít nhất hai điều kiện gain gần 0 (tiếng nói nhỏ, sàn nhiễu).
-4. Nêu điểm vào lượng tử hóa của ONNX Runtime mà bạn sẽ gọi, theo tài liệu chính thức, chưa cần chạy.
-5. Với bin \(0.004\) của lab, giải thích vì sao đầu gain là ứng viên tệ cho INT8 mạnh ngay cả khi convolution thì không.
+1. Tính lại hệ số tỉ lệ đối xứng cho tập trọng số nằm trong khoảng \([-0.8,\ 0.8]\). Giá trị \(s\) bằng bao nhiêu và \(0.8\) ánh xạ sang mã nguyên nào?
+2. Liệt kê 8 loại đoạn âm thanh cần có trong một tập hiệu chuẩn sau huấn luyện kiểu Mezon.
+3. Thiết kế một phiếu đánh giá nghe mù so sánh bản `float` với bản INT8, trong đó có ít nhất hai điều kiện kiểm tra vùng gain gần 0 (giọng nói nhỏ và nền nhiễu).
+4. Tra cứu tài liệu chính thức của ONNX Runtime và nêu tên điểm vào (entry point) cho tác vụ lượng tử hóa mà bạn sẽ sử dụng (chưa cần chạy thực tế).
+5. Dựa trên bin \(0.004\) trong bài mini-lab, giải thích vì sao tầng xuất gain là ứng viên kém phù hợp cho lượng tử hóa INT8 mạnh, ngay cả khi các lớp tích chập vẫn lượng tử hóa tốt.
 
 ### Gợi ý đáp án
 
-1. \(s = 0.8 / 127\). Giá trị \(0.8\) ánh xạ tới mã \(127\) nếu nó là max-abs. Đừng dùng \(255\) trừ khi bạn đã chuyển sang lược đồ affine không dấu và nói rõ.
-2. Gồm im lặng, chỉ nhiễu, tiếng nói to, tiếng thì thầm, babble SNR thấp, bàn phím không dừng, một tone, và một clip kiểu echo dư.
-3. Buộc chọn, cùng gain, nhãn giấu, thêm ô “nhiễu nhạc / giọng mỏng”.
-4. Bắt đầu từ tài liệu lượng tử hóa của ONNX Runtime: lượng tử hóa sau train kiểu tĩnh với calibration reader. Tên lớp đổi theo phiên bản API; hãy trích đúng trang bạn mở.
-5. \(0.004\) nhảy tới khoảng \(0.00787\). Bước tương đối đó áp thẳng lên một bin. Các lớp sau không làm mượt mask theo cách chúng làm mượt sai số trọng số.
+1. \(s = 0.8 / 127\). Vì \(0.8\) là giá trị tuyệt đối lớn nhất, nó ánh xạ tới mã \(127\). Không dùng \(255\) trừ khi chuyển sang lược đồ affine không dấu và nêu rõ quy ước.
+2. Tám loại đoạn âm thanh gồm: khoảng lặng, chỉ có nhiễu, giọng nói âm lượng lớn, tiếng nói thì thầm, tạp âm đám đông ở SNR thấp, tiếng gõ bàn phím không dừng, một âm đơn tần (tone), và đoạn mẫu có tiếng vọng dư.
+3. Sử dụng bài kiểm thử bắt buộc chọn (forced-choice), cân bằng âm lượng giữa hai mẫu, ẩn nhãn thuật toán và bổ sung tiêu chí đánh giá “nhiễu nhạc / giọng bị mỏng”.
+4. Bắt đầu từ mục lượng tử hóa trong tài liệu ONNX Runtime: sử dụng quy trình Static PTQ kèm một `CalibrationDataReader`. Tên lớp cụ thể có thể thay đổi theo phiên bản API, nên cần trích dẫn đúng trang tài liệu đang dùng.
+5. Giá trị \(0.004\) bị làm tròn lên xấp xỉ \(0.00787\), tức sai lệch tương đối gần gấp đôi áp thẳng lên một bin tần số. Khác với sai số trọng số ở các lớp ẩn vốn được các lớp sau lọc bớt, sai số trực tiếp trên mặt nạ gain sẽ đi thẳng ra tín hiệu âm thanh.
 
 ## Đọc thêm
 
 - Hướng dẫn lượng tử hóa trong [tài liệu ONNX Runtime](https://onnxruntime.ai/docs/).
-- Jacob và cộng sự, lượng tử hóa cho suy luận chỉ số nguyên, tài liệu tham chiếu mobile kinh điển.
-- Ghi chú FastEnhancer / faster-enhancer.c về runtime tăng cường INT8 (chỉ là con trỏ khảo sát).
-- Thảo luận dung lượng và realtime của DeepFilterNet trong kho upstream.
+- Jacob và cộng sự — tài liệu nền tảng kinh điển về lượng tử hóa cho suy luận thuần số nguyên trên thiết bị di động.
+- Các ghi chú về FastEnhancer / `faster-enhancer.c` liên quan tới runtime tăng cường giọng nói dùng INT8 (tài liệu tham khảo mở rộng).
+- Các thảo luận về dung lượng mô hình và hiệu năng thời gian thực trong kho mã nguồn gốc DeepFilterNet.
 
 ## Video tham khảo
 
-- [Quantization explained with PyTorch - Post-Training Quantization, Quantization-Aware Training](https://www.youtube.com/watch?v=0VdNflU08yA) — Umar Jamil, tiếng Anh. **xem trước.** Xem lượng tử hóa sau huấn luyện và lượng tử hóa có nhận biết lúc huấn luyện, gồm vì sao khoảng min-max phạt mọi gain nhỏ khi một outlier rất lớn.
-- [Faster and Lighter Model Inference with ONNX Runtime from Cloud to Client](https://www.youtube.com/watch?v=WDww8ce12Mc) — Microsoft Developer, tiếng Anh. Đoạn INT8 là lượng tử hóa đi vào ONNX Runtime, đường một mô hình tiếng nói đi sau phần giải thích PyTorch.
-- [Enable Model Quantization for ONNX and TensorRT!](https://www.youtube.com/watch?v=phmFvMOHt4I) — Nicolai Nielsen Tech, tiếng Anh. Xem một đồ thị ONNX đã lượng tử hóa được nạp. Coi TensorRT là tùy chọn; rủi ro của bài là mô hình tiếng nói, không phải hãng GPU.
+- [Quantization explained with PyTorch - Post-Training Quantization, Quantization-Aware Training](https://www.youtube.com/watch?v=0VdNflU08yA) — Umar Jamil, tiếng Anh. **Xem trước.** Video trình bày rõ lượng tử hóa sau huấn luyện (PTQ) và lượng tử hóa có nhận biết khi huấn luyện (QAT), giải thích vì sao một giá trị ngoại lai lớn trong khoảng min-max lại làm giảm độ phân giải của toàn bộ các giá trị gain nhỏ.
+- [Faster and Lighter Model Inference with ONNX Runtime from Cloud to Client](https://www.youtube.com/watch?v=WDww8ce12Mc) — Microsoft Developer, tiếng Anh. Đoạn nói về INT8 minh họa cách đưa lượng tử hóa vào ONNX Runtime sau phần lý thuyết trên PyTorch.
+- [Enable Model Quantization for ONNX and TensorRT!](https://www.youtube.com/watch?v=phmFvMOHt4I) — Nicolai Nielsen Tech, tiếng Anh. Minh họa quy trình nạp một đồ thị ONNX đã lượng tử hóa (phần TensorRT chỉ mang tính tham khảo, trọng tâm của bài vẫn là rủi ro trên mô hình giọng nói).

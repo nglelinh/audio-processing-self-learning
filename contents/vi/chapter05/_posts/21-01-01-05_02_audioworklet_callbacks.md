@@ -11,34 +11,34 @@ lesson_type: required
 draft: false
 ---
 
-Audio trình duyệt được render trên một luồng thời gian thực. **AudioWorklet** (luồng render của Web Audio) là API đặt mã của bạn lên luồng đó: `audioWorklet.addModule`, rồi một `AudioWorkletNode`, rồi `process(inputs, outputs, parameters)` một lần mỗi render quantum. Quantum thường là **128 mẫu**. Ở 48 kHz đó là $$128/48000\approx 2{,}67$$ ms. Trong `process` bạn không được cấp phát, lấy khóa, hay chạm mạng. `console.log` phạm cả ba kiểu hại đó và không phải cách gỡ một dropout.
+Âm thanh trên trình duyệt được xử lý trên một luồng thời gian thực chuyên biệt. **AudioWorklet** (luồng render của Web Audio API) là giao diện cho phép đưa mã xử lý của bạn chạy trực tiếp trên luồng đó theo trình tự: gọi `audioWorklet.addModule`, khởi tạo `AudioWorkletNode`, và nhận lệnh gọi `process(inputs, outputs, parameters)` một lần cho mỗi render quantum. Mỗi quantum thường dài **128 mẫu**, tương ứng $$128/48000\approx 2{,}67$$ ms ở tần số lấy mẫu 48 kHz. Bên trong `process`, bạn tuyệt đối không được cấp phát bộ nhớ, chờ khóa (lock) hay gọi mạng. Một lệnh `console.log` vi phạm cả ba nguyên tắc này và không thể dùng để gỡ lỗi mất tiếng (dropout).
 
 ![Quantum AudioWorklet như ngân sách thời gian tường cạnh RTF]({{ site.imgurl }}/generated/rtf-audioworklet.png)
 
-*Figure. Mỗi callback sở hữu một khối ngắn — thường 128 mẫu, khoảng 2,67 ms ở 48 kHz — và phải trả về trước khối kế. RTF (real-time factor, hệ số thời gian thực) đo trên khối bạn chọn để bấm giờ (một quantum, hoặc một hop mô hình 10 ms gom từ nhiều quantum). Hình là hạn, không phải giấy phép chạy một lượt forward của DeepFilterNet bên trong một lần `process`.*
+*Hình. Mỗi callback chỉ quản lý một khối dữ liệu ngắn — thường là 128 mẫu, xấp xỉ 2,67 ms ở 48 kHz — và phải trả về trước khi khối kế tiếp đến hạn. Hệ số thời gian thực (real-time factor, RTF) được đo trên đơn vị khối mà bạn chọn bấm giờ (một quantum hoặc một hop 10 ms gom từ nhiều quantum). Biểu đồ này thể hiện giới hạn thời gian, không phải sự cho phép để chạy trọn một lượt suy luận của DeepFilterNet ngay trong một lần gọi `process`.*
 
 ## Mục tiêu học tập
 
-Bạn lần vòng đời AudioWorklet, viết một `process` chép đầu vào sang đầu ra khi cờ bypass bật, giải thích vì sao `console.log` là bất hợp pháp trên luồng đó, và đặt hop DeepFilterNet 480 mẫu lên nhiều quantum 128 mẫu mà không giả định các số chia hết.
+Sau bài học này, bạn sẽ nắm được vòng đời của AudioWorklet, viết được hàm `process` sao chép thẳng tín hiệu đầu vào sang đầu ra khi bật cờ bypass, giải thích được vì sao `console.log` bị cấm trên luồng render âm thanh, và biết cách ghép hop 480 mẫu của DeepFilterNet lên chuỗi quantum 128 mẫu mà không giả định chúng chia hết cho nhau.
 
 ## Kế hoạch 60 phút
 
-- **0–10 phút** — Vì sao luồng chính không được sở hữu callback micro.
-- **10–25 phút** — Vòng đời, quantum 128 mẫu, `return true`.
-- **25–40 phút** — Bản sao bypass, và lệnh cấm cấp phát / khóa / mạng.
-- **40–50 phút** — Đồ thị ONNX DF3 được phép chạy ở đâu.
-- **50–60 phút** — Mini-lab (mã giả là đủ), bài tập.
+- **0–10 phút** — Vì sao luồng chính (main thread) không được đảm nhận callback micro.
+- **10–25 phút** — Vòng đời AudioWorklet, quantum 128 mẫu và giá trị trả về `return true`.
+- **25–40 phút** — Cơ chế sao chép bypass cùng lệnh cấm cấp phát bộ nhớ, khóa đồng bộ và gọi mạng.
+- **40–50 phút** — Đồ thị ONNX của DF3 được phép thực thi ở đâu.
+- **50–60 phút** — Thực hành mini-lab (chỉ cần mã giả) và làm bài tập.
 
 ## Giải thích cốt lõi
 
 ### Vòng đời
 
-1. Trên luồng chính, `audioContext.audioWorklet.addModule('ns-processor.js')` nạp script processor. Biên dịch thuộc về đây. Không thuộc về trong `process`.
-2. `new AudioWorkletNode(audioContext, 'ns-processor', options)` tạo node. `options.processorOptions` truyền kích thước hop và số kênh một lần.
-3. Nối `source → nsNode → destination`, hoặc vào đường track WebRTC (Chương 07).
-4. Trình duyệt gọi `process` trên **luồng render audio**, một lần mỗi quantum, suốt đời node. Trang AudioWorklet của MDN là tham chiếu hướng spec: [developer.mozilla.org/en-US/docs/Web/API/AudioWorklet](https://developer.mozilla.org/en-US/docs/Web/API/AudioWorklet).
+1. Trên luồng chính, gọi `audioContext.audioWorklet.addModule('ns-processor.js')` để nạp tệp script của processor. Quá trình biên dịch diễn ra tại bước này, không phải bên trong `process`.
+2. Gọi `new AudioWorkletNode(audioContext, 'ns-processor', options)` để khởi tạo node. Tham số `options.processorOptions` dùng để truyền kích thước hop và số kênh một lần duy nhất lúc khởi tạo.
+3. Kết nối đường tín hiệu `source → nsNode → destination`, hoặc nối vào luồng track của WebRTC (Chương 07).
+4. Trình duyệt sẽ gọi hàm `process` trên **luồng render âm thanh**, một lần cho mỗi quantum trong suốt vòng đời của node. Bạn có thể xem thêm tài liệu tham chiếu chuẩn về AudioWorklet trên MDN tại [developer.mozilla.org/en-US/docs/Web/API/AudioWorklet](https://developer.mozilla.org/en-US/docs/Web/API/AudioWorklet).
 
-`registerProcessor('ns-processor', NsProcessor)` chạy khi module nạp, lúc dựng luồng audio, không phải mỗi buffer. Trả `true` từ `process` giữ node sống. Trả `false` cho phép trình duyệt thu hồi node — nghe như suppressor biến mất giữa cuộc gọi.
+Hàm `registerProcessor('ns-processor', NsProcessor)` chỉ chạy một lần khi module được nạp lúc dựng đường dẫn âm thanh, không chạy lặp lại ở từng buffer. Việc trả về `true` từ `process` giữ cho node tiếp tục hoạt động; nếu trả về `false`, trình duyệt có thể thu hồi node, khiến bộ khử nhiễu đột ngột ngừng hoạt động giữa cuộc gọi.
 
 ### Hợp đồng bypass
 
@@ -70,39 +70,39 @@ class NsProcessor extends AudioWorkletProcessor {
 registerProcessor("ns-processor", NsProcessor);
 ```
 
-Khi `bypass` bật, người nghe nghe micro, trễ bằng đồ thị, không có suppressor. Đó là hành vi đúng lúc WASM đang biên dịch hoặc hop trước trượt hạn (bài 05-03). `output.set(input)` đòi độ dài bằng nhau. Quantum 128 vào buffer dư có kích thước khác sẽ ném, và một ngoại lệ trong `process` giết node. Kiểm `input.length` trước khi chép.
+Khi `bypass` được bật, người nghe vẫn nhận được tín hiệu micro với độ trễ đúng bằng độ trễ của đồ thị âm thanh, chỉ không qua bộ khử nhiễu. Đây là hành vi chuẩn mực trong thời gian WASM đang biên dịch hoặc khi hop trước đó bị trễ hạn (bài 05-03). Lưu ý rằng `output.set(input)` yêu cầu hai mảng có độ dài tương thích; nếu ghi một quantum 128 mẫu vào bộ đệm đích có kích thước nhỏ hơn, trình duyệt sẽ ném ngoại lệ và chấm dứt hoạt động của node. Vì vậy, cần kiểm tra `input.length` trước khi sao chép.
 
-`deepfilternet3-noise-filter` dùng cùng hình: ONNX/WASM trong AudioWorklet, `DeepFilterNoiseFilterProcessor`, `DeepFilterNet3Core`, suppression 0–100 qua `setSuppressionLevel`. Nó không khớp bit với CLI `deepFilter`, và đoạn bypass ở trên là mã giảng, không phải mã gói đó.
+Gói `deepfilternet3-noise-filter` áp dụng kiến trúc tương tự: chạy ONNX/WASM trong AudioWorklet với `DeepFilterNoiseFilterProcessor`, `DeepFilterNet3Core` và mức khử nhiễu từ 0 đến 100 qua `setSuppressionLevel`. Gói này không khớp từng bit với công cụ dòng lệnh `deepFilter`, và đoạn mã bypass ở trên chỉ là mã minh họa giảng dạy, không phải mã nguồn của gói đó.
 
-### Vì sao `console.log` bất hợp pháp trong `process`
+### Vì sao `console.log` bị cấm trong `process`
 
-Luồng render có hạn cứng khoảng 2,67 ms cho quantum 128 mẫu ở 48 kHz. Ba luật kéo theo, và `console.log` phá cả ba:
+Luồng render âm thanh chịu giới hạn thời gian cứng khoảng 2,67 ms cho mỗi quantum 128 mẫu ở 48 kHz. Ba nguyên tắc bắt buộc được suy ra từ giới hạn này, và `console.log` phá vỡ cả ba:
 
-- **Không cấp phát.** Định dạng một dòng log dựng một chuỗi. Chuỗi là cấp phát heap. Cấp phát có thể kích hoạt thu gom rác, và một khoảng dừng GC vài mili giây đã lớn hơn quantum.
-- **Không khóa.** Đưa dòng đó tới console hoặc DevTools sang luồng khác và có thể chờ mutex. `Atomics.wait` và mọi IPC đồng bộ cùng một lớp lỗi.
-- **Không mạng.** Một nơi nhận log đăng lên debugger từ xa hoặc đầu telemetry thì chờ I/O. Thiết bị audio không chờ.
+- **Không cấp phát bộ nhớ.** Việc định dạng một dòng log sẽ tạo ra chuỗi mới trên heap. Cấp phát bộ nhớ có thể kích hoạt bộ thu gom rác (GC), mà chỉ một khoảng dừng GC kéo dài vài mili giây đã vượt quá thời lượng một quantum.
+- **Không chờ khóa (lock).** Việc chuyển dòng log sang giao diện console hoặc DevTools phải đi qua một luồng khác và có thể phải chờ mutex. `Atomics.wait` cũng như mọi cơ chế giao tiếp liên tiến trình (IPC) đồng bộ khác đều thuộc cùng nhóm lỗi này.
+- **Không gọi mạng.** Nếu đầu ra log được gửi tới trình gỡ lỗi từ xa hoặc hệ thống thu thập telemetry, luồng sẽ phải chờ thao tác I/O, trong khi thiết bị âm thanh không bao giờ dừng lại chờ.
 
-Cùng lệnh cấm phủ `fetch`, `JSON.parse` một file trọng số, `new Float32Array` mỗi callback, biên dịch WASM, và chặn trên mutex mà luồng chính đang giữ. Đổi điều khiển (bypass, suppression, bit “model sẵn sàng”) đến như thông điệp nhỏ trên `MessagePort`, áp giữa các quantum. Trọng số nạp trên luồng chính hoặc một worker trước khi node rời bypass.
+Lệnh cấm này cũng áp dụng cho `fetch`, `JSON.parse` tệp trọng số, tạo `new Float32Array` trong mỗi callback, biên dịch WASM hay bị chặn trên một mutex do luồng chính nắm giữ. Các thay đổi điều khiển (như bật/tắt bypass, chỉnh mức khử nhiễu, báo hiệu mô hình đã sẵn sàng) phải đi qua thông điệp nhỏ trên `MessagePort` và chỉ được áp dụng ở ranh giới giữa các quantum. Toàn bộ trọng số phải được nạp sẵn trên luồng chính hoặc một worker riêng trước khi node tắt chế độ bypass.
 
-Một script Node.js import `wrtc` hoặc một bản WASM là luyện tập tùy chọn. Không bắt buộc để qua lab này. Điều kiện đạt là mã giả và lời giải thích ở trên.
+Việc viết một script Node.js import `wrtc` hoặc chạy bản dựng WASM là phần thực hành mở rộng, không bắt buộc để hoàn thành bài lab này. Tiêu chuẩn đạt yêu cầu chỉ cần phần mã giả và giải thích đúng như trên.
 
-### Quantum và hop
+### Quan hệ giữa quantum và hop
 
-Hop đã công bố là 10 ms, **480 mẫu** ở 48 kHz (04-02, 04-03). $$480/128=3{,}75$$. Ba callback giữ 384 mẫu, bốn giữ 512. Nối vào một ring (05-03) đến khi đủ 480, chạy một hop, rồi cắt đầu ra overlap-add trở lại các quantum 128 mẫu. Giả định `input.length === 480` sẽ làm rơi hoặc lặp audio.
+Bước nhảy đã công bố của DeepFilterNet là 10 ms, tương đương **480 mẫu** ở tần số lấy mẫu 48 kHz (bài 04-02, 04-03). Tỉ số $$480/128=3{,}75$$ cho thấy hai kích thước này không chia hết cho nhau: 3 callback chỉ tích lũy được 384 mẫu, còn 4 callback tích lũy được 512 mẫu. Do đó, cần đưa dữ liệu vào một ring buffer (bài 05-03) cho đến khi đủ 480 mẫu để chạy một hop, sau đó cắt phần đầu ra overlap-add trở lại thành từng quantum 128 mẫu. Giả định cứng `input.length === 480` sẽ dẫn đến mất mẫu hoặc lặp âm thanh.
 
-`sampleRate` nằm trong scope của worklet. Hãy đọc nó. Ở 44,1 kHz cùng 128 mẫu kéo dài $$128/44100\approx 2{,}90$$ ms, và hop 480 mẫu là độ dài sai cho mô hình 48 kHz. CoreAudio, WASAPI và AAudio dùng cùng luật dưới tên khác: xong trước kỳ kế, và bypass khi mô hình trễ.
+Biến `sampleRate` luôn có sẵn trong phạm vi toàn cục của worklet, vì vậy hãy đọc trực tiếp giá trị này. Ở tần số 44,1 kHz, cùng khối 128 mẫu kéo dài $$128/44100\approx 2{,}90$$ ms, đồng thời hop 480 mẫu sẽ không còn tương ứng 10 ms cho một mô hình huấn luyện ở 48 kHz. Các API âm thanh native như CoreAudio, WASAPI và AAudio đều tuân theo nguyên tắc tương tự dưới những tên gọi khác: phải hoàn thành trước kỳ kế tiếp và chuyển sang bypass nếu mô hình xử lý bị trễ.
 
 ## Bẫy thường gặp
 
-- Gỡ dropout bằng `console.log` rồi làm chúng nặng hơn.
-- `new Float32Array(128)` bên trong `process`.
-- Ghim cứng 48000 thay vì đọc `sampleRate`.
-- Structured-clone cả buffer PCM sang luồng chính mỗi quantum. Nếu phải rời luồng, dùng ring SharedArrayBuffer, và đo các bản sao.
-- Chạy ScriptProcessorNode, kéo audio về luồng chính.
+- Gỡ lỗi mất tiếng bằng `console.log`, vô tình làm tình trạng mất tiếng nghiêm trọng hơn.
+- Khởi tạo `new Float32Array(128)` ngay bên trong hàm `process`.
+- Ghi cứng tần số 48000 thay vì đọc biến `sampleRate` thực tế của worklet.
+- Dùng `postMessage` (structured clone) sao chép toàn bộ buffer PCM sang luồng chính ở mỗi quantum; nếu bắt buộc phải chuyển dữ liệu sang luồng khác, hãy dùng ring buffer trên `SharedArrayBuffer` và đo chi phí sao chép.
+- Dùng `ScriptProcessorNode`, kéo toàn bộ quá trình xử lý âm thanh về luồng chính.
 
 ## Mini-lab
 
-**Mục tiêu.** Hiện thực bản sao bypass bằng mã giả Python để lab không cần trình duyệt và không phụ thuộc Node. Bản AudioWorklet là khối trong bài; harness Node là tùy chọn và không bắt buộc để đạt.
+**Mục tiêu.** Hiện thực thao tác sao chép bypass bằng mã giả Python để bài lab không phụ thuộc vào trình duyệt hay Node.js. Phần triển khai bằng AudioWorklet đã được trình bày trong khối mã phía trên; bộ chạy thử trên Node là phần tùy chọn, không bắt buộc để đạt yêu cầu.
 
 ```bash
 python3 - << 'PY'
@@ -126,31 +126,31 @@ print(alive, out)
 PY
 ```
 
-**Expected**. `True [0.1, -0.2, 0.3, -0.4]`. Đối tượng buffer đầu ra là cái bên gọi đã cấp phát. Không gì trong `process` dựng list, in, hay chờ.
+**Kết quả kỳ vọng.** `True [0.1, -0.2, 0.3, -0.4]`. Đối tượng `output` là bộ đệm do bên gọi cấp phát sẵn từ trước; hàm `process` không tạo thêm danh sách mới, không in ra màn hình và không thực hiện thao tác chờ nào.
 
-**Failure modes**. Cấp phát `out = frame.copy()` bên trong hàm rồi gọi đó là an toàn thời gian thực. Nhét một lệnh in “chỉ cho lab” rồi để lại trong worklet. Đòi `npm install` hoặc trình duyệt đang chạy mới được đạt. Coi một bản sao thành công là bằng chứng đồ thị DF3 đạt ngân sách 2,67 ms — bản sao là vài load và store, đồ thị thì không.
+**Lỗi thường gặp.** Cấp phát mới `out = frame.copy()` bên trong hàm rồi coi đó là an toàn thời gian thực; chèn lệnh in “tạm cho bài lab” rồi quên xóa khi đưa vào worklet; yêu cầu phải chạy `npm install` hoặc mở trình duyệt mới công nhận đạt; hoặc coi việc sao chép thành công là bằng chứng cho thấy đồ thị DF3 đáp ứng được ngân sách 2,67 ms — sao chép bộ nhớ chỉ tốn vài lệnh đọc ghi, còn suy luận đồ thị thì nặng hơn rất nhiều.
 
 ## Bài tập
 
-1. **Hạn.** Quantum 256 mẫu, 48 kHz. Bạn có bao nhiêu mili giây? Ở 44,1 kHz?
-2. **Gom.** Bạn cần 480 mẫu và mỗi `process` cho 128. Sau bao nhiêu callback thì lần đầu giữ đủ một hop, và còn dư bao nhiêu mẫu?
-3. **Thông điệp suppression.** Soạn payload `postMessage` đặt suppression bằng 40 trên processor có `setSuppressionLevel` trong khoảng 0–100. Chuyện gì xảy ra nếu áp nó giữa chừng `output.set`?
-4. **Sự cố.** `process` thỉnh thoảng mất 15 ms trong khi quantum là 2,67 ms. Người dùng nghe gì, và callback kế nên làm gì?
+1. **Giới hạn thời gian.** Với quantum 256 mẫu ở tần số 48 kHz, bạn có bao nhiêu mili giây để xử lý? Nếu tần số lấy mẫu là 44,1 kHz thì con số đó là bao nhiêu?
+2. **Tích lũy mẫu.** Mô hình cần hop 480 mẫu trong khi mỗi lần gọi `process` chỉ cung cấp 128 mẫu. Sau bao nhiêu callback thì lần đầu tiên bạn có đủ một hop, và còn dư lại bao nhiêu mẫu?
+3. **Thông điệp điều khiển mức khử nhiễu.** Hãy viết payload cho `postMessage` để đặt mức khử nhiễu bằng 40 trên một processor có hàm `setSuppressionLevel` trong dải 0–100. Điều gì xảy ra nếu áp dụng thay đổi này ngay giữa quá trình chạy `output.set`?
+4. **Phân tích sự cố.** Hàm `process` thỉnh thoảng mất 15 ms trong khi thời lượng quantum chỉ là 2,67 ms. Người dùng sẽ nghe thấy hiện tượng gì, và các callback kế tiếp nên xử lý ra sao?
 
 ### Gợi ý đáp án
 
-1. $$256/48000\approx 5{,}33$$ ms. $$256/44100\approx 5{,}80$$ ms. Cả hai vẫn quá nhỏ cho một session ONNX lạnh, và 5,33 ms là nửa hop 10 ms, nên một quantum vẫn chưa phải một hop.
-2. Bốn callback giữ $$4\times 128=512$$ mẫu. Hop tiêu 480 và **32** mẫu còn trong ring đầu vào. Ba callback chỉ giữ 384.
-3. `{type: "setSuppressionLevel", value: 40}` xử lý trong `onmessage`, cất vào một trường, áp ở biên hop kế. Áp giữa chừng bản sao khiến hai nửa của một quantum dùng hai gain khác nhau và gây click.
-4. Thiết bị underrun: một click, một lần lặp, hoặc một khoảng im ngắn, tùy trình duyệt. Callback hồi phục nên đi đường bypass (chép) hoặc phát mẫu đã có trong ring đầu ra, không chặn đến khi suy luận đuổi kịp.
+1. Ở 48 kHz: $$256/48000\approx 5{,}33$$ ms. Ở 44,1 kHz: $$256/44100\approx 5{,}80$$ ms. Cả hai khoảng thời gian đều vẫn quá nhỏ cho một session ONNX khởi động lạnh, và 5,33 ms mới chỉ bằng một nửa hop 10 ms nên một quantum vẫn chưa thể tương đương một hop.
+2. Sau 4 callback, tổng số mẫu tích lũy là $$4\times 128=512$$ mẫu. Một hop tiêu thụ 480 mẫu và còn dư **32** mẫu nằm lại trong ring buffer đầu vào (3 callback chỉ mới có 384 mẫu).
+3. Payload là `{type: "setSuppressionLevel", value: 40}`, được tiếp nhận trong `onmessage`, lưu tạm vào một thuộc tính của processor và chỉ áp dụng ở ranh giới hop kế tiếp. Nếu thay đổi hệ số khuếch đại ngay giữa quá trình sao chép, hai nửa của cùng một quantum sẽ có mức khuếch đại khác nhau và gây ra tiếng tách.
+4. Thiết bị âm thanh sẽ bị underrun: người dùng nghe thấy tiếng tách, một đoạn âm bị lặp lại hoặc khoảng lặng ngắn tùy cách xử lý của từng trình duyệt. Callback phục hồi cần chuyển sang đường bypass (sao chép tín hiệu gốc) hoặc phát tiếp các mẫu sẵn có trong ring buffer đầu ra, tuyệt đối không chặn luồng để chờ suy luận đuổi kịp.
 
 ## Đọc thêm
 
-- MDN, [AudioWorklet](https://developer.mozilla.org/en-US/docs/Web/API/AudioWorklet) và tham chiếu `AudioWorkletProcessor.process`.
-- Bài 05-01 cho RTF và ngân sách hop 10 ms; bài 05-03 cho ring hấp thụ 3,75 quantum.
-- [mezonai/mezon-noise-suppression](https://github.com/mezonai/mezon-noise-suppression) cho `DeepFilterNoiseFilterProcessor` và `setSuppressionLevel` như bề mặt sản phẩm, không phải mã của bài này.
+- MDN, [AudioWorklet](https://developer.mozilla.org/en-US/docs/Web/API/AudioWorklet) và tài liệu tham chiếu `AudioWorkletProcessor.process`.
+- Bài 05-01 về RTF và ngân sách hop 10 ms; bài 05-03 về ring buffer dùng để hấp thụ độ lệch 3,75 quantum mỗi hop.
+- Kho mã [mezonai/mezon-noise-suppression](https://github.com/mezonai/mezon-noise-suppression) tham khảo giao diện sản phẩm với `DeepFilterNoiseFilterProcessor` và `setSuppressionLevel` (không phải mã nguồn của bài học này).
 
 ## Video tham khảo
 
-- [AudioWorklet :: What, Why, and How - Hongchan Choi](https://www.youtube.com/watch?v=g1L4O1smMC0) — WebAudio PDX, tiếng Anh. **xem trước.** Hongchan Choi nói vì sao luồng audio không được chờ luồng chính. Xem addModule, processor, và callback.
-- [Sonic Boom! Audio Programming on Android and Chrome (Google I/O'19)](https://www.youtube.com/watch?v=EeQr0zfvF04) — Google for Developers, tiếng Anh. Nửa Chrome cho AudioWorklet cộng WebAssembly trên cùng callback, với độ trễ khứ hồi đã đo.
+- [AudioWorklet :: What, Why, and How - Hongchan Choi](https://www.youtube.com/watch?v=g1L4O1smMC0) — WebAudio PDX, tiếng Anh. **Xem trước.** Hongchan Choi giải thích vì sao luồng âm thanh không được phụ thuộc vào luồng chính, đồng thời trình bày rõ `addModule`, processor và callback.
+- [Sonic Boom! Audio Programming on Android and Chrome (Google I/O'19)](https://www.youtube.com/watch?v=EeQr0zfvF04) — Google for Developers, tiếng Anh. Phần trình bày về Chrome minh họa sự kết hợp giữa AudioWorklet và WebAssembly ngay trên cùng callback, kèm các số liệu độ trễ khứ hồi đo được.

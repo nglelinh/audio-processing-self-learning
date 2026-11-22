@@ -11,87 +11,87 @@ lesson_type: required
 draft: false
 ---
 
-Ship NS ít phụ thuộc đỉnh MOS trên bảng xếp hạng hơn là sống sót trên audio thread. Bài này định nghĩa độ trễ và RTF chặt, giải thích ràng buộc streaming, và liệt kê chế độ hỏng bạn sẽ debug trong tích hợp kiểu Mezon.
+Việc triển khai thành công một bộ khử nhiễu (NS) vào sản phẩm phụ thuộc ít hơn vào điểm MOS cao nhất trên bảng xếp hạng và phụ thuộc nhiều hơn vào khả năng vận hành ổn định trên luồng âm thanh (audio thread). Bài học này định nghĩa chặt chẽ độ trễ và hệ số thời gian thực (RTF), phân tích các ràng buộc của luồng xử lý streaming, đồng thời liệt kê những chế độ lỗi thường gặp khi gỡ lỗi trong các tích hợp kiểu Mezon.
 
 ![Cùng một bộ khử nhiễu, vẽ một lần là batch offline và một lần là khối streaming nhân quả]({{ site.imgurl }}/generated/realtime-vs-offline.png)
 
-*Figure. Look-ahead offline và hop streaming là hai khoản trễ khác nhau; hình chỉ để lập ngân sách, không phải thuật toán thứ hai.*
+*Hình. Độ trễ nhìn trước (look-ahead) ở chế độ ngoại tuyến và bước nhảy hop ở chế độ thời gian thực là hai khoản trễ khác nhau; sơ đồ dùng để lập ngân sách độ trễ, không đại diện cho hai thuật toán riêng biệt.*
 
 ## Mục tiêu học tập
 
-1. Định nghĩa độ trễ thuật toán, độ trễ đệm, và RTF.
-2. Giải thích ràng buộc nhân quả / streaming so với look-ahead offline.
-3. Liên hệ kích thước frame, hop, và ngân sách trễ đầu–cuối cho cuộc gọi.
-4. Liệt kê underrun, audio cắt khúc, drift đồng hồ, gián đoạn state.
-5. Áp dụng tư duy “RTF worst-case trên thiết bị đích” khi chọn mô hình.
+1. Định nghĩa chính xác độ trễ thuật toán, độ trễ đệm và hệ số thời gian thực (RTF).
+2. Giải thích các ràng buộc nhân quả / streaming so với khả năng nhìn trước (look-ahead) của xử lý ngoại tuyến.
+3. Liên hệ kích thước khung, bước nhảy hop và ngân sách độ trễ đầu–cuối trong một cuộc gọi.
+4. Liệt kê các chế độ lỗi phổ biến: underrun, âm thanh bị cắt khúc, trôi đồng hồ (clock drift) và gián đoạn trạng thái (state discontinuity).
+5. Áp dụng tư duy đánh giá "RTF ở trường hợp xấu nhất trên thiết bị đích" khi lựa chọn mô hình.
 
 ## Kế hoạch giảng 60 phút
 
 | Phút | Hoạt động |
 |-----:|-----------|
-| 0–12 | Định nghĩa latency + RTF kèm bài tập số |
-| 12–28 | Pipeline STFT nhân quả; vì sao SOTA offline thất bại trên WebRTC/LiveKit |
-| 28–42 | State streaming: OLA, ẩn RNN/DF |
-| 42–52 | Chế độ hỏng và checklist SLA |
+| 0–12 | Định nghĩa độ trễ và RTF kèm ví dụ tính toán |
+| 12–28 | Pipeline STFT nhân quả; lý giải vì sao các mô hình SOTA ngoại tuyến thất bại trên WebRTC/LiveKit |
+| 28–42 | Quản lý trạng thái streaming: bộ đệm OLA và trạng thái ẩn của RNN/DF |
+| 42–52 | Các chế độ lỗi thực tế và danh mục kiểm tra SLA |
 | 52–60 | Bài tập nhỏ |
 
 ## Giải thích cốt lõi
 
-### Ba khái niệm độ trễ
+### Ba thành phần độ trễ
 
-1. **Đệm** — thời gian gom mẫu trước khi xử lý frame.
-2. **Thuật toán** — look-ahead, group delay bộ lọc, trễ OLA.
-3. **Hệ thống** — quantum OS/callback, cầu JS/Wasm, jitter mạng.
+1. **Độ trễ đệm (buffering latency)** — thời gian chờ gom đủ mẫu trước khi có thể xử lý một khung.
+2. **Độ trễ thuật toán (algorithmic latency)** — gồm khoảng nhìn trước (look-ahead), trễ nhóm của bộ lọc (group delay) và độ trễ từ phép cộng chồng lấp (OLA).
+3. **Độ trễ hệ thống (system latency)** — kích thước quantum của hệ điều hành/callback, cầu nối JS/Wasm và độ rung mạng (network jitter).
 
-### Real-time factor
+### Hệ số thời gian thực (RTF)
 
 $$
 \mathrm{RTF} = \frac{T_{\mathrm{proc}}}{T_{\mathrm{audio}}}
 $$
 
-Streaming cần **dư địa**: RTF trung bình 0.9 vẫn chết khi GC/thermal đẩy một frame lên RTF 2.0.
+Hệ thống streaming luôn cần **biên độ an toàn**: một mô hình có RTF trung bình 0.9 vẫn sẽ gặp lỗi khi trình thu gom rác (GC) hoặc giảm xung do quá nhiệt đẩy thời gian xử lý của một khung lên RTF 2.0.
 
-**Ví dụ:** hop \(R=480\) tại \(48\,\mathrm{kHz}\) → \(10\,\mathrm{ms}\). Ngân sách RTF \(\le 0.5\) ⇒ \(T_{\mathrm{proc}}\le 5\,\mathrm{ms}\) cho đường STFT+model+ISTFT (đã khấu hao).
+**Ví dụ:** Với bước nhảy hop \(R=480\) mẫu ở tần số \(48\,\mathrm{kHz}\), mỗi hop tương ứng \(10\,\mathrm{ms}\). Để giữ ngân sách RTF \(\le 0.5\), thời gian xử lý \(T_{\mathrm{proc}}\) cho toàn bộ chuỗi STFT + mô hình + ISTFT (tính khấu hao theo hop) phải thỏa mãn \(\le 5\,\mathrm{ms}\).
 
-**Trung bình đẹp vẫn có thể glitch.** 100 hop, mỗi hop 10 ms: 99 hop xong trong 3 ms, một hop mất 15 ms. Trung bình là \((99\times 3+15)/100=3.12\,\mathrm{ms}\), RTF trung bình \(0.312\). Hop chậm có RTF \(1.5\) và trượt callback. Phải kèm p95 hoặc p99, nếu không số trung bình sẽ che underrun.
+**Giá trị trung bình đẹp vẫn có thể gây méo tiếng (glitch).** Giả sử trong 100 hop dài 10 ms, có 99 hop hoàn thành trong 3 ms nhưng 1 hop mất 15 ms. Thời gian xử lý trung bình là \((99\times 3+15)/100=3.12\,\mathrm{ms}\), tương ứng RTF trung bình \(0.312\). Tuy vậy, riêng hop bị chậm có RTF bằng \(1.5\) và sẽ trượt hạn callback. Do đó, đánh giá hiệu năng bắt buộc phải đo kèm các phân vị đuôi như p95 hoặc p99; nếu chỉ nhìn giá trị trung bình, hiện tượng underrun sẽ bị che khuất.
 
-**Quantum không phải hop.** Quantum 128 mẫu ở 48 kHz dài \(128/48000\approx 2.67\,\mathrm{ms}\). Hop 480 mẫu là \(480/128=3.75\) quantum. Processor phải gom quantum lẻ trong ring buffer. DeepFilterNet3 (arXiv:2305.08227) là bản real-time của họ đó; checkpoint offline vài trăm ms look-ahead không thành nhân quả chỉ vì bạn bọc nó trong `DeepFilterNoiseFilterProcessor`.
+**Quantum không đồng nhất với hop.** Một quantum 128 mẫu ở 48 kHz kéo dài \(128/48000\approx 2.67\,\mathrm{ms}\), trong khi hop 480 mẫu tương đương \(480/128=3.75\) quantum. Vì vậy, bộ xử lý phải gom các quantum lẻ vào bộ đệm vòng (ring buffer). DeepFilterNet3 (arXiv:2305.08227) được thiết kế cho chế độ thời gian thực trong họ mô hình này; một checkpoint ngoại tuyến có độ trễ nhìn trước vài trăm ms sẽ không tự động trở thành nhân quả chỉ nhờ được bọc bên trong `DeepFilterNoiseFilterProcessor`.
 
-### Nhân quả và offline
+### Nhân quả và ngoại tuyến
 
-DeepFilterNet2/3 nhấn thiết kế **real-time / causal** — lý do khóa học neo vào họ này thay vì chỉ mô hình diffusion offline.
+DeepFilterNet2 và DeepFilterNet3 nhấn mạnh thiết kế **thời gian thực / nhân quả** — đây là lý do khóa học chọn họ mô hình này làm trọng tâm thay vì các mô hình khuếch tán (diffusion) ngoại tuyến.
 
-### Frame, hop, trễ
+### Khung, hop và độ trễ
 
 $$
 T_{\mathrm{hop}}=\frac{R}{f_s},\qquad T_{\mathrm{win}}=\frac{L}{f_s}
 $$
 
-Giảm \(L\) giảm trễ nhưng hại độ phân giải tần số — Chương 02 đào sâu.
+Giảm độ dài cửa sổ \(L\) giúp hạ độ trễ nhưng đánh đổi bằng độ phân giải tần số — nội dung này sẽ được phân tích kỹ ở Chương 02.
 
-### State streaming
+### Trạng thái streaming
 
-OLA, ước lượng nhiễu/VAD, state hồi tiếp neural. Cold-start mỗi callback gây click; đổi sample rate không reset gây “bùn”.
+Một hệ thống streaming phải duy trì liên tục các trạng thái như bộ đệm OLA, bộ ước lượng nhiễu/VAD và trạng thái ẩn hồi tiếp của mạng nơ-ron. Khởi tạo lại từ đầu (cold-start) ở mỗi callback sẽ gây tiếng lách tách (click), còn thay đổi tần số lấy mẫu mà không đặt lại trạng thái sẽ khiến âm thanh bị đục và méo.
 
-### Chế độ hỏng
+### Các chế độ lỗi thường gặp
 
-Underrun/glitch; tiếng nói cắt/ướt; drift ring buffer; artifact đuôi; cliff nhiệt.
+Các lỗi điển hình bao gồm: hụt đệm/vỡ tiếng (underrun/glitch); tiếng nói bị cắt cụt hoặc méo "ướt"; trôi con trỏ bộ đệm vòng (ring buffer drift); nhiễu đuôi (tail artifacts); và sụt giảm hiệu năng đột ngột do quá nhiệt (thermal throttling).
 
-## Ví dụ — mô hình này ship được không?
+## Ví dụ — mô hình này có triển khai được không?
 
-Offline: look-ahead 300 ms, RTF GPU 0.15, RTF CPU laptop 1.2 @ 48 kHz mono. Ngân sách gọi \(\le 40\,\mathrm{ms}\) look-ahead → **fail**. RTF 1.2 → **fail** nếu không downsample/quantize/mô hình nhỏ hơn.
+Xét một mô hình ngoại tuyến có độ trễ nhìn trước 300 ms, đạt RTF 0.15 trên GPU nhưng RTF 1.2 trên CPU laptop ở 48 kHz mono. Nếu ngân sách cuộc gọi yêu cầu độ trễ nhìn trước \(\le 40\,\mathrm{ms}\), mô hình này **không đạt**. Với RTF 1.2 trên CPU đích, mô hình cũng **không đạt** trừ khi giảm tần số lấy mẫu, lượng tử hóa hoặc thu gọn kiến trúc.
 
 ## Bẫy thường gặp
 
-1. Trích RTF paper đo offline batch lớn.
-2. Bỏ qua latency đuôi p95/p99.
-3. Dùng checkpoint non-causal “cho demo”.
-4. Đo trễ bằng `Date.now()` xuyên nhiều tầng đệm ẩn.
-5. Nhầm quantum AudioWorklet (ví dụ 128 mẫu ≈ 2.67 ms @ 48 kHz) với hop STFT.
+1. Trích dẫn số liệu RTF từ bài báo vốn được đo ở chế độ ngoại tuyến với kích thước batch lớn.
+2. Bỏ qua độ trễ đuôi (p95/p99).
+3. Dùng checkpoint không nhân quả "tạm cho bản demo".
+4. Đo độ trễ bằng `Date.now()` xuyên qua nhiều tầng đệm ẩn mà không tách rõ từng công đoạn.
+5. Nhầm lẫn quantum của AudioWorklet (ví dụ 128 mẫu ≈ 2.67 ms ở 48 kHz) với bước nhảy hop của STFT.
 
 ## Mini-lab
 
-**Mục tiêu.** In ngân sách hop 10 ms ở 48 kHz, rồi chỉ một hop bị spike mà RTF trung bình vẫn trông an toàn.
+**Mục tiêu.** In ngân sách xử lý cho hop 10 ms ở 48 kHz, đồng thời minh họa tình huống một hop tăng đột biến khiến callback trượt hạn dù RTF trung bình vẫn trông rất an toàn.
 
 ```python
 fs, hop = 48_000, 480
@@ -105,32 +105,32 @@ print(f"spike_rtf={15 / t_audio_ms:.2f}")
 print(f"quantum_ms={quantum_ms:.2f} quanta_per_hop={hop/128:.2f}")
 ```
 
-**Expected.** `t_audio_ms=10.0 t_proc_max_ms=5.0`, `mean_ms=3.12 mean_rtf=0.312`, `spike_rtf=1.50`, `quantum_ms=2.67 quanta_per_hop=3.75`.
+**Kết quả kỳ vọng.** `t_audio_ms=10.0 t_proc_max_ms=5.0`, `mean_ms=3.12 mean_rtf=0.312`, `spike_rtf=1.50`, `quantum_ms=2.67 quanta_per_hop=3.75`.
 
-**Failure modes.** Lấy trung bình RTF rồi bỏ spike. Coi 128 mẫu là hop 10 ms. Đảo RTF nên máy chậm lại in số nhỏ hơn.
+**Lỗi thường gặp.** Chỉ lấy RTF trung bình mà bỏ qua các điểm tăng đột biến (spike); đồng nhất 128 mẫu với hop 10 ms; hoặc tính ngược công thức RTF khiến máy chậm lại cho ra con số nhỏ hơn.
 
 ## Bài tập nhỏ
 
-1. Hop 256 mẫu @ 16 kHz: hop ms? \(T_{\mathrm{proc}}\) max cho RTF 0.25?
-2. Liệt kê ba state buffer hệ STFT-NS phải giữ giữa các hop.
-3. Vì sao RTF trung bình 0.4 vẫn glitch trên Chrome khi tải cao?
-4. Đề xuất checklist go/no-go 5 phép đo trước khi bật NS mặc định.
+1. Với hop 256 mẫu ở tần số 16 kHz, hãy tính độ dài hop (ms) và thời gian xử lý tối đa \(T_{\mathrm{proc}}\) để đạt RTF 0.25.
+2. Liệt kê ba bộ đệm trạng thái mà một hệ thống STFT-NS phải duy trì xuyên suốt giữa các hop.
+3. Vì sao một mô hình có RTF trung bình 0.4 vẫn có thể gây vỡ tiếng trên Chrome khi hệ thống chịu tải cao?
+4. Đề xuất danh mục kiểm tra go/no-go gồm 5 phép đo trước khi bật mặc định tính năng khử nhiễu.
 
 ### Gợi ý đáp án
 
-1. \(256/16000=16\,\mathrm{ms}\). RTF \(0.25\) cho phép \(4\,\mathrm{ms}\) xử lý.
-2. Buffer chồng OLA, state cửa sổ phân tích, và hồi tiếp của mạng hoặc tracker nhiễu. Thêm sample rate và số kênh.
-3. Trung bình giấu pause của GC, spike nhiệt, hoặc một hop vượt 16 ms. Callback cảm nhận p99.
-4. Năm mục dùng được: look-ahead nhân quả tính bằng ms, p95 RTF trên CPU đích, số underrun trong cuộc gọi 10 phút, quy tắc downmix stereo, và một lần nghe ở đúng sample rate sản phẩm.
+1. Độ dài hop là \(256/16000=16\,\mathrm{ms}\). Với RTF \(0.25\), thời gian xử lý tối đa cho phép là \(4\,\mathrm{ms}\).
+2. Bộ đệm cộng chồng lấp OLA, bộ đệm cửa sổ phân tích và trạng thái ẩn hồi tiếp của mạng nơ-ron (hoặc bộ theo dõi nền nhiễu); ngoài ra cần theo dõi cấu hình tần số lấy mẫu và số kênh.
+3. Giá trị trung bình che lấp các khoảng dừng của GC, hiện tượng quá nhiệt hoặc những hop đơn lẻ vượt quá 16 ms — trong khi audio callback chịu ảnh hưởng trực tiếp bởi độ trễ đuôi (p99).
+4. Năm phép đo thiết thực: độ trễ nhìn trước nhân quả (ms), phân vị p95 của RTF trên CPU đích, số lần underrun trong cuộc gọi kéo dài 10 phút, quy tắc gộp kênh stereo và một phiên nghe kiểm tra ở đúng tần số lấy mẫu của sản phẩm.
 
 ## Đọc thêm
 
-- DeepFilterNet2 (arXiv:2205.05474) và DeepFilterNet3 (arXiv:2305.08227) — mục real-time / causal. Mã: https://github.com/Rikorose/DeepFilterNet.
-- Tổng quan đồ thị xử lý WebRTC APM.
-- Tài liệu MDN AudioWorklet (ràng buộc thời gian callback).
+- DeepFilterNet2 (arXiv:2205.05474) và DeepFilterNet3 (arXiv:2305.08227) — các mục về thiết kế thời gian thực / nhân quả. Mã nguồn: https://github.com/Rikorose/DeepFilterNet.
+- Tài liệu tổng quan đồ thị xử lý của WebRTC APM.
+- Tài liệu MDN về AudioWorklet (ràng buộc thời gian của callback).
 
 ## Video tham khảo
 
-- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, tiếng Anh. **xem trước.** Xem các khẳng định độ trễ và hệ số thời gian thực cạnh sơ đồ hai tầng; đó là phép thử ship hay không mà bài định nghĩa.
-- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, tiếng Anh. Đoạn độ phức tạp đối chất lượng cho thấy điểm offline không phải ngân sách streaming.
-- [Sonic Boom! Audio Programming on Android and Chrome (Google I/O'19)](https://www.youtube.com/watch?v=EeQr0zfvF04) — Google for Developers, tiếng Anh. Số đo độ trễ callback là nửa thiết bị của bài: look-ahead thuật toán và audio thread là hai đồng hồ khác nhau.
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, tiếng Anh. **Xem trước.** Quan sát các thông số độ trễ và hệ số thời gian thực đặt cạnh sơ đồ hai tầng; đây chính là phép thử khả năng triển khai mà bài học này định nghĩa.
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, tiếng Anh. Phần phân tích đánh đổi giữa độ phức tạp và chất lượng cho thấy điểm số ngoại tuyến không đại diện cho ngân sách streaming.
+- [Sonic Boom! Audio Programming on Android and Chrome (Google I/O'19)](https://www.youtube.com/watch?v=EeQr0zfvF04) — Google for Developers, tiếng Anh. Các số đo độ trễ callback minh họa nửa còn lại ở tầng thiết bị: độ trễ nhìn trước của thuật toán và nhịp đồng hồ của audio thread là hai bài toán khác nhau.

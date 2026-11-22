@@ -11,25 +11,25 @@ lesson_type: required
 draft: false
 ---
 
-Đường Mezon được hỗ trợ là hộp WASM trong `deepfilternet3-noise-filter`: weight ONNX, bản WASM SIMD, bố trí CDN `v2/` mà gói tự thêm từ ≥ 1.2.0 (gồm 1.3.0), và AudioWorklet. Crate Rust bạn có thể gọi `df-core` là **phương án kéo thay cho hộp đó**, cho CLI máy bàn hoặc nhúng native bạn tự dựng trong workspace của mình. Nó không phải sản phẩm thứ hai, không bắt buộc để đậu, và không phải thư mục bạn có quyền tìm dưới `/Users/nguyenlelinh/ncc/mezon-noise-suppression`. Nếu backend đầu chỉ chép mẫu từ vào ra, hãy ghi **passthrough**. Đừng viết “NS works” trên bản passthrough.
+Luồng chạy chính thức được hỗ trợ của Mezon là gói WASM bên trong `deepfilternet3-noise-filter`: gồm trọng số ONNX, bản dựng WASM SIMD, cấu trúc CDN `v2/` (được gói tự động thêm từ bản ≥ 1.2.0, bao gồm 1.3.0) và AudioWorklet. Crate Rust tạm gọi là `df-core` chỉ là **nhánh mở rộng tùy chọn thay thế cho hộp WASM đó**, phục vụ công cụ dòng lệnh (CLI) trên máy tính hoặc tích hợp native trong không gian làm việc cá nhân của bạn. Đây không phải sản phẩm thứ hai, không phải yêu cầu bắt buộc để hoàn thành khóa học và không nằm trong kho mã nguồn sản phẩm. Nếu phiên bản backend ban đầu chỉ sao chép thẳng mẫu đầu vào sang đầu ra, bắt buộc phải ghi rõ là **passthrough**, tuyệt đối không ghi “NS works” cho một bộ chép thẳng.
 
 ![Đường WASM trên thiết bị của deepfilternet3-noise-filter]({{ site.imgurl }}/generated/onnx-wasm-path.png)
 
-*Hình. Đường ship là PyTorch sang ONNX sang WASM sang gói hoặc asset CDN `v2/`, rồi AudioWorklet. Rust `df-core` là phương án kéo thay cho hộp WASM này, không phải sản phẩm thứ hai đứng cạnh nó.*
+*Hình. Luồng phát hành sản phẩm đi từ PyTorch sang ONNX, biên dịch thành WASM phân phối qua CDN `v2/` rồi chạy trong AudioWorklet. Nhánh Rust `df-core` chỉ là phương án mở rộng thay cho hộp WASM này, không phải một sản phẩm song song.*
 
-## Bạn làm được gì sau bài này
+## Mục tiêu học tập
 
-Bạn nói được đường WASM tải gì (`df_bg.wasm`, `DeepFilterNet3_onnx.tar.gz`), thí nghiệm Rust cá nhân phải khớp gì (hop khung, sample rate, mô hình thật), và cách chứng minh parity mà không nhận bit-exact khi chưa đo. Bạn cũng từ chối coi backend rỗng là enhance.
+Sau bài học này, bạn sẽ nêu chính xác những tài nguyên luồng WASM tải về (`df_bg.wasm`, `DeepFilterNet3_onnx.tar.gz`), xác định các tham số mà bản thử nghiệm Rust cá nhân cần đồng bộ (độ dài khung/hop, tần số lấy mẫu, mô hình thực), biết cách kiểm chứng độ tương đương (parity) mà không tuyên bố khớp từng bit khi chưa đo, và giữ nguyên tắc không bao giờ đánh đồng backend rỗng với bộ khử nhiễu thực sự.
 
-## Hộp bạn không thay theo mặc định
+## Thành phần mặc định không cần thay thế
 
-Gói 1.3.0, như mọi bản ≥ 1.2.0, xin `{cdnUrl}/v2/pkg/df_bg.wasm` và `{cdnUrl}/v2/models/DeepFilterNet3_onnx.tar.gz`. Client tự thêm `v2/`. Đừng nhét vào `cdnUrl`. Base ví dụ là `https://cdn.mezon.ai/AI/models/datas/noise_suppression/deepfilternet3`. Nút công khai vẫn là `DeepFilterNoiseFilterProcessor` hoặc `DeepFilterNet3Core`, `setProcessor`, `setSuppressionLevel(0–100)`, và `setEnabled`. Thí nghiệm Rust không thêm tên công khai mới vào gói npm. Muốn CLI thì dựng cạnh khóa học, trong repo cá nhân.
+Phiên bản 1.3.0 (giống mọi bản ≥ 1.2.0) tải `{cdnUrl}/v2/pkg/df_bg.wasm` và `{cdnUrl}/v2/models/DeepFilterNet3_onnx.tar.gz`, trong đó client tự nối `v2/` còn bạn chỉ truyền đường dẫn gốc (ví dụ `https://cdn.mezon.ai/AI/models/datas/noise_suppression/deepfilternet3`). Các điểm điều khiển công khai vẫn giữ nguyên: `DeepFilterNoiseFilterProcessor` hoặc `DeepFilterNet3Core`, `setProcessor`, `setSuppressionLevel(0–100)` và `setEnabled`. Việc thử nghiệm bằng Rust không bổ sung thêm API công khai nào vào gói npm; nếu muốn xây dựng CLI, hãy đặt độc lập trong kho cá nhân.
 
-Các bài DeepFilterNet nói vì sao viết lại native khó tính: audio full-band 48 kHz, STFT với hop cỡ 10 ms, tầng gain ERB, và deep filter có thể dùng look-ahead ngắn. Look-ahead đó là độ trễ thuật toán. Khớp RTF không phải khớp waveform. Bài 08-01 cho thấy trượt một mẫu biến 13.80 dB thành −10.67 dB. Bản Rust “trễ một chút” sẽ tệ trên SI-SDR dù nghe na ná.
+Các bài báo DeepFilterNet cho thấy việc cài đặt lại trên native đòi hỏi độ chính xác rất cao: âm thanh toàn dải 48 kHz, STFT với hop khoảng 10 ms, tầng hệ số ERB và bộ lọc sâu có thể kèm cửa sổ nhìn trước (look-ahead) ngắn tạo ra độ trễ thuật toán. Đạt cùng RTF không đồng nghĩa khớp dạng sóng: như bài 08-01 đã chứng minh, chỉ cần lệch 1 mẫu cũng khiến SI-SDR tụt từ 13.80 dB xuống −10.67 dB. Do đó, một bản Rust “hơi trễ một chút” sẽ cho điểm SI-SDR rất kém dù nghe qua có vẻ tương tự.
 
-## Workspace cá nhân, nếu bạn chọn
+## Tổ chức không gian làm việc cá nhân (nếu chọn thực hiện)
 
-Chỉ tạo trong fork hoặc repo mới. Đừng thêm vào cây sản phẩm chung như bài tập.
+Chỉ khởi tạo thư mục này trong fork hoặc kho cá nhân mới, không đặt vào kho sản phẩm chung:
 
 ```text
 my-df-stretch/
@@ -38,18 +38,18 @@ my-df-stretch/
   README.md    # câu đầu nói passthrough hoặc backend thật
 ```
 
-Các mốc gợi ý, theo thứ tự:
+Các mốc triển khai gợi ý theo thứ tự:
 
-1. **Backend passthrough.** `process` trả lại mẫu đầu vào. Tiêu đề README nói passthrough. Test kiểm độ dài và bản sao, không kiểm nền nhiễu.
-2. **Lỗi asset.** Thiếu đường tar hoặc ONNX thì fail với lỗi rõ. Đừng lặng lẽ cho audio đi qua rồi in “enhanced”.
-3. **Tải runtime thật.** [tract](https://github.com/sonos/tract) hoặc ONNX Runtime ([onnxruntime.ai/docs](https://onnxruntime.ai/docs/)) chạy cùng archive DeepFilterNet3 mà CDN phục vụ. [libDF](https://github.com/Rikorose/DeepFilterNet) phía upstream là lựa chọn thật còn lại. Chọn một và ghim phiên bản.
-4. **Khung.** Ghi hop, cửa sổ, và sample rate cạnh đường WASM. Đừng bịa API riêng của Mezon để làm việc đó.
-5. **File vàng.** Một wav ồn qua đường WASM công khai, một qua CLI của bạn. So SI-SDR **giữa hai ước lượng**, sau khi căn, và báo float. Rồi nghe. SI-SDR cao giữa chúng nghĩa là chúng khớp nhau, không nghĩa là cái nào khớp tiếng sạch.
-6. **Điểm dừng.** Nếu bạn chỉ xong bước 1, script demo nói “passthrough, noise suppression is not running”.
+1. **Backend passthrough.** Hàm `process` trả về nguyên vẹn mẫu đầu vào. Dòng đầu tệp README ghi rõ trạng thái `passthrough`; các bài kiểm thử chỉ xác nhận độ dài và tính toàn vẹn bản sao, không kiểm tra mức giảm nhiễu.
+2. **Bắt lỗi thiếu tài nguyên.** Khi thiếu đường dẫn tệp `.tar.gz` hoặc `.onnx`, chương trình phải dừng và báo lỗi rõ ràng, không âm thầm cho âm thanh đi thẳng rồi in thông báo “enhanced”.
+3. **Nạp runtime suy luận thực.** Dùng [tract](https://github.com/sonos/tract) hoặc ONNX Runtime ([onnxruntime.ai/docs](https://onnxruntime.ai/docs/)) để chạy cùng gói mô hình DeepFilterNet3 mà CDN phục vụ; lựa chọn thực tế còn lại là [libDF](https://github.com/Rikorose/DeepFilterNet) từ kho nguồn gốc. Hãy chọn một phương án và cố định phiên bản.
+4. **Đồng bộ cấu hình khung.** Ghi rõ độ dài hop, kích thước cửa sổ và tần số lấy mẫu song song với bản WASM, không tự đặt thêm API nội bộ cho Mezon.
+5. **Đối chiếu trên tệp chuẩn.** Cho cùng một tệp WAV nhiễu đi qua luồng WASM công khai và qua CLI Rust của bạn, căn chỉnh độ trễ rồi tính SI-SDR **giữa hai tín hiệu đầu ra**, báo cáo giá trị thực và nghe thử. Lưu ý: SI-SDR cao giữa hai bản đầu ra chỉ chứng minh chúng khớp nhau, chưa tự chứng minh bản nào khớp giọng sạch.
+6. **Điểm dừng trung thực.** Nếu bạn chỉ hoàn thành tới bước 1, kịch bản demo phải nói rõ “passthrough, noise suppression is not running”.
 
-Giấy phép theo dự án DeepFilterNet upstream (Apache-2.0 OR MIT, như gói npm). Đừng commit tar.gz. Trỏ bố trí CDN hoặc hướng dẫn `models/` phía upstream.
+Về giấy phép, cần tuân thủ giấy phép gốc của DeepFilterNet (Apache-2.0 hoặc MIT, tương đồng với gói npm). Không commit trực tiếp tệp `.tar.gz` vào Git; thay vào đó hãy trỏ tới cấu trúc CDN hoặc hướng dẫn tải `models/` từ kho nguồn gốc.
 
-## Parity không hư cấu
+## Kiểm chứng độ tương đương (parity) một cách trung thực
 
 ```text
 căn delay hop
@@ -60,24 +60,24 @@ ghi float vào báo cáo
 nếu backend là passthrough, bỏ so sánh này và nói vì sao
 ```
 
-Chưa có bước 3 thì test vàng là **đang chờ**. File passthrough so với enhancer thật sẽ điểm xấu. Điểm xấu đó là mục đích. Đừng nới dung sai cho đến khi số trông hiền.
+Khi chưa hoàn thành bước 3, bài kiểm tra đối chiếu được ghi nhận ở trạng thái **đang chờ**. Một đầu ra passthrough so với bộ khử nhiễu thực chắc chắn sẽ cho điểm rất thấp — và đó chính là dấu hiệu đúng của phép kiểm tra; không được nới lỏng dung sai để làm đẹp con số.
 
-tract (hoặc ONNX Runtime) với binding tay tới libDF upstream là đánh đổi bạn nên viết một đoạn: runtime ONNX ăn artifact mà CDN đã ship; libDF là engine mà bản WASM được dựng từ đó và có thể bám trạng thái streaming sát hơn. Cách nào cũng phải đo. Chương 06 là nền. Bài này không thêm bảng ký hiệu riêng.
+Sự đánh đổi giữa `tract` (hoặc ONNX Runtime) với việc gọi trực tiếp `libDF` nên được phân tích ngắn gọn trong báo cáo: runtime ONNX sử dụng trực tiếp tệp tài nguyên sẵn có trên CDN, còn `libDF` là engine gốc tạo ra bản WASM nên có thể bám sát trạng thái streaming hơn. Dù chọn hướng nào đều phải đo kiểm thực tế dựa trên nền tảng Chương 06.
 
-## “Xong” nghĩa là gì với phần kéo
+## Tiêu chuẩn hoàn thành cho nhánh mở rộng
 
-Xong đường tùy chọn là README người lạ build được, nhãn passthrough nếu bạn chỉ có thế, hoặc CLI cộng một float SI-SDR với đầu ra WASM nếu bạn đã tải mô hình. Xong không phải slide nói client native là Mezon production. Client ship vẫn là gói npm trên đường LiveKit ở 09-01.
+Nhánh mở rộng tùy chọn được coi là hoàn tất khi có tệp README đủ rõ để người khác tự biên dịch được, ghi nhãn trung thực `passthrough` nếu mới dừng ở bước khung, hoặc cung cấp CLI kèm chỉ số SI-SDR đối chiếu với đầu ra WASM nếu đã nạp mô hình thực. Lưu ý không trình bày client native như sản phẩm chính của Mezon — sản phẩm đang vận hành vẫn là gói npm trên luồng LiveKit ở bài 09-01.
 
 ## Mini-lab
 
-Viết `df_core_status.md` với hai dòng checker nhìn thấy:
+Tạo tệp `df_core_status.md` chứa hai dòng trạng thái để script kiểm tra đọc:
 
 ```text
 backend: passthrough
 claim: noise suppression is not running
 ```
 
-Nếu bạn thật sự tải mô hình, có thể viết `backend: tract` hoặc `backend: onnxruntime` hoặc `backend: libdf`, và `claim: compared to wasm SI-SDR <float>`. Chữ passthrough không được đứng cạnh câu nhận NS chạy.
+Nếu bạn đã nạp thành công mô hình thực, có thể thay bằng `backend: tract`, `backend: onnxruntime` hoặc `backend: libdf`, kèm dòng `claim: compared to wasm SI-SDR <float>`. Tuyệt đối không đặt `passthrough` cạnh tuyên bố rằng khử nhiễu đang chạy.
 
 ```python
 from pathlib import Path
@@ -88,32 +88,32 @@ bad = "ns works" in text or "noise suppression works" in text
 print("status", "ok" if (ok_pass or ok_real) and not bad else "fix")
 ```
 
-Đầu ra kỳ vọng cho lab kéo mặc định (chưa có mô hình):
+**Kết quả kỳ vọng** (cho trạng thái mặc định chưa nạp mô hình):
 
 ```text
 status ok
 ```
 
-Kiểu hỏng: “NS works” trên vòng chép; commit `DeepFilterNet3_onnx.tar.gz`; bắt đường máy giảng viên; mô tả Rust là sản phẩm và WASM là demo; float parity không ghi căn thời gian.
+**Lỗi thường gặp.** Ghi “NS works” cho vòng lặp sao chép thẳng; commit tệp `DeepFilterNet3_onnx.tar.gz` vào kho Git; phụ thuộc vào đường dẫn cục bộ trên máy khác; mô tả Rust là bản sản phẩm còn WASM chỉ là bản demo; hoặc báo cáo số SI-SDR đối chiếu mà không ghi bước căn chỉnh thời gian.
 
 ## Bài tập
 
-1. Viết năm mốc làm được không cần GPU, đánh dấu mốc nào là passthrough.
-2. Liệt kê test không cần weight: độ dài khung, chép đồng nhất, và lỗi thiếu file.
-3. Một đoạn, so tract (hoặc ONNX Runtime) với libDF upstream làm backend kéo.
-4. Quyết đi hay không đi Rust trong capstone của bạn. Nếu không đi, gọi tên việc WASM bạn sẽ làm.
-5. Nêu hướng so SI-SDR: ước lượng với ước lượng, không phải ước lượng với khẩu hiệu.
+1. Liệt kê 5 mốc thực hiện nhánh Rust mà không cần GPU, đánh dấu rõ mốc nào vẫn ở trạng thái `passthrough`.
+2. Đề xuất các bài kiểm thử đơn vị (unit test) không cần trọng số mô hình: kiểm tra độ dài khung, tính đồng nhất khi sao chép và xử lý lỗi thiếu tệp.
+3. Viết một đoạn ngắn so sánh `tract` (hoặc ONNX Runtime) với `libDF` gốc khi làm backend cho nhánh mở rộng.
+4. Quyết định rõ bạn có thực hiện nhánh Rust trong dự án cuối khóa hay không; nếu không, hãy nêu cụ thể hạng mục WASM bạn chọn thay thế.
+5. Nêu đúng chiều so sánh SI-SDR trong bài kiểm tra độ tương đương: so sánh hai tín hiệu ước lượng với nhau, không so với khẩu hiệu.
 
 ### Gợi ý đáp án
 
-1. Bước 1–2 được phép passthrough. Bước 3 là lần đầu được dùng chữ enhance.
-2. Đồng nhất: mẫu ra bằng mẫu vào. Thiếu file: mã thoát khác không và không có wav “enhanced”.
-3. Runtime ONNX ăn tar/ONNX CDN đã có. libDF là engine upstream. Cả hai cần file vàng.
-4. Không đi vẫn là capstone đủ nếu 09-01 và 09-04 là thật. Nói vậy.
-5. SI-SDR(wasm, rust) sau khi bù delay. Lab 13.80 là phương pháp, không phải điểm sản phẩm kỳ vọng.
+1. Bước 1 và 2 là `passthrough`; từ bước 3 (nạp runtime thực) mới được sử dụng thuật ngữ “enhance”.
+2. Kiểm tra tính đồng nhất: mẫu đầu ra bằng đúng mẫu đầu vào; kiểm tra thiếu tệp: chương trình thoát với mã lỗi khác 0 và không tạo tệp WAV “enhanced”.
+3. Runtime ONNX dùng trực tiếp tệp mô hình phân phối qua CDN, còn `libDF` là engine gốc của tác giả; cả hai hướng đều bắt buộc đối chiếu trên tệp chuẩn.
+4. Không chọn nhánh Rust vẫn hoàn thành trọn vẹn dự án cuối khóa miễn là các phần 09-01 và 09-04 được thực hiện đầy đủ và trung thực.
+5. Tính `SI-SDR(wasm, rust)` sau khi đã bù độ trễ; giá trị `13.80` ở bài lab chỉ minh họa phương pháp, không phải mức điểm mục tiêu của sản phẩm.
 
 ## Video tham khảo
 
-- [Zoom on Web: getting connected with advanced web technology](https://www.youtube.com/watch?v=nhTxJBgTywc) — Chrome for Developers, tiếng Anh. **xem trước.** Xem ghi chú Rust simd128 và cờ Emscripten. Nhánh df-core native vẫn phải đạt mốc WASM này hoặc giải thích vì sao thay nó.
-- [Faster and Lighter Model Inference with ONNX Runtime from Cloud to Client](https://www.youtube.com/watch?v=WDww8ce12Mc) — Microsoft Developer, tiếng Anh. ONNX Runtime là máy mà hộp WASM của bài đang dùng. Máy Rust phải nạp cùng loại đồ thị.
-- [Sonic Boom! Audio Programming on Android and Chrome (Google I/O'19)](https://www.youtube.com/watch?v=EeQr0zfvF04) — Google for Developers, tiếng Anh. Callback không quan tâm code đã chuyển sang Rust. Xem hạn mà lõi native vẫn phải kịp.
+- [Zoom on Web: getting connected with advanced web technology](https://www.youtube.com/watch?v=nhTxJBgTywc) — Chrome for Developers, tiếng Anh. **Xem trước.** Xem phần về Rust `simd128` và cờ biên dịch — mốc hiệu năng WASM mà bất kỳ nhánh `df-core` native nào cũng cần so sánh cùng.
+- [Faster and Lighter Model Inference with ONNX Runtime from Cloud to Client](https://www.youtube.com/watch?v=WDww8ce12Mc) — Microsoft Developer, tiếng Anh. Giới thiệu engine ONNX Runtime cho cùng loại đồ thị mà nhánh Rust phải nạp.
+- [Sonic Boom! Audio Programming on Android and Chrome (Google I/O'19)](https://www.youtube.com/watch?v=EeQr0zfvF04) — Google for Developers, tiếng Anh. Ràng buộc thời gian của callback âm thanh vẫn giữ nguyên bất kể mã nguồn viết bằng JS hay Rust.

@@ -11,33 +11,33 @@ lesson_type: required
 draft: false
 ---
 
-Điểm capstone dành cho kỹ thuật đo được: khung và chồng lấn, chính sách mức khử, harness đánh giá, đường CDN lỗi, hoặc ngân sách RTF. Không dành cho việc đổi tên `deepfilternet3-noise-filter` hay refactor tiện tay trong repo sản phẩm chung. Wrapper là xe. Tầng ERB và deep filter của DeepFilterNet là lý do chiếc xe tồn tại. Bài này ép một giả thuyết, một baseline, và một bảng người giữ repo chạy lại được.
+Điểm đánh giá dự án cuối khóa (capstone) tập trung vào các kỹ thuật đo đạc được: cấu hình khung và chồng lấp, chính sách chọn mức khử nhiễu, bộ công cụ đánh giá (harness), cơ chế ứng phó khi CDN lỗi hoặc kiểm soát ngân sách RTF — không phải việc đổi tên gói `deepfilternet3-noise-filter` hay tái cấu trúc nhỏ trong kho sản phẩm chung. Lớp wrapper chỉ là phương tiện vận chuyển, còn tầng hệ số ERB và bộ lọc sâu (deep filter) của DeepFilterNet mới là giá trị cốt lõi. Bài học này yêu cầu bạn xác lập trước một giả thuyết rõ ràng, một tập số liệu nền (baseline) và một bảng kết quả mà người quản trị kho mã có thể tự chạy lại để kiểm chứng.
 
 ![Khối DeepFilterNet: đường ERB và deep filter nhiều khung]({{ site.imgurl }}/generated/deepfilternet-erb.png)
 
-*Hình. Kỹ thuật dưới wrapper: PCM 48 kHz, STFT, đường gain ERB, deep filter trên phổ phức, rồi ISTFT và overlap-add. Capstone của bạn nên gọi tên bạn đang học khối nào.*
+*Hình. Chuỗi kỹ thuật nằm dưới lớp wrapper: PCM 48 kHz, STFT, nhánh hệ số khuếch đại ERB, bộ lọc sâu trên phổ phức, sau đó là ISTFT và cộng chồng lấp (overlap-add). Dự án cuối khóa cần nêu rõ bạn đang khảo sát hoặc tối ưu khâu nào.*
 
-## Bạn làm được gì sau bài này
+## Mục tiêu học tập
 
-Bạn đề xuất được một thay đổi bám chương 02–08, viết luật thành công và thất bại trước khi có số thứ hai, và giữ việc trong fork cá nhân hoặc harness ngoài. Bạn cũng nói nút công khai nào sẽ đụng (`setSuppressionLevel`, `setEnabled`, hoặc `assetConfig.cdnUrl`) và metric nào giữ `n/a`.
+Sau bài học này, bạn sẽ đề xuất được một cải tiến gắn chặt với kiến thức Chương 02–08, định nghĩa trước tiêu chí thành công và thất bại trước khi đo lần hai, giữ toàn bộ mã thử nghiệm trong fork cá nhân hoặc thư mục độc lập, đồng thời nêu rõ API công khai nào được tác động (`setSuppressionLevel`, `setEnabled`, hoặc `assetConfig.cdnUrl`) và chỉ số nào giữ nguyên `n/a`.
 
-## Thực đơn ánh xạ chương
+## Danh mục đề tài ánh xạ theo chương
 
-| Ý | Nhiên liệu | Sản phẩm chấm được |
+| Hướng đề tài | Kiến thức nền tảng | Sản phẩm kiểm chứng được |
 |----|------------|---------------------|
-| Harness với phiếu sáu cột của 08-04 | Ch. 08 | `suite.md` và checker |
-| Mức mặc định chọn bằng test AB | 08-03 | Protocol, N, thắng theo điều kiện |
-| Log RTF p95 và luật hạ mức đã viết | 05, 07 | Thiết bị, p95, cái bạn tắt |
-| Ghi NS trình duyệt đối với processor này | 03, 07 | Checklist ràng buộc |
-| Base CDN và tiền tố `v2/`, kèm diễn tập lỗi | 07 | Log tải bị chặn và tải từ cache |
-| Mixer tổng hợp offline và SI-SDR | 02, 08-01 | Lab 13.80 / −10.67, rồi wav của bạn |
-| Rust `df-core` | 09-03 | Kéo tùy chọn, passthrough phải ghi vậy |
+| Bộ đánh giá theo bảng 6 cột (bài 08-04) | Chương 08 | Tệp `suite.md` và script kiểm tra |
+| Chọn mức khử mặc định bằng kiểm thử AB | Bài 08-03 | Quy trình AB, cỡ mẫu $$N$$, bảng thắng/thua theo điều kiện |
+| Ghi log RTF p95 và luật hạ mức tự động | Chương 05, 07 | Tên thiết bị, giá trị p95, hành động hạ tải tương ứng |
+| Đối chiếu NS trình duyệt với processor | Chương 03, 07 | Bảng kiểm tra ràng buộc `getSettings()` |
+| Đường dẫn CDN, tiền tố `v2/` và diễn tập lỗi | Chương 07 | Nhật ký tình huống bị chặn mạng và tải từ cache |
+| Bộ trộn tín hiệu tổng hợp ngoại tuyến và SI-SDR | Chương 02, bài 08-01 | Kiểm chứng mốc 13.80 / −10.67 rồi chạy trên WAV của bạn |
+| Nhánh mở rộng Rust `df-core` | Bài 09-03 | Tùy chọn mở rộng; nếu chỉ chép thẳng phải ghi rõ `passthrough` |
 
-Từ chối sửa chỉ CSS, bump dependency không có bảng, và hai giả thuyết không liên quan trong một báo cáo. Nếu bạn không gọi được số baseline sẽ thu trước, bạn chưa có thí nghiệm.
+Không chấp nhận các đề tài chỉ chỉnh giao diện CSS, nâng phiên bản thư viện mà không có bảng so sánh, hoặc gộp hai giả thuyết không liên quan vào cùng một báo cáo. Nếu bạn chưa nêu được số liệu baseline cần thu thập trước tiên, bạn chưa có một thí nghiệm hợp lệ.
 
-## Giả thuyết, thí nghiệm, đo
+## Cấu trúc Giả thuyết – Thí nghiệm – Đo lường
 
-Viết khối này trước khi xoay núm:
+Hãy viết hoàn chỉnh khối này trước khi thay đổi bất kỳ tham số nào:
 
 ```text
 Hypothesis: Đưa setSuppressionLevel từ 80 xuống 60 giảm phụ âm bị bít
@@ -55,31 +55,31 @@ Fail:       Người nghe quán rõ ràng thích 80, hoặc tiếng yên thua, h
             p95 trễ quantum AudioWorklet. Khi đó bạn không đổi mặc định.
 ```
 
-Số trong khung là mẫu, không phải kết quả. Báo cáo của bạn thay bằng số đo. Vẫn không có ngưỡng DNSMOS chính thức để núp.
+Các con số trong khung trên chỉ là ví dụ định dạng, không phải kết quả thực nghiệm; báo cáo của bạn phải thay bằng số đo thực tế và vẫn không được tự đặt ra ngưỡng chuẩn DNSMOS chính thức.
 
-## Metric bạn phải gọi tên
+## Các chỉ số cần khai báo minh bạch
 
-Chất lượng là SI-SDR trên cặp tổng hợp đã căn, DNSMOS hoặc `n/a` trên file thật, và ghi chú nghe. Hệ thống là RTF p95 hoặc lời thật rằng bạn chỉ có trung bình, cộng việc init có fail khi CDN bị chặn không. UX là `setEnabled(false)` có trả mic thô không và asset thiếu có vẫn cho publish cuộc gọi không. Bỏ cột nào thì ghi `n/a` và lý do. Đừng chép 13.80 từ lab SI-SDR vào bảng sản phẩm rồi gọi là DeepFilterNet.
+Về mặt chất lượng âm thanh, cần có SI-SDR trên các cặp tổng hợp đã căn chỉnh thời gian, DNSMOS (hoặc `n/a`) trên tệp thực tế và ghi chú nghe thử. Về mặt hệ thống, cần báo cáo RTF p95 (hoặc nêu trung thực nếu mới chỉ đo được trung bình) cùng kết quả kiểm tra khởi tạo khi CDN bị chặn. Về trải nghiệm người dùng, cần xác nhận `setEnabled(false)` trả về đúng tín hiệu micro gốc và việc thiếu tài nguyên vẫn cho phép phát hành cuộc gọi. Mọi cột chưa thực hiện phải ghi `n/a` kèm lý do; không bao giờ sao chép con số `13.80` từ bài lab SI-SDR vào bảng sản phẩm rồi gán cho DeepFilterNet.
 
-## Ghi chú người giữ repo giữ được
+## Bản ghi quyết định kỹ thuật dành cho người duy trì kho mã
 
-Dùng bản quyết định ngắn:
+Trình bày kết luận của bạn dưới dạng một bản ghi quyết định (decision record) ngắn gọn gồm 5 mục:
 
-- Bối cảnh: API công khai nào và chương nào.
-- Quyết định: mức, cờ, hoặc bố trí harness.
-- Metric: phiếu sáu cột hoặc đường dẫn tới nó.
-- Phương án đã loại, gồm “sửa repo chung”.
-- Việc chưa đo: ngôn ngữ, điện thoại, ASR.
+- **Bối cảnh:** API công khai nào và nội dung chương nào đang được đề cập.
+- **Quyết định:** Mức khử nhiễu, cờ tính năng hoặc cấu trúc bộ công cụ đánh giá được chọn.
+- **Số liệu đánh giá:** Bảng 6 cột hoặc đường dẫn tới tệp báo cáo.
+- **Các phương án đã loại bỏ:** Bao gồm cả lý do không chỉnh sửa kho sản phẩm chung.
+- **Phần chưa đo lường:** Các ngôn ngữ, thiết bị hoặc chỉ số ASR chưa bao phủ.
 
-Hình DeepFilterNet là nội dung kỹ thuật của ghi chú đó. Nếu thay đổi chỉ là chính sách CDN, nói bạn không chỉnh gain ERB hay tap deep filter. Nếu thay đổi là núm mức, nói núm là `setSuppressionLevel(0–100)` và bạn không huấn luyện lại mạng.
+Sơ đồ DeepFilterNet là nền tảng kỹ thuật của bản ghi này: nếu thay đổi chỉ nằm ở chính sách CDN, hãy nêu rõ bạn không can thiệp vào hệ số ERB hay các tap của bộ lọc sâu; nếu thay đổi nằm ở mức khử, hãy ghi rõ bạn chỉ điều chỉnh `setSuppressionLevel(0–100)` chứ không huấn luyện lại mạng.
 
-## Cắt phạm vi
+## Giới hạn phạm vi thực hiện
 
-MVP của khóa này là danh sách clip đóng băng, một cột baseline, một thay đổi, và một báo cáo. Phần kéo là thiết bị thứ hai, checkpoint DNSMOS bạn thật sự chạy, hoặc đường Rust ở 09-03. Huấn luyện mạng enhance mới nằm ngoài. Suy luận mây trên audio khách hàng cũng vậy. Mọi patch chỉ rơi trên repo sản phẩm chung cũng vậy.
+Phiên bản tối thiểu khả thi (MVP) của dự án gồm: danh sách mẫu âm thanh đóng băng, một cột baseline, một thay đổi duy nhất và một báo cáo hoàn chỉnh. Phần mở rộng (stretch) có thể là đo thêm trên thiết bị thứ hai, chạy thêm một checkpoint DNSMOS cố định hoặc thử nghiệm nhánh Rust ở bài 09-03. Các công việc nằm ngoài phạm vi gồm: huấn luyện kiến trúc khử nhiễu mới, chạy suy luận đám mây trên âm thanh người dùng, và gửi bản vá trực tiếp vào kho sản phẩm chung.
 
 ## Mini-lab
 
-Viết `hypothesis.md` với bốn nhãn `Hypothesis:`, `Experiment:`, `Success:`, và `Fail:`. Gọi một API công khai và một metric sẽ là `n/a`. Chạy:
+Tạo tệp `hypothesis.md` chứa đủ bốn nhãn `Hypothesis:`, `Experiment:`, `Success:` và `Fail:`, đồng thời nêu rõ một API công khai và ít nhất một chỉ số ghi `n/a`, sau đó kiểm tra bằng đoạn mã sau:
 
 ```python
 from pathlib import Path
@@ -90,33 +90,35 @@ print("missing", missing or "none")
 print("lines", len(text.splitlines()))
 ```
 
-Nếu giả thuyết dùng `setEnabled` hoặc `cdnUrl` thay vì `setSuppressionLevel`, đổi token bắt buộc cuối thành tên đó và nói trong file. Đầu ra kỳ vọng cho bài mức khử:
+Nếu giả thuyết của bạn xoay quanh `setEnabled` hoặc `cdnUrl` thay vì `setSuppressionLevel`, hãy đổi từ khóa cuối trong danh sách `need` cho khớp và ghi chú trong tệp.
+
+**Kết quả kỳ vọng** (với đề tài điều chỉnh mức khử nhiễu):
 
 ```text
 missing none
 lines <số dòng của bạn, ít nhất 8>
 ```
 
-Kiểu hỏng: giả thuyết không có luật fail; thành công chỉ là “SI-SDR tăng”; sửa file trong repo sản phẩm chung như bước hiện thực; cho rằng sơ đồ ERB nghĩa là bạn phải huấn luyện lại bộ lọc.
+**Lỗi thường gặp.** Viết giả thuyết nhưng thiếu tiêu chí thất bại; đặt điều kiện thành công chỉ gói gọn trong “SI-SDR tăng”; chỉnh sửa tệp trong kho sản phẩm chung làm bước triển khai; hoặc hiểu nhầm rằng sơ đồ ERB đòi hỏi bạn phải tự huấn luyện lại bộ lọc.
 
 ## Bài tập
 
-1. Viết một câu giả thuyết bạn sẽ đem chấm. Hỏi người lạ có bác bỏ được không.
-2. Liệt kê số baseline sẽ thu trước khi đổi, gồm ít nhất một `n/a`.
-3. Tách ý thành MVP và phần kéo trong năm dòng.
-4. Phác các heading bản quyết định để trống, rồi điền Bối cảnh và Phương án đã loại.
-5. Chỉ một khối trên hình ERB và nói capstone của bạn có đụng nó không.
+1. Viết một câu giả thuyết sẽ dùng để chấm điểm và tự kiểm tra xem một người ngoài có thể bác bỏ (falsify) câu đó bằng số liệu hay không.
+2. Liệt kê tập số liệu baseline cần thu thập trước khi thay đổi cấu hình, bao gồm ít nhất một ô `n/a`.
+3. Chia đề tài của bạn thành phần MVP và phần mở rộng (stretch) trong 5 dòng ngắn gọn.
+4. Tạo khung tiêu đề cho bản ghi quyết định kỹ thuật rồi điền trước hai mục *Bối cảnh* và *Các phương án đã loại bỏ*.
+5. Chỉ vào một khối trên sơ đồ DeepFilterNet và nêu rõ dự án của bạn có tác động trực tiếp vào khối đó hay không.
 
 ### Gợi ý đáp án
 
-1. Gồm núm, điều kiện (bàn phím, quán, yên), và metric. “Làm cho tốt hơn” không bác bỏ được.
-2. Baseline là mức 80 hoặc bypass trên cùng file. Clip thật có SI-SDR `n/a` cho đến khi có tham chiếu sạch.
-3. MVP là bảng và AB. Phần kéo là thiết bị thứ hai hoặc Rust. Huấn luyện không phải cái nào.
-4. Phương án đã loại nên có “không làm gì” và “vá repo chung” (bác).
-5. Chính sách mức không chỉnh gain ERB. Harness đánh giá cũng không. Nói thẳng vậy.
+1. Giả thuyết đạt chuẩn phải nêu rõ tham số điều chỉnh, điều kiện kiểm thử (bàn phím, quán cà phê, phòng yên) và chỉ số đo; câu chung chung kiểu “làm cho tốt hơn” không thể bác bỏ được.
+2. Baseline có thể là mức 80 hoặc chế độ bypass trên cùng tập tệp; các đoạn ghi âm thực tế ghi `n/a` ở cột SI-SDR do không có bản gốc sạch.
+3. MVP gồm bảng số liệu 6 cột và kiểm thử AB; phần mở rộng gồm thiết bị thứ hai hoặc nhánh Rust; huấn luyện lại mô hình không nằm trong cả hai.
+4. Mục *Các phương án đã loại bỏ* nên bao gồm phương án “giữ nguyên không làm gì” và “vá trực tiếp vào kho sản phẩm chung”.
+5. Chính sách chọn mức khử hoặc bộ công cụ đánh giá đều không thay đổi trực tiếp thuật toán tính gain ERB — hãy trình bày thẳng thắn điều này.
 
 ## Video tham khảo
 
-- [Short-Time Fourier Transform Explained Easily](https://www.youtube.com/watch?v=-Yxj3yfvY-4) — Valerio Velardo - The Sound of AI, tiếng Anh. **xem trước.** Frame và hop là kỹ thuật đo được. Xem chúng trước khi đổi tên gói được tính là capstone.
-- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, tiếng Anh. Vòng đánh giá (dữ liệu, nghe, độ phức tạp) là thí nghiệm bài yêu cầu bạn viết ra.
-- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, tiếng Anh. Bản thân mô hình là một kỹ thuật trong thực đơn: gain ERB cộng deep filter, với độ trễ bạn trích được.
+- [Short-Time Fourier Transform Explained Easily](https://www.youtube.com/watch?v=-Yxj3yfvY-4) — Valerio Velardo - The Sound of AI, tiếng Anh. **Xem trước.** Khung xử lý và bước nhảy (hop) là các kỹ thuật đo đạc được — nền tảng cốt lõi cần nắm trước khi triển khai dự án cuối khóa.
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, tiếng Anh. Chu trình đánh giá gồm dữ liệu, kiểm thử lắng nghe và chi phí tính toán tương ứng trực tiếp với cấu trúc thí nghiệm trong bài.
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, tiếng Anh. Trình bày cụ thể cơ chế kết hợp hệ số ERB và bộ lọc sâu kèm độ trễ thuật toán.

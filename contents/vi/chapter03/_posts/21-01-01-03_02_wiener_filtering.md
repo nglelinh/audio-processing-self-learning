@@ -11,65 +11,65 @@ lesson_type: required
 draft: false
 ---
 
-Spectral subtraction quyết định “trừ rồi sàn”; **bộ lọc Wiener** chọn gain liên tục theo từng bin từ ước lượng tỉ số tín hiệu–nhiễu. Đường bên phải của hình là gain đó; các cột bên trái là subtractor mà nó thay.
+Nếu trừ phổ xử lý theo hướng "trừ rồi kẹp sàn", thì **bộ lọc Wiener** chọn một hệ số độ lợi liên tục trên từng bin dựa trên tỷ số tín hiệu trên nhiễu ước lượng. Đường cong bên phải trong hình dưới minh họa độ lợi Wiener, đặt cạnh các cột trừ phổ mà nó thay thế.
 
 ![Gain Wiener theo SNR tiên nghiệm, cạnh các cột spectral subtraction mà nó làm mềm]({{ site.imgurl }}/generated/spectral-subtraction-wiener.png)
 
-*Hình. Gain Wiener bằng \(1/2\) (\(-6\,\mathrm{dB}\)) khi công suất tiếng nói và nhiễu bằng nhau, và nó không thành các hố cứng của cột trừ phổ bên trái.*
+*Hình. Độ lợi Wiener đạt \(1/2\) (\(-6\,\mathrm{dB}\)) khi công suất tiếng nói và nhiễu bằng nhau, biến thiên mượt mà thay vì tạo các hố phổ cứng như cột trừ phổ bên trái.*
 
-Đây là cầu nối giữa subtractor cổ điển và enhancer neural dựa trên mask: họ DeepFilterNet có thể đọc như họ hàng học được của gain Wiener thời–tần, với đặc trưng phong phú hơn và bộ lọc đa khung. Bài này xây trực giác MMSE, SNR tiên nghiệm / hậu nghiệm, theo dõi decision-directed, và biến thể Wiener tiếng nói trong stack VoIP.
+Đây là cầu nối tự nhiên giữa trừ phổ cổ điển và các mô hình tăng cường tiếng nói mạng nơ-ron dựa trên mặt nạ: họ DeepFilterNet có thể được nhìn nhận như phiên bản học sâu của độ lợi Wiener thời gian–tần số với đặc trưng giàu thông tin hơn và bộ lọc đa khung. Bài học này trình bày trực giác MMSE, phân biệt SNR tiên nghiệm và hậu nghiệm, cơ chế theo dõi decision-directed và ứng dụng lọc Wiener trong các hệ thống VoIP.
 
 ## Mục tiêu học tập
 
-Bạn suy ra gain Wiener miền tần số $$G = \xi/(1+\xi)$$ từ lập luận MMSE dưới giả định Gauss, phân biệt SNR tiên nghiệm $$\xi$$ và hậu nghiệm $$\gamma$$, cài tracker decision-directed ở mức giả mã, và nối gain Wiener với soft mask trong SE neural.
+Sau bài học này, bạn sẽ suy ra được độ lợi Wiener miền tần số $$G = \xi/(1+\xi)$$ từ tiêu chí MMSE dưới giả định Gauss, phân biệt rõ SNR tiên nghiệm $$\xi$$ với SNR hậu nghiệm $$\gamma$$, viết được giả mã bộ theo dõi decision-directed và liên hệ độ lợi Wiener với mặt nạ mềm (soft mask) trong mạng nơ-ron tăng cường tiếng nói.
 
 ## Kế hoạch 60 phút
 
-- **0–10 phút** — Từ trừ cứng sang gain mềm; nghe Wiener vs subtractor.
-- **10–25 phút** — Phác thảo MMSE → $$G^{\mathrm{Wiener}}=\xi/(\xi+1)$$.
-- **25–40 phút** — Ước lượng $$\xi$$, $$\gamma$$; đệ quy decision-directed (Ephraim–Malah).
-- **40–50 phút** — Thủ thuật tiếng nói: sàn gain; SpeexDSP / WebRTC NS.
-- **50–60 phút** — Bẫy, bài tập, mở Kalman (03-03).
+- **0–10 phút** — Chuyển từ trừ cứng sang độ lợi mềm; so sánh cảm nhận nghe giữa Wiener và trừ phổ.
+- **10–25 phút** — Phác thảo dẫn xuất MMSE → $$G^{\mathrm{Wiener}}=\xi/(\xi+1)$$.
+- **25–40 phút** — Ước lượng $$\xi$$, $$\gamma$$ và công thức đệ quy decision-directed (Ephraim–Malah).
+- **40–50 phút** — Kỹ thuật thực tế cho tiếng nói: sàn độ lợi và ứng dụng trong SpeexDSP / WebRTC NS.
+- **50–60 phút** — Các bẫy thường gặp, bài tập và dẫn sang lọc Kalman (bài 03-03).
 
 ## Giải thích cốt lõi
 
-### Gain Wiener một dòng
+### Công thức độ lợi Wiener
 
-Với $$Y=S+N$$ trong một bin STFT, ước lượng tuyến tính MMSE của $$S$$ cho $$Y$$ (Gauss, không tương quan, kỳ vọng không) là nhân với
+Với mô hình hỗn hợp $$Y=S+N$$ tại một bin STFT (giả sử $$S$$ và $$N$$ có phân bố Gauss, không tương quan và kỳ vọng bằng 0), bộ ước lượng tuyến tính tối ưu theo sai số bình phương trung bình tối thiểu (MMSE) của $$S$$ từ $$Y$$ có dạng nhân với hệ số:
 
 $$
 G^{\mathrm{W}} = \frac{P_S}{P_S + P_N} = \frac{\xi}{\xi + 1},
 $$
 
-$$\xi = P_S/P_N$$ là **SNR tiên nghiệm**. Phổ tăng cường $$\hat{S}=G^{\mathrm{W}} Y$$.
+trong đó $$\xi = P_S/P_N$$ là **SNR tiên nghiệm (a priori SNR)** và phổ sau tăng cường là $$\hat{S}=G^{\mathrm{W}} Y$$.
 
-**Đọc:** $$\xi\to\infty$$ thì $$G\to 1$$; $$\xi\to 0$$ thì $$G\to 0$$. Ở giữa là soft mask—đúng hình dạng mạng mask học từ dữ liệu.
+**Cách diễn giải:** Khi $$\xi\to\infty$$ thì $$G\to 1$$ (giữ nguyên tín hiệu); khi $$\xi\to 0$$ thì $$G\to 0$$ (triệt tiêu nhiễu). Ở vùng trung gian, $$G$$ hoạt động như một mặt nạ mềm — đúng dạng hàm mà các mạng dự đoán mặt nạ học từ dữ liệu.
 
-### SNR hậu nghiệm
+### SNR hậu nghiệm (a posteriori SNR)
 
 $$
 \gamma = \frac{|Y|^2}{P_N}.
 $$
 
-$$\gamma$$ đo được mỗi khung nếu biết $$P_N$$; $$\xi$$ thì không vì $$P_S$$ ẩn. SE cổ điển đổ công sức vào ước lượng $$\xi$$. Ước lượng ML thô $$\hat{\xi}=\max(\gamma-1,0)$$ nhiễu theo khung và tạo artifact giống subtraction mạnh.
+Ta có thể đo trực tiếp $$\gamma$$ ở mỗi khung nếu biết công suất nhiễu $$P_N$$, nhưng không thể đo trực tiếp $$\xi$$ vì $$P_S$$ bị ẩn. Phần lớn công sức của khử nhiễu cổ điển tập trung vào việc ước lượng $$\xi$$. Ước lượng hợp lý cực đại (ML) thô $$\hat{\xi}=\max(\gamma-1,0)$$ dao động rất mạnh giữa các khung và tạo ra méo âm tương tự trừ phổ cứng.
 
-### Decision-directed (Ephraim–Malah)
+### Bộ ước lượng decision-directed (Ephraim–Malah)
 
 $$
 \hat{\xi}(\ell) = \eta\,\frac{|G(\ell-1) Y(\ell-1)|^2}{P_N} + (1-\eta)\,\max\bigl(\gamma(\ell)-1,\,0\bigr),
 $$
 
-$$\eta$$ thường $$0.98$$, rồi $$G=\hat{\xi}/(\hat{\xi}+1)$$. $$\eta$$ cao: mượt, ít musical noise, dễ “váng”; $$\eta$$ thấp: bám nhiễu không dừng tốt hơn nhưng giật.
+với hằng số làm mượt $$\eta$$ thường chọn khoảng $$0.98$$, sau đó tính $$G=\hat{\xi}/(\hat{\xi}+1)$$. Giá trị $$\eta$$ lớn giúp độ lợi mượt và giảm mạnh nhiễu nhạc nhưng dễ gây nhòe đuôi âm; ngược lại, $$\eta$$ nhỏ giúp bám nhiễu không dừng nhanh hơn nhưng dễ làm độ lợi dao động giật.
 
-### Nhìn soft mask (cầu Chương 04)
+### Góc nhìn mặt nạ mềm (cầu nối sang Chương 04)
 
-IRM miền công suất:
+Mặt nạ tỷ số lý tưởng (IRM) trên miền công suất được định nghĩa là:
 
 $$
 M^{\mathrm{IRM}} = \frac{|S|^2}{|S|^2+|N|^2} = \frac{\xi}{\xi+1}.
 $$
 
-Đúng gain Wiener khi $$\xi$$ là SNR thật. Mạng SE thường hồi quy $$\hat{M}$$ về IRM / IBM / cIRM. Đọc DeepFilterNet dễ hơn khi đã “nằm lòng” Wiener.
+Biểu thức này trùng khớp hoàn toàn với độ lợi Wiener khi $$\xi$$ là SNR thực. Các mạng tăng cường tiếng nói thường huấn luyện để hồi quy $$\hat{M}$$ tiến tới IRM, IBM hoặc cIRM — vì thế nắm vững lọc Wiener giúp việc đọc hiểu DeepFilterNet trở nên trực quan hơn nhiều.
 
 ### Giả mã
 
@@ -84,27 +84,27 @@ for each frame ell:
   emit ISTFT_OLA(S_hat)
 ```
 
-## Checklist chỉnh Wiener tiếng nói
+## Bảng tham số tinh chỉnh lọc Wiener cho tiếng nói
 
-| Núm | Tăng → | Giảm → |
-|-----|--------|--------|
-| $$\eta$$ | mượt, ít tonal | nhanh, giật |
-| $$G_{\min}$$ | nhiễu dư nhiều | méo / hố |
-| Tốc độ cập nhật $$P_N$$ | bám nhiễu không dừng | ổn định lúc nói |
+| Tham số | Khi tăng → | Khi giảm → |
+|---------|------------|------------|
+| $$\eta$$ | Mượt hơn, ít nhiễu nhạc hơn | Đáp ứng nhanh hơn nhưng dễ giật |
+| $$G_{\min}$$ | Còn nhiều nhiễu nền dư hơn | Dễ méo tiếng hoặc tạo hố phổ |
+| Tốc độ cập nhật $$P_N$$ | Bám tốt hơn với nhiễu không dừng | Ổn định hơn trong lúc có tiếng nói |
 
-**Sanity:** $$P_N\to 0$$ ⇒ $$G\to 1$$, output ≈ input (OLA chuẩn). Hãy unit-test đường này.
+**Kiểm tra nhanh (sanity check):** Khi $$P_N\to 0$$ thì $$G\to 1$$ và đầu ra phải xấp xỉ đầu vào (với OLA đúng chuẩn). Nên viết bài kiểm thử đơn vị cho trường hợp biên này.
 
 ## Bẫy thường gặp
 
-- Dùng $$\gamma/(\gamma+1)$$ như thể là Wiener.
-- Đóng băng $$P_N$$ mãi sau giây đầu cuộc gọi.
-- Không sàn gain → về 0 đột ngột → musical noise.
-- Wiener sau AGC phi tuyến mà không cập nhật PSD nhiễu.
-- Nhầm **echo** (có tham chiếu) với **nhiễu** (mù)—Wiener NS không phải AEC.
+- Dùng trực tiếp $$\gamma/(\gamma+1)$$ và coi đó là bộ lọc Wiener chuẩn.
+- Đóng băng ước lượng $$P_N$$ mãi mãi sau giây đầu tiên của cuộc gọi.
+- Không đặt sàn độ lợi $$G_{\min}$$, khiến độ lợi tụt về 0 đột ngột và sinh nhiễu nhạc.
+- Đặt lọc Wiener phía sau khối AGC phi tuyến mà không cập nhật lại mật độ phổ công suất nhiễu.
+- Nhầm lẫn giữa **tiếng vọng** (có tín hiệu tham chiếu) với **nhiễu nền** (ước lượng mù) — lọc Wiener NS không thay thế được AEC.
 
 ## Mini-lab
 
-**Mục tiêu.** Tính gain Wiener tại SNR tiên nghiệm \(-10\), \(0\) và \(+10\,\mathrm{dB}\).
+**Mục tiêu.** Tính độ lợi Wiener tại ba mức SNR tiên nghiệm là \(-10\), \(0\) và \(+10\,\mathrm{dB}\).
 
 ```python
 import numpy as np
@@ -116,34 +116,34 @@ for snr_db in (-10, 0, 10):
           "G_dB", round(float(20 * np.log10(G)), 2))
 ```
 
-**Kỳ vọng.** \(-10\,\mathrm{dB}\) → \(\xi=0.1\), \(G\approx 0.091\) (\(-20.83\,\mathrm{dB}\)). \(0\,\mathrm{dB}\) → \(\xi=1\), \(G=0.5\) (\(-6.02\,\mathrm{dB}\)). \(+10\,\mathrm{dB}\) → \(\xi=10\), \(G\approx 0.909\) (\(-0.83\,\mathrm{dB}\)). Hàng giữa là điểm đánh dấu trên hình.
+**Kết quả kỳ vọng.** Tại \(-10\,\mathrm{dB}\) → \(\xi=0.1\), \(G\approx 0.091\) (\(-20.83\,\mathrm{dB}\)); tại \(0\,\mathrm{dB}\) → \(\xi=1\), \(G=0.5\) (\(-6.02\,\mathrm{dB}\)); tại \(+10\,\mathrm{dB}\) → \(\xi=10\), \(G\approx 0.909\) (\(-0.83\,\mathrm{dB}\)). Hàng giữa tương ứng đúng với điểm đánh dấu trên hình minh họa.
 
-**Khi hỏng.** Đưa decibel thẳng vào \(\xi/(\xi+1)\) (quên \(10^{\mathrm{SNR}/10}\)) làm gain ở \(-10\,\mathrm{dB}\) lớn hơn gain ở \(+10\,\mathrm{dB}\), tức đường cong bị lộn. Dùng \(20\log_{10}\) để đổi SNR sang \(\xi\), hoặc báo \(10\log_{10} G\) thay vì \(20\log_{10} G\), sẽ lệch cột decibel khoảng một hệ số hai. \(\gamma/(\gamma+1)\) là plug-in khác; lab này không ước lượng \(\gamma\).
+**Lỗi thường gặp.** Đưa trực tiếp giá trị dB vào công thức \(\xi/(\xi+1)\) (quên đổi sang tuyến tính qua \(10^{\mathrm{SNR}/10}\)) khiến độ lợi ở \(-10\,\mathrm{dB}\) lớn hơn ở \(+10\,\mathrm{dB}\), làm đảo ngược hoàn toàn đường cong; dùng nhầm \(20\log_{10}\) để đổi công suất SNR sang \(\xi\), hoặc tính \(10\log_{10} G\) thay vì \(20\log_{10} G\), sẽ làm cột dB lệch hệ số 2; lưu ý rằng \(\gamma/(\gamma+1)\) là công thức thế khác và bài thực hành này không ước lượng \(\gamma\).
 
 ## Bài tập
 
-1. Chứng minh $$G=\xi/(\xi+1)=1-1/(\xi+1)$$; diễn giải $$1-G$$.
-2. Tính $$G$$ với $$\xi\in\{0.1,1,10\}$$ (tuyến tính và dB); $$\xi$$ nào cho $$-6\,\mathrm{dB}$$?
-3. Cài decision-directed Wiener; vẽ bản đồ $$G(k,\ell)$$; so musical noise với 03-01.
-4. Hai đoạn văn: vì sao ước lượng IRM neural thắng Wiener decision-directed trên nhiễu không dừng mà vẫn giữ trực giác $$\xi/(\xi+1)$$.
+1. Chứng minh $$G=\xi/(\xi+1)=1-1/(\xi+1)$$ và giải thích ý nghĩa của $$1-G$$.
+2. Tính $$G$$ với $$\xi\in\{0.1,1,10\}$$ theo cả thang tuyến tính và dB; giá trị $$\xi$$ nào cho độ lợi đúng bằng $$-6\,\mathrm{dB}$$?
+3. Cài đặt bộ lọc Wiener decision-directed, vẽ bản đồ độ lợi $$G(k,\ell)$$ và so sánh mức nhiễu nhạc với bài 03-01.
+4. Viết hai đoạn văn giải thích vì sao mạng nơ-ron ước lượng IRM vượt trội hơn Wiener decision-directed trên nhiễu không dừng dù vẫn giữ cùng trực giác $$\xi/(\xi+1)$$.
 
 ### Gợi ý đáp án
 
-1. Trừ hai dạng; \(1-G=1/(\xi+1)\) là phần của \(Y\) bạn gán cho nhiễu.
-2. \(G=1/2\) (tức \(-6\,\mathrm{dB}\)) khi \(\xi=1\). Ba gain được hỏi khoảng \(0.091\), \(0.5\) và \(0.909\).
-3. Vẽ \(G\), không vẽ \(|Y|\). \(\eta\) giật thì ảnh lốm đốm; spectral subtraction trông như các hố.
-4. Mạng vẫn nhắm một tỉ số công suất. Nó thắng vì ước lượng tỉ số đó từ nhiều ngữ cảnh hơn một vòng đệ quy decision-directed, không phải vì bịa một dạng gain khác.
+1. Biến đổi trực tiếp cho thấy \(1-G=1/(\xi+1)\), đại diện cho tỷ lệ thành phần trong \(Y\) được quy về nhiễu.
+2. \(G=1/2\) (tương ứng \(-6.02\,\mathrm{dB}\)) đạt được tại \(\xi=1\); ba giá trị độ lợi tương ứng là \(0.091\), \(0.5\) và \(0.909\).
+3. Hãy vẽ trực tiếp \(G\) thay vì \(|Y|\): khi \(\eta\) nhỏ sẽ thấy bản đồ \(G\) lốm đốm, trong khi trừ phổ tạo các vùng khuyết cứng.
+4. Mạng nơ-ron vẫn hướng tới ước lượng tỷ số công suất, nhưng nó vượt trội vì khai thác được ngữ cảnh thời gian–tần số rộng hơn nhiều so với một phép đệ quy decision-directed đơn giản, chứ không phải vì phát minh ra một công thức độ lợi hoàn toàn khác.
 
 ## Đọc thêm
 
-- N. Wiener — nền tảng lọc tối ưu.
+- N. Wiener — nền tảng lý thuyết lọc tối ưu.
 - Ephraim & Malah, *IEEE TASSP*, 1984.
-- P. Scalart và J. V. Filho, “Speech enhancement based on a priori signal to noise estimation,” *ICASSP*, 1996 — dạng SNR tiên nghiệm dùng trong Wiener tiếng nói.
+- P. Scalart & J. V. Filho, “Speech enhancement based on a priori signal to noise estimation,” *ICASSP*, 1996 — dạng ước lượng SNR tiên nghiệm dùng trong lọc Wiener tiếng nói.
 - Loizou, *Speech Enhancement: Theory and Practice*.
-- SpeexDSP / WebRTC APM — hiện thực kỹ thuật.
+- SpeexDSP và WebRTC APM — các hiện thực kỹ thuật thực tế.
 
 ## Video tham khảo
 
-- [Lec 22: Causal IIR Wiener Filter](https://www.youtube.com/watch?v=K_U0yeVdblU) — NPTEL IIT Guwahati, tiếng Anh. **xem trước.** Xem gain phụ thuộc độ nhiễu của phép đo. Gain từng bin của bài là luật liên tục này trên biên độ STFT, không phải phép trừ cứng.
-- [Wiener Filter Demonstration](https://www.youtube.com/watch?v=U71siegOD48) — Greg Malysa, tiếng Anh. Demo ngắn một bộ lọc Wiener đang chạy. Coi đó là hành vi bộ ước lượng, rồi tự ánh xạ gain lên bin tiếng nói.
-- [Spectral Subtraction In Python - Alexx Mitchell](https://www.youtube.com/watch?v=Xb--68NlxS0) — The Audio Programmer, tiếng Anh. Giữ sơ đồ trừ phổ cạnh gain Wiener để đối chiếu của bài (sàn sau khi trừ đối gain SNR liên tục) còn nhìn thấy.
+- [Lec 22: Causal IIR Wiener Filter](https://www.youtube.com/watch?v=K_U0yeVdblU) — NPTEL IIT Guwahati, tiếng Anh. **Xem trước.** Minh họa cách độ lợi thay đổi liên tục theo mức nhiễu của phép đo — đúng nguyên lý đằng sau độ lợi theo bin trên STFT thay cho phép trừ cứng.
+- [Wiener Filter Demonstration](https://www.youtube.com/watch?v=U71siegOD48) — Greg Malysa, tiếng Anh. Đoạn minh họa ngắn về hành vi của bộ lọc Wiener giúp bạn hình dung trực quan trước khi ánh xạ lên từng bin tiếng nói.
+- [Spectral Subtraction In Python - Alexx Mitchell](https://www.youtube.com/watch?v=Xb--68NlxS0) — The Audio Programmer, tiếng Anh. Đặt cạnh bài Wiener để thấy rõ sự khác biệt giữa quy tắc trừ kèm ngưỡng sàn với đường độ lợi liên tục theo SNR.

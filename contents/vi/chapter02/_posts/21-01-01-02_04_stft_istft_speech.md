@@ -11,112 +11,111 @@ lesson_type: required
 draft: false
 ---
 
-Biến đổi Fourier thời gian ngắn (STFT) là biểu diễn chủ lực của NS cổ điển và của họ mô hình DeepFilterNet. Biến đổi thuận dưới đây dùng một cửa sổ phân tích; biến đổi ngược gọi tên cửa sổ tổng hợp riêng, để điều kiện COLA của bài 02-02 áp được mà không có lần nhân cửa sổ bị giấu.
+Biến đổi Fourier thời gian ngắn (STFT) là biểu diễn cốt lõi của cả khử nhiễu cổ điển lẫn họ mô hình DeepFilterNet. Trong bài học này, phép biến đổi thuận dùng cửa sổ phân tích, còn phép biến đổi nghịch chỉ rõ cửa sổ tổng hợp riêng biệt để áp dụng chính xác điều kiện COLA từ bài 02-02 mà không bị ẩn đi bước nhân cửa sổ nào.
 
 ## Mục tiêu học tập
 
-1. Có mô hình tinh thần của lưới STFT (thời gian × tần số).
-2. Đối chiếu mask biên độ, mask phức, và ý deep filtering.
-3. Nêu điều kiện tái dựng hoàn hảo trong thực hành.
-4. Ánh xạ tham số STFT (rate, \(N\), hop, cửa sổ) sang độ trễ và phân giải.
-5. Nối thiết kế STFT đã công bố của DeepFilterNet với tham số kỹ thuật.
+1. Hình dung rõ cấu trúc lưới STFT (thời gian × tần số).
+2. Phân biệt mặt nạ biên độ, mặt nạ phức và ý tưởng của deep filtering.
+3. Nêu các điều kiện tái tạo hoàn hảo (perfect reconstruction) trong thực hành.
+4. Ánh xạ các tham số STFT (tần số lấy mẫu, \(N\), hop, hàm cửa sổ) sang độ trễ và độ phân giải.
+5. Liên hệ thiết kế STFT đã công bố của DeepFilterNet với các thông số triển khai kỹ thuật.
 
 ## Kế hoạch giảng 60 phút
 
 | Phút | Hoạt động |
 |-----:|-----------|
-| 0–12 | Định nghĩa STFT; spectrogram là \(|STFT|\) |
-| 12–28 | ISTFT / OLA; bài tái dựng |
-| 28–42 | Xử lý mag và phức; trực giác deep filtering |
-| 42–52 | Bài rút tham số từ paper DeepFilterNet |
-| 52–60 | Bài tập |
+| 0–12 | Định nghĩa STFT; mối liên hệ giữa phổ đồ (spectrogram) và \(|\mathrm{STFT}|\) |
+| 12–28 | ISTFT, cộng chồng lấp OLA và bài kiểm tra tái tạo |
+| 28–42 | Xử lý biên độ so với xử lý phổ phức; trực giác về deep filtering |
+| 42–52 | Thực hành trích xuất tham số từ bài báo DeepFilterNet |
+| 52–60 | Bài tập nhỏ |
 
 ![Cùng bức tranh overlap-add: frame phân tích, cửa sổ Hann bước theo hop R, và tổng cửa sổ mà ISTFT dựa vào]({{ site.imgurl }}/generated/stft-ola.png)
 
-*Hình. Mỗi frame màu là một cột STFT; ISTFT cộng chồng các frame ngược, và tổng ở dưới phải là hằng, nếu không sine phía trên sẽ trở lại kèm bao biên theo hop.*
+*Hình. Mỗi khung màu tương ứng với một cột của lưới STFT; ISTFT cộng chồng các khung sau biến đổi nghịch, và tổng cửa sổ phía dưới phải là hằng số để sóng sin ban đầu được tái tạo mà không bị gợn biên độ theo nhịp hop.*
 
 ## Giải thích cốt lõi
 
-### STFT
+### Biến đổi STFT
 
 $$
 X(\ell,k)=\sum_{n=0}^{L-1}x[n+\ell R]\,w[n]\,e^{-j2\pi kn/N}
 $$
 
-\(w[n]\) ở đây là cửa sổ **phân tích** \(w_{\mathrm{ana}}\). Lưới: cột là frame thời gian \(\ell\), hàng là bin tần số \(k\). Tăng cường tiếng nói ước lượng \(\hat{X}(\ell,k)\) sạch từ \(Y(\ell,k)\) nhiễu.
+Trong công thức trên, \(w[n]\) là cửa sổ **phân tích** \(w_{\mathrm{ana}}\). Trên lưới thời gian–tần số, mỗi cột là một khung thời gian \(\ell\) và mỗi hàng là một bin tần số \(k\). Nhiệm vụ của tăng cường tiếng nói là ước lượng phổ sạch \(\hat{X}(\ell,k)\) từ phổ quan sát có nhiễu \(Y(\ell,k)\).
 
-\(N\) là độ dài FFT. Có thể lớn hơn \(L\) khi zero-pad; nhỏ hơn \(L\) thì alias theo thời gian trong frame. Khoảng cách bin là \(f_s/N\), nhưng phân giải vẫn do cửa sổ (bài 02-03). Tín hiệu thực có \(N/2+1\) bin độc nhất, Nyquist ở bin cuối.
+\(N\) là độ dài FFT: có thể chọn \(N > L\) khi đệm số 0, còn nếu \(N < L\) sẽ gây chồng chéo (aliasing) theo thời gian ngay trong khung. Khoảng cách giữa các bin bằng \(f_s/N\), nhưng độ phân giải tần số thực vẫn do hàm cửa sổ quyết định (xem bài 02-03). Với tín hiệu thực, chỉ có \(N/2+1\) bin không dư thừa và bin cuối cùng là tần số Nyquist.
 
-### ISTFT
+### Biến đổi ISTFT
 
-FFT ngược từng frame, cửa sổ tổng hợp nếu có, rồi OLA. Một frame ngược, trước overlap-add:
+Quy trình tổng hợp gồm: tính FFT nghịch cho từng khung, nhân cửa sổ tổng hợp (nếu có), rồi cộng chồng lấp OLA. Mỗi khung sau biến đổi nghịch trước khi cộng chồng lấp có dạng:
 
 $$
 y_\ell[n]=\frac{1}{N}\sum_{k=0}^{N-1}\hat{X}(\ell,k)\,e^{j2\pi kn/N},\qquad n=0,\ldots,L-1
 $$
 
-(đóng gói FFT thực khi gọi `irfft`). Dạng sóng:
+(sử dụng biến đổi FFT thực `irfft` cho tín hiệu thực). Dạng sóng đầu ra được ghép theo:
 
 $$
 \hat{x}[n]=\sum_\ell w_{\mathrm{syn}}[n-\ell R]\,y_\ell[n-\ell R].
 $$
 
-Nếu biến đổi thuận đã nhân \(w\) và \(w_{\mathrm{syn}}=1\), tái dựng phổ chưa sửa rút về \(\sum_\ell w[n-\ell R]=C\) rồi chia cho \(C\). Nếu còn nhân cửa sổ tổng hợp, COLA là tổng tích ở bài 02-02:
+Nếu bước phân tích đã nhân \(w\) và chọn \(w_{\mathrm{syn}}=1\), điều kiện tái tạo phổ chưa sửa quy về \(\sum_\ell w[n-\ell R]=C\) rồi chia cho \(C\). Nếu có nhân thêm cửa sổ tổng hợp \(w_{\mathrm{syn}}\), điều kiện COLA là tổng tích đã nêu ở bài 02-02:
 
 $$
 \sum_\ell w[n-\ell R]\,w_{\mathrm{syn}}[n-\ell R]=C.
 $$
 
-Không sửa phổ và COLA đúng thì dựng lại \(x\) (trừ trễ/gain). STFT offline căn giữa lệch khoảng \(L/2\) so với stream nhân quả; cả hai có thể COLA mà vẫn lệch đủ để làm hỏng SI-SDR.
+Khi phổ không bị chỉnh sửa và COLA được thỏa mãn, hệ thống sẽ tái tạo chính xác \(x\) (sai khác tối đa độ trễ và hằng số khuếch đại). Lưu ý rằng STFT ngoại tuyến căn giữa bị lệch khoảng \(L/2\) mẫu so với STFT streaming nhân quả; cả hai đều có thể thỏa COLA nhưng độ lệch thời gian đó đủ làm sụt giảm mạnh điểm SI-SDR nếu không căn chỉnh khi đánh giá.
 
-### Các biểu diễn
+### Các dạng biểu diễn phổ
 
-| Biểu diễn | Chứa | Dùng điển hình |
-|-----------|------|----------------|
-| Phức \(X\) | thực/ảo hoặc mag/pha | deep filtering, mask phức |
-| Biên độ \(|X\|\) | không âm | Wiener cổ điển, mask mag |
-| Log-mag / dB | nén | đặc trưng, đồ thị |
-| Filterbank ERB / Mel | năng lượng băng | front-end tri giác (paper DeepFilterNet dùng đặc trưng thang ERB) |
+| Biểu diễn | Thành phần lưu giữ | Ứng dụng điển hình |
+|-----------|--------------------|--------------------|
+| Phổ phức \(X\) | Phần thực/ảo hoặc biên độ/pha | Deep filtering, mặt nạ phức |
+| Biên độ \(|X\|\) | Giá trị không âm | Lọc Wiener cổ điển, mặt nạ biên độ |
+| Log-biên độ / dB | Nén dải động | Trích xuất đặc trưng, vẽ đồ thị |
+| Dãy lọc ERB / Mel | Năng lượng theo băng tần | Tiền xử lý cảm thụ (DeepFilterNet dùng đặc trưng thang ERB) |
 
-### Mask biên độ và deep filtering
+### Mặt nạ biên độ và deep filtering
 
-**Mask biên độ:** \(\hat{X}=M\odot|Y|e^{j\arg Y}\) (dùng lại pha nhiễu). Rẻ; sai pha khi SNR thấp.
+- **Mặt nạ biên độ:** \(\hat{X}=M\odot|Y|e^{j\arg Y}\), tức giữ nguyên pha của tín hiệu nhiễu. Cách này nhẹ nhưng gây méo pha đáng kể khi SNR thấp.
+- **Mặt nạ phức và lọc sâu (deep filtering):** dự đoán các hệ số lọc để kết hợp nhiều bin lân cận theo cả thời gian và tần số. Trong các bài báo DeepFilterNet, **deep filtering** áp bộ lọc học được trực tiếp lên phổ phức, nhờ đó khôi phục cấu trúc tín hiệu tốt hơn so với hệ số khuếch đại độc lập trên từng bin.
 
-**Mask phức / lọc:** dự đoán bộ lọc trộn các bin thời gian–tần số lân cận. **Deep filtering** trong tài liệu DeepFilterNet áp bộ lọc học được lên phổ phức, khôi phục cấu trúc tốt hơn gain từng bin độc lập.
+Chi tiết kiến trúc cụ thể sẽ được học qua các bài báo DeepFilterNet / 2 / 3 ở Chương 04. Ở bài này, điều cốt lõi cần nắm là: **mô hình đang chỉnh sửa một lưới STFT dưới ràng buộc nhân quả, sau đó biến đổi ISTFT để trả về dạng sóng.**
 
-Đọc paper DeepFilterNet / 2 / 3 cho kiến trúc chính xác. Bài này chỉ cần kết luận kỹ thuật: **bạn đang sửa một lưới STFT dưới ràng buộc nhân quả**, rồi ISTFT trở lại.
+### Thực hành kiểm tra tái tạo hoàn hảo
 
-### Thực hành tái dựng hoàn hảo
+Bài kiểm thử đơn vị bắt buộc trước khi bật mô hình: cho tín hiệu đi qua chuỗi STFT → ISTFT không qua khử nhiễu và kiểm tra đầu ra phải xấp xỉ tín hiệu gốc. Nếu phép biến đổi khứ hồi này chưa đúng thì phải dừng lại sửa ngay. Phần Mini-lab dưới đây thực hiện kiểm thử này trên sóng sin: sai số ở `float64` nằm quanh \(10^{-15}\) tại vùng giữa, còn sai số mức \(10^{-2}\) báo hiệu lỗi hàm cửa sổ hoặc bước nhảy hop và sẽ nghe rõ dưới dạng rung biên độ theo nhịp hop.
 
-Unit test: STFT→ISTFT không có mô hình phải xấp xỉ đồng nhất. Rồi mới bật mô hình. Nếu đồng nhất đã hỏng thì dừng. Mini-lab là test đó trên một sine: sai số float64 khoảng \(10^{-15}\) ở vùng trong. Sai số \(10^{-2}\) là lỗi cửa sổ hoặc hop, và sẽ thành tremolo theo hop.
+### Ánh xạ tham số từ bài báo sang hệ thống
 
-### Ánh xạ tham số
+Khi đọc tài liệu hoặc bài báo, hãy trích xuất đầy đủ: \(f_s\), dạng cửa sổ và độ dài \(L\) / kích thước FFT \(N\), bước nhảy hop \(R\), số khung nhìn trước nhân quả và giả định mono. Sau đó quy đổi sang mili giây và số hop/giây bằng các công thức của Chương 01–02 trước khi tích hợp `deepfilternet3-noise-filter` hay ONNX Runtime.
 
-Rút từ docs/paper: \(f_s\), loại cửa sổ và \(L\) / FFT \(N\), hop \(R\), look-ahead nhân quả, giả định mono. Đổi ra ms và hops/s bằng công thức chương 01–02 trước khi tích hợp `deepfilternet3-noise-filter` hoặc ORT.
+**Lưới STFT đã công bố của DeepFilterNet.** Framework hỗ trợ tần số lấy mẫu lên đến 48 kHz; cấu hình toàn băng công bố sử dụng \(N_{\mathrm{FFT}}=960\) (20 ms ở 48 kHz) với chồng lấp 50%, tức \(R=480\) (10 ms) — xem Schröter và cộng sự ([arXiv:2110.05588](https://arxiv.org/abs/2110.05588)) cùng cấu hình tham chiếu tại [Rikorose/DeepFilterNet](https://github.com/Rikorose/DeepFilterNet) (`sr=48000`, `fft_size=960`, `hop_size=480`). Hàm cửa sổ gắn liền với checkpoint đã huấn luyện nên hop và cửa sổ phải khớp tuyệt đối. Gói npm `deepfilternet3-noise-filter` 1.3.0 cũng tuân theo giao ước toàn băng 48 kHz này. Việc tự ý đổi sang hop 16 kHz, cửa sổ Blackman hay STFT ngoại tuyến căn giữa không hề "tăng chất lượng" mà sẽ cung cấp cho dãy lọc ERB một lưới khác hẳn lưới mà trọng số đã học.
 
-**Lưới DeepFilterNet đã công bố.** Framework dành cho tốc độ tới 48 kHz. Thiết lập full-band được báo cáo dùng \(N_{\mathrm{FFT}}=960\) (20 ms ở 48 kHz) với overlap 50%, nên \(R=480\) (10 ms). Xem Schröter và cộng sự, [arXiv:2110.05588](https://arxiv.org/abs/2110.05588), và cấu hình tham chiếu [Rikorose/DeepFilterNet](https://github.com/Rikorose/DeepFilterNet) (`sr=48000`, `fft_size=960`, `hop_size=480`). Cửa sổ thuộc checkpoint đó: hop và cửa sổ phải khớp mô hình. Gói npm `deepfilternet3-noise-filter` 1.3.0 theo cùng hợp đồng full-band 48 kHz. Đổi hop 16 kHz, cửa sổ Blackman, hoặc STFT offline căn giữa không “tăng chất lượng”; nó đưa cho filterbank ERB một lưới khác với lưới của trọng số.
-
-Thiết lập đó còn báo cáo look-ahead tích chập nhỏ (\(l_{\mathrm{DNN}}=2\) frame và \(l_{\mathrm{DF}}=1\) frame). Với hop 10 ms, các frame này nằm trên cửa sổ 20 ms. Hãy chép từ checkpoint.
+Cấu hình công bố đó cũng ghi nhận độ trễ nhìn trước tích chập nhỏ (\(l_{\mathrm{DNN}}=2\) khung và \(l_{\mathrm{DF}}=1\) khung). Với hop 10 ms, các khung nhìn trước này cộng thêm vào độ trễ của cửa sổ 20 ms — hãy đối chiếu trực tiếp với cấu hình của checkpoint cụ thể.
 
 ## Ví dụ có số
 
-1 giây @ 16 kHz, \(R=256\), \(N=512\), FFT thực → khoảng \(16000/256\approx 62\) frame (chính sách biên có thể lệch một), 257 bin độc nhất. Tensor mask có thể là \([1,257,62]\) hoặc đảo thứ tự trục — khớp mô hình.
+Với 1 giây âm thanh ở 16 kHz, \(R=256\), \(N=512\) (FFT thực), lưới STFT có khoảng \(16000/256\approx 62\) khung (có thể lệch 1 tùy quy ước biên) và 257 bin không dư thừa. Tensor mặt nạ có thể có kích thước \([1,257,62]\) hoặc hoán đổi thứ tự trục tùy định nghĩa của mô hình.
 
-2 giây @ 48 kHz, \(R=480\), \(N=960\): khoảng \(96000/480=200\) frame, \(960/2+1=481\) bin thực. Đó là họ kích thước mà tích hợp DeepFilterNet 48 kHz phải cấp phát, không phải 257 bin.
+Với 2 giây âm thanh ở 48 kHz, \(R=480\), \(N=960\), lưới STFT có khoảng \(96000/480=200\) khung và \(960/2+1=481\) bin thực — đây là kích thước mà tích hợp DeepFilterNet 48 kHz cần cấp phát, không phải 257 bin.
 
-Bin SNR thấp: pha nhiễu gần như ngẫu nhiên. Mask biên độ dọn năng lượng nhưng phần dư nghe “ướt”. Phương pháp phức cố hơn — vẫn không phải phép màu với babble.
+Ở các bin có SNR thấp, pha của hỗn hợp gần như trở thành pha ngẫu nhiên của nhiễu. Mặt nạ biên độ có thể hạ năng lượng nhiễu nhưng phần dư thường nghe bị méo "ướt"; phương pháp xử lý phổ phức cải thiện rõ rệt tình trạng này, dù vẫn có giới hạn trước nhiễu babble.
 
 ## Bẫy thường gặp
 
-1. Căn giữa frame khi offline nhưng không làm vậy khi streaming.
-2. Hop lúc train khác hop lúc serve.
-3. Đưa Mel vào mô hình đang kỳ vọng ERB hoặc STFT tuyến tính.
-4. ISTFT cả file theo batch trong production (độ trễ).
-5. Khẳng định hằng số STFT Mezon chưa được tài liệu hóa, chỉ dựa vào khóa học này.
+1. Bật chế độ căn giữa khung (center padding) khi chạy ngoại tuyến nhưng tắt khi chạy streaming.
+2. Dùng bước nhảy hop lúc triển khai khác với lúc huấn luyện.
+3. Đưa đặc trưng Mel vào mô hình được thiết kế cho thang ERB hoặc STFT tuyến tính.
+4. Tính ISTFT hàng loạt trên toàn tệp trong môi trường thời gian thực, làm tăng vọt độ trễ.
+5. Suy diễn các hằng số STFT nội bộ chưa được công bố của Mezon chỉ dựa vào nội dung khóa học.
 
 ## Mini-lab
 
-**Mục tiêu.** Đưa một sine 440 Hz qua STFT (cửa sổ phân tích) và ISTFT overlap-add, in sai số tuyệt đối lớn nhất ở vùng trong.
+**Mục tiêu.** Cho một sóng sin 440 Hz đi qua chuỗi STFT (có cửa sổ phân tích) và ISTFT cộng chồng lấp, sau đó in sai số tuyệt đối lớn nhất ở vùng giữa.
 
 ```python
 import numpy as np
@@ -137,34 +136,34 @@ err = np.max(np.abs(y[mid] / acc[mid] - x[mid]))
 print("max abs error", err)
 ```
 
-**Kỳ vọng.** `max abs error` cỡ \(10^{-15}\) (sai số float64). Ước COLA `acc` bằng hằng 1 ở vùng trong, như bài 02-02.
+**Kết quả kỳ vọng.** `max abs error` cỡ \(10^{-15}\) (ngưỡng sai số `float64`), trong đó mảng tổng COLA `acc` bằng hằng số 1 trên toàn vùng giữa đúng như chứng minh ở bài 02-02.
 
-**Khi hỏng.** Quên chia cho `acc` để lại ngõ ra nửa biên độ hoặc gợn, sai số khoảng \(10^{-1}\). Hann đối xứng, hoặc nhân `w` lần nữa trên frame ngược, tạo sai số tuần hoàn theo hop, đủ để nghe. Chấm điểm `L` mẫu đầu, nơi `acc` chưa tới hằng, làm phồng sai số dù vùng ổn định đã đúng. Script này mà sai khác 0 thì backend FFT không khứ hồi, không phải vì COLA là tùy chọn.
+**Lỗi thường gặp.** Quên chia cho `acc` sẽ làm đầu ra mất nửa biên độ hoặc bị gợn với sai số cỡ \(10^{-1}\); dùng Hann đối xứng hoặc nhân `w` thêm lần nữa ở khung nghịch sẽ tạo sai số tuần hoàn theo hop nghe rất rõ; đánh giá sai số ngay trên `L` mẫu đầu tiên (nơi `acc` chưa ổn định) sẽ làm sai số trông lớn bất thường dù vùng ổn định đã chính xác. Nếu đoạn mã này cho sai số lớn đáng kể, nguyên nhân là backend FFT không khứ hồi đúng chứ không phải vì COLA là tùy chọn.
 
 ## Bài tập nhỏ
 
-1. Shape STFT xấp xỉ cho 2 s @ 48 kHz, \(R=480\), \(N=960\).
-2. Vì sao tái sử dụng pha nhiễu thất bại khi nhiễu sâu?
-3. Bốn tham số copy từ config DeepFilterNet vào checklist tích hợp.
-4. COLA hỏng nghe thế nào sau ISTFT?
-5. ERB vs STFT tuyến tính: một lý do dùng ERB ở front-end tăng cường tiếng nói?
+1. Ước lượng kích thước lưới STFT cho đoạn âm thanh 2 giây ở 48 kHz với \(R=480\) và \(N=960\).
+2. Giải thích vì sao việc tái sử dụng pha nhiễu trở nên kém hiệu quả khi SNR xuống sâu.
+3. Liệt kê bốn tham số cần sao chép từ cấu hình DeepFilterNet vào danh mục kiểm tra tích hợp.
+4. Khi điều kiện COLA bị vi phạm, âm thanh đầu ra sau ISTFT có biểu hiện như thế nào?
+5. So với STFT tuyến tính, nêu một lý do khiến thang ERB được ưa chuộng trong phần tiền xử lý tăng cường tiếng nói.
 
 ### Gợi ý đáp án
 
-1. Khoảng 200 frame và 481 bin thực.
-2. SNR thấp thì pha nhiễu gần pha của nhiễu, nên biên độ hoàn hảo vẫn điều chế tiếng nói.
-3. \(f_s\), độ dài FFT, hop, cửa sổ (và look-ahead nếu có ghi). Mặc định công khai cần đối chiếu: 48 kHz, 960, 480.
-4. Tremolo biên độ ở \(f_s/R\) (100 Hz với hop 10 ms).
-5. ERB dồn bin vào chỗ tai (và formant) có phân giải, thay vì chia đều theo hertz.
+1. Khoảng 200 khung thời gian và 481 bin tần số thực.
+2. Ở SNR thấp, pha của tín hiệu hỗn hợp bị chi phối bởi pha ngẫu nhiên của nhiễu, nên ngay cả khi khôi phục hoàn hảo biên độ, tiếng nói vẫn bị điều biến méo.
+3. Tần số lấy mẫu \(f_s\), kích thước FFT, bước nhảy hop và dạng hàm cửa sổ (kèm số khung nhìn trước nếu có tài liệu hóa; cấu hình công khai cần đối chiếu là 48 kHz, 960 và 480).
+4. Xuất hiện rung biên độ (tremolo) ở tần số \(f_s/R\) (ví dụ 100 Hz với hop 10 ms).
+5. Thang ERB tập trung mật độ dải tần cao hơn ở vùng tai người (và các formant tiếng nói) nhạy cảm, thay vì chia đều tuyến tính theo Hz.
 
 ## Đọc thêm
 
-- Paper DeepFilterNet, DeepFilterNet2, DeepFilterNet3 — STFT, ERB, deep filtering. Bắt đầu ở [arXiv:2110.05588](https://arxiv.org/abs/2110.05588) và mã [github.com/Rikorose/DeepFilterNet](https://github.com/Rikorose/DeepFilterNet).
-- Julius O. Smith, *Spectral Audio Signal Processing* — định nghĩa STFT/ISTFT khớp cửa sổ.
-- Oppenheim & Schafer — nối filter bank với STFT.
+- Các bài báo DeepFilterNet, DeepFilterNet2, DeepFilterNet3 về STFT, đặc trưng ERB và deep filtering: bắt đầu tại [arXiv:2110.05588](https://arxiv.org/abs/2110.05588) và kho mã [github.com/Rikorose/DeepFilterNet](https://github.com/Rikorose/DeepFilterNet).
+- Julius O. Smith, *Spectral Audio Signal Processing* — định nghĩa cặp STFT/ISTFT khớp hàm cửa sổ.
+- Oppenheim & Schafer — mối liên hệ giữa dãy bộ lọc (filter bank) và STFT.
 
 ## Video tham khảo
 
-- [Short-Time Fourier Transform Explained Easily](https://www.youtube.com/watch?v=-Yxj3yfvY-4) — Valerio Velardo - The Sound of AI, tiếng Anh. **xem trước.** Xem frame phân tích và ý rằng biến đổi ngược phải hoàn tác chúng. Cặp đó là hợp đồng STFT/ISTFT cho tiếng nói.
-- [The Spectrogram and the Gabor Transform](https://www.youtube.com/watch?v=EfWnEldTyPA) — Steve Brunton, tiếng Anh. Cửa sổ trượt trên biến đổi Fourier là spectrogram. Dùng như bức tranh thời gian của tiếng nói mà front-end DeepFilterNet giả định.
-- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, tiếng Anh. Xem STFT vào dải ERB và ISTFT ra. Phần gắn DeepFilterNet của bài là khối này, chưa phải hàm loss.
+- [Short-Time Fourier Transform Explained Easily](https://www.youtube.com/watch?v=-Yxj3yfvY-4) — Valerio Velardo - The Sound of AI, tiếng Anh. **Xem trước.** Trình bày khung phân tích và yêu cầu phép biến đổi nghịch phải hoàn tác chính xác bước phân tích — đúng giao ước STFT/ISTFT cho tiếng nói.
+- [The Spectrogram and the Gabor Transform](https://www.youtube.com/watch?v=EfWnEldTyPA) — Steve Brunton, tiếng Anh. Minh họa cửa sổ trượt trên biến đổi Fourier tạo nên phổ đồ, giúp hình dung miền biểu diễn thời gian–tần số mà phần tiền xử lý DeepFilterNet giả định.
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, tiếng Anh. Quan sát luồng STFT đi vào dãy ERB và ISTFT đi ra — phần kết nối trực tiếp của bài học này với DeepFilterNet trước khi bàn đến hàm mất mát.

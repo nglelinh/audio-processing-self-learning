@@ -11,45 +11,45 @@ lesson_type: required
 draft: false
 ---
 
-Đọc kỹ ba nguồn gốc còn hơn đánh dấu hai mươi abstract. Mọi link bên dưới là bài báo, repo, hoặc bộ tài liệu thật dùng trong khóa. Tên khảo sát ở cuối chỉ là tên: DPDFNet, DeepFilterGAN, HDF-Net, FastEnhancer, μNet, Fast-ULCNet, GTCRN. Đừng bịa tiêu đề hay URL của chúng. Nếu thẻ đọc cần một sự kiện bạn chưa mở, ghi “chưa đọc” thay vì một câu nghe hợp lý.
+Đọc sâu ba tài liệu gốc có giá trị hơn nhiều so với việc lưu hai mươi bài tóm tắt mà không mở ra xem. Mọi liên kết dưới đây đều là bài báo, kho mã nguồn hoặc bộ tài liệu chính thức được dùng xuyên suốt khóa học. Các tên mô hình khảo sát ở cuối danh sách — gồm DPDFNet, DeepFilterGAN, HDF-Net, FastEnhancer, μNet, Fast-ULCNet và GTCRN — chỉ mang tính điểm tên nhận diện; tuyệt đối không tự bịa tiêu đề hay URL cho chúng. Nếu thẻ đọc cần một chi tiết mà bạn chưa trực tiếp mở nguồn để kiểm tra, hãy ghi rõ “chưa đọc” thay vì suy diễn một câu nghe có vẻ hợp lý.
 
 ![Đường ERB và deep filter của DeepFilterNet]({{ site.imgurl }}/generated/deepfilternet-erb.png)
 
-*Hình. Bức tranh bạn vẽ lại được sau khi đọc Schröter và cộng sự: STFT vào, gain ERB và deep filter, ISTFT và overlap-add ra. Mẫu thẻ bên dưới là cách chứng minh bạn đã đọc.*
+*Hình. Sơ đồ khối mà bạn cần tự vẽ lại được sau khi đọc các công trình của Schröter và cộng sự: STFT đầu vào → nhánh hệ số ERB và bộ lọc sâu (deep filter) → ISTFT và cộng chồng lấp (overlap-add) ở đầu ra. Mẫu thẻ đọc bên dưới là cách chứng minh bạn đã đọc tài liệu gốc.*
 
-## Bạn làm được gì sau bài này
+## Mục tiêu học tập
 
-Bạn chọn được ba link trong danh sách, điền thẻ bốn gạch cho mỗi link, và khớp một ví dụ đã điền đủ để người chấm thấy hình dạng. Bạn cũng giữ SI-SDR, DNSMOS, RTF, và TrackProcessor là thuật ngữ tiếng Anh trong ghi chú, kể cả khi phần văn xung quanh viết bằng tiếng Việt.
+Sau bài học này, bạn sẽ chọn được 3 liên kết từ danh mục chuẩn, hoàn thiện thẻ đọc gồm đúng 4 gạch đầu dòng cho mỗi nguồn theo đúng định dạng kiểm tra, đồng thời giữ nguyên các thuật ngữ tiếng Anh cốt lõi (`SI-SDR`, `DNSMOS`, `RTF`, `TrackProcessor`) trong ghi chú ngay cả khi phần diễn giải viết bằng tiếng Việt.
 
-## Link được trích
+## Danh mục tài liệu trích dẫn
 
-Họ DeepFilterNet:
+**Họ mô hình DeepFilterNet:**
 
-- Schröter, Escalante-B., Rosenkranz, Maier. “DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio based on Deep Filtering.” ICASSP 2022. <https://arxiv.org/abs/2110.05588>
-- Schröter và cộng sự. “DeepFilterNet2: Towards Real-Time Speech Enhancement on Embedded Devices for Full-Band Audio.” <https://arxiv.org/abs/2205.05474> (bài Interspeech 2023 sau này trích công trình này là IWAENC 2022).
-- Schröter, Escalante-B., Rosenkranz, Maier. “DeepFilterNet: Perceptually Motivated Real-Time Speech Enhancement.” Interspeech 2023. <https://arxiv.org/abs/2305.08227> — đây là trích dẫn mô hình DeepFilterNet3 mà README upstream dùng. Bảng kết quả trong bài gọi tên DeepFilterNet3; tựa bài không thêm số “3”.
-- Mã và hướng dẫn archive mô hình: <https://github.com/Rikorose/DeepFilterNet>
+- Schröter, Escalante-B., Rosenkranz, Maier. *“DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio based on Deep Filtering.”* ICASSP 2022. <https://arxiv.org/abs/2110.05588>
+- Schröter và cộng sự. *“DeepFilterNet2: Towards Real-Time Speech Enhancement on Embedded Devices for Full-Band Audio.”* <https://arxiv.org/abs/2205.05474> (bài báo Interspeech 2023 sau này trích dẫn công trình này theo hội nghị IWAENC 2022).
+- Schröter, Escalante-B., Rosenkranz, Maier. *“DeepFilterNet: Perceptually Motivated Real-Time Speech Enhancement.”* Interspeech 2023. <https://arxiv.org/abs/2305.08227> — đây là trích dẫn của mô hình DeepFilterNet3 mà README kho gốc sử dụng (các bảng kết quả bên trong gọi tên DeepFilterNet3 dù tiêu đề bài báo không thêm số “3”).
+- Mã nguồn và hướng dẫn gói trọng số mô hình: <https://github.com/Rikorose/DeepFilterNet>
 
-Cầu nối giảng và runtime:
+**Các mô hình nền tảng và runtime suy luận:**
 
-- RNNoise: <https://github.com/xiph/rnnoise> và Valin, “A Hybrid DSP/Deep Learning Approach to Real-Time Full-Band Speech Enhancement,” <https://arxiv.org/abs/1709.08243>
+- RNNoise: <https://github.com/xiph/rnnoise> và Valin, *“A Hybrid DSP/Deep Learning Approach to Real-Time Full-Band Speech Enhancement,”* <https://arxiv.org/abs/1709.08243>
 - WebRTC APM: <https://webrtc.googlesource.com/src/+/refs/heads/main/modules/audio_processing/>
 - SpeexDSP: <https://github.com/xiph/speexdsp>
 - Tài liệu ONNX Runtime: <https://onnxruntime.ai/docs/>
-- tract: <https://github.com/sonos/tract>
+- Thư viện suy luận Rust `tract`: <https://github.com/sonos/tract>
 
-Đánh giá và sản phẩm:
+**Đánh giá chất lượng và tích hợp sản phẩm:**
 
-- Le Roux, Wisdom, Erdogan, Hershey. “SDR – Half-baked or Well Done?” ICASSP 2019. Dùng cho SI-SDR, không thay bài nghe.
-- Dữ liệu và baseline DNS Challenge: <https://github.com/microsoft/DNS-Challenge>
-- DNSMOS / DNSMOS P.835: Reddy, Gopal, Cutler, Interspeech 2021 và ICASSP 2022. Không xâm nhập. Khóa này không có ngưỡng điểm chính thức.
+- Le Roux, Wisdom, Erdogan, Hershey. *“SDR – Half-baked or Well Done?”* ICASSP 2019 — nền tảng của SI-SDR (không thay thế kiểm thử lắng nghe).
+- Dữ liệu và mô hình nền DNS Challenge: <https://github.com/microsoft/DNS-Challenge>
+- DNSMOS / DNSMOS P.835: Reddy, Gopal, Cutler (Interspeech 2021 và ICASSP 2022) — bộ dự đoán không xâm nhập; khóa học không đặt ngưỡng điểm đạt chính thức.
 - Tài liệu LiveKit: <https://docs.livekit.io/>
-- npm `deepfilternet3-noise-filter` 1.3.0: <https://www.npmjs.com/package/deepfilternet3-noise-filter>
-- Repo sản phẩm (đọc, đừng nộp patch bài khóa vào đây): <https://github.com/mezonai/mezon-noise-suppression>
+- Gói npm `deepfilternet3-noise-filter` 1.3.0: <https://www.npmjs.com/package/deepfilternet3-noise-filter>
+- Kho mã nguồn sản phẩm (chỉ dùng để đọc tham khảo, không gửi bản vá bài tập vào đây): <https://github.com/mezonai/mezon-noise-suppression>
 
-## Mẫu thẻ
+## Mẫu thẻ đọc tài liệu
 
-Bốn gạch, không hơn. Đây là hình dạng mini-lab đòi.
+Mỗi thẻ chỉ gồm đúng 4 gạch đầu dòng theo đúng cấu trúc yêu cầu của mini-lab:
 
 ```text
 Source: <url>
@@ -59,7 +59,7 @@ Source: <url>
 - What I will reuse: một việc trong harness hoặc capstone của bạn.
 ```
 
-Ví dụ đã điền (đừng nộp URL này như một trong ba link trừ khi bạn còn viết hai link khác):
+Ví dụ một thẻ đọc đã điền hoàn chỉnh (không nộp lại nguyên văn URL này làm một trong 3 thẻ trừ khi bạn tự viết thêm 2 nguồn khác):
 
 ```text
 Source: https://arxiv.org/abs/2110.05588
@@ -69,17 +69,17 @@ Source: https://arxiv.org/abs/2110.05588
 - What I will reuse: Tôi sẽ vẽ lại khối ERB cộng deep filter trong phác capstone và sẽ không mô tả npm wrapper như thể nó là thuật toán.
 ```
 
-Ví dụ từ chối một số độ trễ bịa. Sự từ chối đó là một phần hình dạng. Nếu bạn mở PDF và thấy hop, bạn được thay câu “hãy kiểm tra bài” bằng con số bạn đọc, và nên nói bạn đã đọc.
+Lưu ý rằng ví dụ trên cố tình không tự điền một con số độ trễ chưa kiểm chứng — đây là một phần quan trọng của tính kỷ luật khoa học. Khi bạn đã mở tệp PDF và xác nhận chính xác độ dài hop, bạn có thể thay câu lưu ý bằng con số thực tế đọc được.
 
-## Đọc một nguồn trong một giờ
+## Cách đọc hiệu quả một tài liệu trong một giờ
 
-Bắt đầu từ hình, không từ mục related work. Với bài DeepFilterNet, tìm đường ERB và tổng deep filter. Với DNSMOS, xác nhận nó không xâm nhập và ghi protocol nghe mà nó được huấn luyện để bám. Với README npm, chỉ chép tên công khai: `DeepFilterNet3Core`, `DeepFilterNoiseFilterProcessor`, `setProcessor`, `setSuppressionLevel`, `setEnabled`, `assetConfig.cdnUrl`, và cách thêm tiền tố `v2/` từ ≥ 1.2.0. Với WebRTC APM hoặc SpeexDSP, ghi chúng là baseline cổ điển, không phải weight thả vào CDN Mezon.
+Hãy bắt đầu từ các sơ đồ khối thay vì đọc mục tài liệu liên quan (related work) trước. Với các bài báo DeepFilterNet, hãy tìm ngay nhánh tính hệ số ERB và phép lọc sâu đa khung. Với DNSMOS, cần xác nhận bản chất không xâm nhập và ghi nhận giao thức nghe thử mà mô hình được huấn luyện để bám theo. Với README gói npm, chỉ ghi nhận các tên giao diện công khai (`DeepFilterNet3Core`, `DeepFilterNoiseFilterProcessor`, `setProcessor`, `setSuppressionLevel`, `setEnabled`, `assetConfig.cdnUrl` và quy tắc nối tiền tố `v2/` từ bản ≥ 1.2.0). Với WebRTC APM hay SpeexDSP, hãy xếp chúng vào nhóm nền tảng DSP cổ điển, không phải tệp trọng số để thả vào CDN Mezon.
 
-Tên khảo sát, liệt kê để bạn nhận ra trong một buổi nói rồi dừng: DPDFNet, DeepFilterGAN, HDF-Net, FastEnhancer, μNet, Fast-ULCNet, GTCRN. Thẻ bịa arXiv id cho một tên trong đó là trượt bài.
+Nhắc lại danh sách các tên khảo sát chỉ dùng để nhận diện khi đọc thêm: DPDFNet, DeepFilterGAN, HDF-Net, FastEnhancer, μNet, Fast-ULCNet và GTCRN. Thẻ đọc nào tự bịa mã arXiv cho các tên này sẽ bị đánh trượt.
 
 ## Mini-lab
 
-Chọn **ba** URL trong danh sách trên. Viết `reading_cards.md` với ba thẻ đúng hình bốn gạch. Rồi chạy:
+Chọn **3** URL trong danh sách chính thức phía trên, soạn tệp `reading_cards.md` gồm 3 thẻ đúng cấu trúc 4 gạch đầu dòng mỗi thẻ, rồi chạy script kiểm tra:
 
 ```python
 from pathlib import Path
@@ -91,7 +91,7 @@ print("bullets", bullets)
 print("has_url", "https://" in text)
 ```
 
-Đầu ra kỳ vọng:
+**Kết quả kỳ vọng**
 
 ```text
 sources 3
@@ -99,26 +99,28 @@ bullets 12
 has_url True
 ```
 
-Mười hai gạch là ba thẻ nhân bốn gạch. Kiểu hỏng: câu claim trái với tựa bạn chưa mở; URL bịa cho GTCRN hoặc DeepFilterGAN; dùng ví dụ đã điền làm cả ba thẻ; dịch SI-SDR hoặc DNSMOS thành viết tắt khác.
+Tổng cộng 12 gạch đầu dòng tương ứng 3 thẻ nhân 4 mục.
+
+**Lỗi thường gặp.** Viết phần `Claim` mâu thuẫn với tiêu đề bài báo do chưa mở đọc; tự bịa URL cho GTCRN hoặc DeepFilterGAN; sao chép nguyên ví dụ mẫu làm cả 3 thẻ; hoặc tự ý đổi chữ viết tắt chuẩn của `SI-SDR` và `DNSMOS`.
 
 ## Bài tập
 
-1. Làm ba thẻ. Có ít nhất một URL DeepFilterNet và một URL không phải bài báo (repo hoặc docs).
-2. Sau khi thật sự mở arXiv:2110.05588, thêm ghi chú riêng thứ năm (không thuộc bốn gạch) với hop hoặc look-ahead bạn thấy, hoặc “tôi không thấy”.
-3. Mở repo DNS Challenge đủ lâu để gọi tên một thư mục hoặc script thật sự có ở đó. Đặt tên đó vào gạch “ships”.
-4. Viết một câu vì sao thẻ DNSMOS của bạn không có ngưỡng chính thức.
-5. Liệt kê các tên khảo sát bạn sẽ **không** trích kèm URL.
+1. Hoàn thiện 3 thẻ đọc, trong đó có ít nhất một bài báo thuộc họ DeepFilterNet và ít nhất một nguồn không phải bài báo (kho mã nguồn hoặc tài liệu kỹ thuật).
+2. Sau khi mở trực tiếp `arXiv:2110.05588`, thêm một dòng ghi chú riêng bên dưới thẻ (nằm ngoài 4 gạch đầu dòng chuẩn) ghi rõ độ dài hop và look-ahead bạn tìm thấy, hoặc ghi trung thực là chưa tìm thấy.
+3. Mở kho DNS Challenge đủ lâu để gọi tên một thư mục hoặc script có thật trong kho đó rồi đưa vào mục `What it measures or ships`.
+4. Viết một câu giải thích vì sao thẻ đọc về DNSMOS không ghi ngưỡng điểm đậu chính thức.
+5. Liệt kê lại danh sách các tên mô hình khảo sát mà bạn không được phép gắn URL tự bịa.
 
 ### Gợi ý đáp án
 
-1. Tối thiểu là một bài cộng một repo. Trang npm và docs LiveKit tính là không phải bài báo.
-2. Giữ khế ước bốn gạch. Ghi chú thêm để phía dưới.
-3. Đừng mô tả file bạn chưa thấy. “not stated” được phép.
-4. Reddy, Gopal và Cutler cho một predictor, không cho vạch ship của Mezon. Lệch miền là kiểu hỏng.
-5. DPDFNet, DeepFilterGAN, HDF-Net, FastEnhancer, μNet, Fast-ULCNet, GTCRN.
+1. Tối thiểu gồm 1 bài báo khoa học và 1 kho mã nguồn hoặc trang tài liệu (trang npm và tài liệu LiveKit đều tính là nguồn ngoài bài báo).
+2. Giữ đúng quy ước 4 gạch đầu dòng bên trong thẻ; mọi ghi chú mở rộng đặt riêng phía dưới.
+3. Không mô tả tệp chưa trực tiếp kiểm tra; ghi `"not stated"` khi nguồn không đề cập.
+4. Công trình của Reddy, Gopal và Cutler xây dựng bộ dự đoán chất lượng chứ không định nghĩa ngưỡng phát hành cho Mezon, đặc biệt khi có rủi ro lệch miền dữ liệu.
+5. DPDFNet, DeepFilterGAN, HDF-Net, FastEnhancer, μNet, Fast-ULCNet và GTCRN.
 
 ## Video tham khảo
 
-- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, tiếng Anh. **xem trước.** Xem cạnh paper DeepFilterNet trong danh sách đọc. Bài nói đi theo sơ đồ khối của paper; nó không thay PDF.
-- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, tiếng Anh. Các phần DNS Challenge và DNSMOS khớp các mục dữ liệu và metric trong cùng danh sách.
-- [But what is the Fourier Transform?  A visual introduction.](https://www.youtube.com/watch?v=spUNpyF58BY) — 3Blue1Brown, tiếng Anh. Dùng biến đổi trực quan như trực giác dưới các bài đọc DSP, rồi quay lại công thức.
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, tiếng Anh. **Xem trước.** Xem song song với bài báo DeepFilterNet trong danh sách đọc để nắm nhanh sơ đồ khối trước khi đọc kỹ PDF.
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, tiếng Anh. Phần trình bày về DNS Challenge và DNSMOS khớp trực tiếp với nhóm tài liệu đánh giá chất lượng.
+- [But what is the Fourier Transform?  A visual introduction.](https://www.youtube.com/watch?v=spUNpyF58BY) — 3Blue1Brown, tiếng Anh. Cung cấp trực giác hình học cho biến đổi Fourier trước khi đi sâu vào các công thức DSP.

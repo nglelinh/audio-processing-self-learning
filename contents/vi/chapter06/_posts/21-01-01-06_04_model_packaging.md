@@ -11,33 +11,33 @@ lesson_type: required
 draft: false
 ---
 
-Đồ thị ONNX (định dạng trao đổi đồ thị) đúng vẫn thất bại trong sản phẩm khi **đóng gói** sai: lượt tải đầu quá nặng, URL không cache, file WASM và kho mô hình thuộc hai thế hệ, hoặc giấy phép bạn không đưa được cho khách. `deepfilternet3-noise-filter` **1.3.0** tách bài toán đó. Gói npm ship phần keo JavaScript, AudioWorklet (callback xử lý âm thanh trên luồng realtime) đã inline, và bộ tải. Phần byte nặng, `df_bg.wasm` và `DeepFilterNet3_onnx.tar.gz`, được lấy từ CDN (mạng phân phối nội dung) qua `assetConfig.cdnUrl`. Bài này thiết kế layout, quy tắc tiền tố phiên bản, toàn vẹn, và đường rollback. Bài 07-03 tính đủ URL.
+Một đồ thị ONNX (định dạng trao đổi đồ thị) chuẩn xác vẫn có thể thất bại khi đưa vào sản phẩm nếu khâu **đóng gói** sai sót: dung lượng tải lần đầu quá lớn, URL không được lưu đệm (cache), tệp WASM và gói mô hình lệch phiên bản, hoặc vướng rào cản giấy phép phân phối. Gói `deepfilternet3-noise-filter` **1.3.0** tách bạch hai lớp này: gói npm chỉ chứa mã kết nối JavaScript, AudioWorklet (callback xử lý âm thanh trên luồng thời gian thực) được nhúng nội tuyến và bộ nạp; còn hai tệp dung lượng lớn là `df_bg.wasm` và `DeepFilterNet3_onnx.tar.gz` được tải từ CDN (mạng phân phối nội dung) thông qua `assetConfig.cdnUrl`. Bài học này trình bày bố cục tệp, quy tắc tiền tố phiên bản, kiểm tra tính toàn vẹn và phương án khôi phục (rollback). Chi tiết ghép nối URL đầy đủ sẽ được trình bày ở bài 07-03.
 
 ![WASM và kho ONNX đã đóng gói ở phía CDN của đường vào trình duyệt]({{ site.imgurl }}/generated/onnx-wasm-path.png)
 
-*Figure. Đóng gói quyết định byte nào được phép đi vào bước biên dịch WASM trong trình duyệt.*
+*Hình. Khâu đóng gói quyết định chính xác những tệp nhị phân nào sẽ đi tới bước biên dịch WASM trên trình duyệt.*
 
 ## Mục tiêu học tập
 
-Bạn tách tarball npm khỏi artifact trên CDN, áp quy tắc đường cho gói ≤ 1.1.2 và ≥ 1.2.0 (gồm 1.3.0, vẫn tự thêm `v2/`), từ chối `cdnUrl` đã chứa `v2`, và liệt kê kiểm tra giấy phép cùng cache thuộc cổng ship.
+Sau bài học này, bạn sẽ tách bạch được gói npm khỏi các tệp tài nguyên trên CDN, áp dụng đúng quy tắc đường dẫn cho các phiên bản ≤ 1.1.2 và ≥ 1.2.0 (bao gồm bản 1.3.0 vốn tự động nối tiền tố `v2/`), phát hiện và loại bỏ các `cdnUrl` đã chứa sẵn `v2`, đồng thời liệt kê đầy đủ các hạng mục kiểm tra giấy phép và cache trước khi phát hành.
 
 ## Kế hoạch 60 phút
 
-- **0–10 phút** — Một lượt tải lần đầu chặn cuộc gọi, và vì sao dung lượng npm là con số sai.
-- **10–25 phút** — Cặp artifact, config gợi ý, semver.
-- **25–40 phút** — Quy tắc tiền tố, nén, cache bất biến.
-- **40–50 phút** — Toàn vẹn, giấy phép, rollout theo giai đoạn.
-- **50–60 phút** — Mini-lab, bẫy, bài tập.
+- **0–10 phút** — Lượt tải lần đầu chặn cuộc gọi, và vì sao dung lượng gói npm không phản ánh đúng tải trọng thực tế.
+- **10–25 phút** — Cặp tệp tài nguyên, tệp cấu hình đi kèm và quy ước phiên bản (semver).
+- **25–40 phút** — Quy tắc tiền tố đường dẫn, nén dữ liệu và chính sách cache bất biến.
+- **40–50 phút** — Kiểm tra toàn vẹn, tuân thủ giấy phép và phát hành theo từng giai đoạn (staged rollout).
+- **50–60 phút** — Thực hành mini-lab, bẫy thường gặp và làm bài tập.
 
 ## Giải thích cốt lõi
 
-### Hai gói, một sản phẩm
+### Hai thành phần, một sản phẩm thống nhất
 
-`npm install deepfilternet3-noise-filter` cài một thư viện có peer dependency `livekit-client` ^2. README nói mã worker và worklet được inline thành blob URL, nên Webpack, Vite, Rollup, esbuild và Parcel không cần plugin copy. Đó là bề mặt JavaScript nhỏ, có phiên bản. Nó không phải mô hình. `DeepFilterNet3Core.initialize()` tải song song hai thân: module WASM (WebAssembly — mã nhị phân chạy trong trình duyệt) và kho mô hình. Hai thân đó chiếm thời gian khởi động lạnh. Lượng tử hóa (bài 06-02) và bản SIMD (một lệnh xử lý nhiều số, bài 06-03) đổi dung lượng và tốc độ của chúng, nhưng chỉ sau khi bạn đăng cặp file lên đúng URL mà client sẽ gọi.
+Lệnh `npm install deepfilternet3-noise-filter` cài đặt thư viện kèm phụ thuộc ngang hàng (peer dependency) `livekit-client` ^2. Theo README, mã nguồn worker và worklet đã được nhúng sẵn dưới dạng blob URL, nên các công cụ đóng gói như Webpack, Vite, Rollup, esbuild hay Parcel không cần cài thêm plugin sao chép tệp. Tuy nhiên, phần cài qua npm mới chỉ là lớp giao diện JavaScript gọn nhẹ, chưa bao gồm mô hình. Khi chạy, `DeepFilterNet3Core.initialize()` tải song song hai tệp trọng yếu là module WASM (WebAssembly — mã nhị phân chạy trong trình duyệt) và gói nén mô hình — đây mới là phần quyết định thời gian khởi động lạnh. Lượng tử hóa (bài 06-02) và tối ưu SIMD (bài 06-03) giúp cải thiện dung lượng và tốc độ của hai tệp này, nhưng chỉ phát huy tác dụng khi cặp tệp được đăng tải lên đúng đường dẫn mà client gọi tới.
 
-### Sidecar gợi ý, không phải API riêng
+### Tệp siêu dữ liệu đi kèm (sidecar) nên duy trì
 
-Mirror của sản phẩm nên mang đủ metadata để wrapper không trôi im lặng. Layout để học, do bạn sở hữu, trông như sau:
+Kho lưu trữ tài nguyên của đội ngũ nên chứa đầy đủ siêu dữ liệu đi kèm để tránh việc wrapper và mô hình lệch nhau âm thầm. Một bố cục thư mục chuẩn cho quá trình quản lý có dạng như sau:
 
 ```text
 models/df3-mono-48k/
@@ -49,40 +49,40 @@ models/df3-mono-48k/
   CHANGELOG.md
 ```
 
-`config.json` là manifest của bạn: sample rate (48000 với gói này), hop, tên input, và shape state. API công khai của npm không bắt bạn upload một file mang đúng tên đó. Client chỉ xin đúng hai đường dưới `cdnUrl`. Hãy để manifest cạnh chúng cho người và cho CI.
+Tệp `config.json` đóng vai trò bảng kê kỹ thuật (manifest) ghi rõ tần số lấy mẫu (48000 Hz với gói này), độ dài hop, tên tensor đầu vào và kích thước trạng thái. API công khai của gói npm không yêu cầu bạn phải tải tệp này lên CDN — bản thân client chỉ yêu cầu đúng hai đường dẫn dưới `cdnUrl` — nhưng việc lưu manifest song song giúp kỹ sư và hệ thống CI dễ dàng đối chiếu.
 
 ### Quy tắc đường dẫn trong README
 
-README gói nêu:
+README của gói quy định cấu trúc đường dẫn theo phiên bản như sau:
 
-| Gói | WASM | Kho mô hình |
+| Phiên bản gói | Đường dẫn WASM | Đường dẫn gói mô hình |
 |-----|------|-------------|
 | ≤ 1.1.2 | `{cdnUrl}/pkg/df_bg.wasm` | `{cdnUrl}/models/DeepFilterNet3_onnx.tar.gz` |
 | ≥ 1.2.0, gồm 1.3.0 | `{cdnUrl}/v2/pkg/df_bg.wasm` | `{cdnUrl}/v2/models/DeepFilterNet3_onnx.tar.gz` |
 
-Client tự thêm `v2/` với bản ≥ 1.2.0. Bạn không thêm. Base đã kết thúc bằng `/v2` sẽ thành `.../v2/v2/...` và 404. Base ví dụ trong README gói là `https://cdn.mezon.ai/AI/models/datas/noise_suppression/deepfilternet3`. Tên kho là `DeepFilterNet3_onnx.tar.gz`, từ kho DeepFilterNet upstream của Rikorose. Tên file WASM là `df_bg.wasm`.
+Với các phiên bản từ 1.2.0 trở lên, client sẽ tự động thêm tiền tố `v2/`; người cấu hình không được tự thêm vào `cdnUrl`. Nếu đường dẫn gốc đã kết thúc bằng `/v2`, URL sinh ra sẽ trở thành `.../v2/v2/...` và gặp lỗi 404. Đường dẫn gốc minh họa trong README là `https://cdn.mezon.ai/AI/models/datas/noise_suppression/deepfilternet3`. Tên gói mô hình là `DeepFilterNet3_onnx.tar.gz` (từ kho DeepFilterNet gốc của Rikorose), còn tên tệp WASM là `df_bg.wasm`.
 
-### Cache, nén, toàn vẹn
+### Cache, nén dữ liệu và kiểm tra toàn vẹn
 
-Phục vụ cặp file với Brotli hoặc gzip. Kho ONNX thường nén tốt; WASM kém hơn nhưng vẫn có lợi. Ưu tiên tên đánh địa chỉ theo nội dung, hoặc một thư mục phiên bản bất biến, với `Cache-Control: public, max-age=31536000, immutable`. Công bố tổng SHA-256 và kiểm sau khi tải trong CI. Từ chối canary nếu hash WASM và hash mô hình không cùng một lần phát hành. Module SIMD mới đứng cạnh kho tháng trước là lỗi đóng gói, không phải lỗi chất lượng mô hình.
+Cặp tệp tài nguyên cần được phục vụ kèm nén Brotli hoặc gzip (gói ONNX thường nén giảm dung lượng rất tốt; tệp WASM nén ít hơn nhưng vẫn đáng kể). Nên đặt tên tệp theo mã băm nội dung hoặc đặt trong thư mục phiên bản cố định kèm header `Cache-Control: public, max-age=31536000, immutable`. Công bố mã băm SHA-256 và tự động đối chiếu sau khi tải về trong quy trình CI; chặn bản thử nghiệm canary nếu mã băm của WASM và mô hình không thuộc cùng một đợt phát hành. Một module SIMD mới chạy chung với gói mô hình từ tháng trước là lỗi đóng gói, không phải lỗi chất lượng mô hình.
 
-Ghi đè tại chỗ một URL mà bạn đã bảo cache giữ một năm là cách đầu độc client. Đi tiếp bằng cách đăng thư mục mới. Giữ thư mục cũ để trỏ `cdnUrl` ngược lại, hoặc hạ phiên bản gói, mà không phải dựng lại cả thế giới. Phiên bản gói JavaScript và phiên bản thư mục asset đi cùng nhau trong ma trận tương thích: opset, bản tract hoặc ORT, bộ tính năng SIMD, sàn trình duyệt.
+Tuyệt đối không ghi đè trực tiếp lên một URL đã gắn chính sách cache một năm vì điều đó sẽ gây xung đột dữ liệu ở máy khách. Khi nâng cấp, hãy xuất bản sang thư mục phiên bản mới và giữ nguyên thư mục cũ để có thể chuyển `cdnUrl` ngược về hoặc hạ phiên bản gói ngay lập tức khi cần rollback mà không phải biên dịch lại toàn bộ hệ thống. Phiên bản gói JavaScript và thư mục tài nguyên phải luôn được quản lý theo cặp trong ma trận tương thích (gồm opset, phiên bản `tract` hoặc ORT, tập tính năng SIMD và phiên bản trình duyệt tối thiểu).
 
-### Dung lượng là quyết định theo kênh
+### Dung lượng là quyết định theo từng kênh triển khai
 
-Ngân sách để học, không phải số đo kho này: web mobile ở lượt tải đầu muốn cặp file nén nhỏ, desktop có thể tải trễ một bản lớn hơn, và app native có hạn mức cửa hàng riêng. Trọng số INT8 và mô hình siêu nhẹ (bài 04-05) là cách chạm con số mobile. Chúng được chọn trước lúc upload CDN, nên hình vẽ đặt lượng tử hóa bên trái bước biên dịch WASM.
+Về mặt ngân sách kỹ thuật (mức định hướng thiết kế, không phải số đo cố định của khóa học): nền tảng web di động cần cặp tệp nén nhỏ gọn cho lượt tải đầu tiên, nền tảng máy tính để bàn có thể chấp nhận tải trễ bản đầy đủ hơn, còn ứng dụng native chịu giới hạn kích thước riêng của kho ứng dụng. Trọng số INT8 và các mô hình siêu nhẹ (bài 04-05) là công cụ chính để đáp ứng ngân sách di động; quyết định này phải được chốt trước bước tải lên CDN, đúng như vị trí của khâu lượng tử hóa nằm trước bước biên dịch WASM trong hình minh họa.
 
-### Đóng gói và giấy phép
+### Đóng gói và tuân thủ giấy phép
 
-Gói npm cấp phép kép Apache-2.0 OR MIT, theo upstream DeepFilterNet. Trọng số bạn phân phối lại cần cùng cách đọc giấy phép upstream, cộng thông báo bên thứ ba cho runtime. Đừng nhét audio khách hàng vào artifact. File mô hình không phải bản ghi, nhưng telemetry lưu metric giọng có thể là dữ liệu cá nhân. Cây `/Users/nguyenlelinh/ncc/mezon-noise-suppression` là checkout cục bộ tùy chọn của giảng viên. Bài khóa không sửa cây đó.
+Gói npm áp dụng giấy phép kép Apache-2.0 hoặc MIT, kế thừa từ dự án DeepFilterNet gốc. Khi phân phối lại tệp trọng số, bạn cần tuân thủ đúng điều khoản giấy phép của kho nguồn gốc và đính kèm đầy đủ thông báo bản quyền của các thư viện runtime bên thứ ba. Tuyệt đối không đưa tệp âm thanh của khách hàng vào gói phát hành; dù tệp mô hình không chứa bản ghi, dữ liệu telemetry ghi nhận chỉ số giọng nói vẫn có thể bị xếp vào nhóm dữ liệu cá nhân cần bảo vệ.
 
-### Rollout theo giai đoạn
+### Phát hành theo từng giai đoạn (staged rollout)
 
-Canary một nhóm desktop nhỏ, theo dõi underrun và lỗi init, rồi mở rộng. Lỗi khởi động lạnh là lỗi đóng gói: 404, CORS, sai MIME, tiền tố kép. Underrun ở trạng thái ổn định là lỗi hệ số realtime. Hãy log tách hai loại.
+Hãy bắt đầu triển khai thử nghiệm (canary) trên một nhóm nhỏ người dùng máy tính để bàn, theo dõi sát tỉ lệ underrun và lỗi khởi tạo rồi mới mở rộng phạm vi. Cần tách bạch hai nhóm lỗi trong hệ thống log: các lỗi xảy ra lúc khởi động lạnh (như 404, CORS, sai kiểu MIME, lặp tiền tố đường dẫn) thuộc về khâu đóng gói, còn lỗi underrun trong trạng thái chạy ổn định thuộc về ngân sách hệ số thời gian thực.
 
 ## Mini-lab
 
-Chạy `python3 prefix_check.py`. Hàm mã hóa quy tắc README: `cdnUrl` của 1.3.0 không được kết thúc sẵn bằng `/v2`.
+Lưu đoạn mã sau thành `prefix_check.py` và chạy `python3 prefix_check.py`. Hàm này kiểm tra đúng quy tắc từ README: `cdnUrl` dùng cho bản 1.3.0 không được kết thúc sẵn bằng `/v2`.
 
 ```python
 def prefix_ok(url):
@@ -94,53 +94,52 @@ print(prefix_ok("https://example.com/df3"))
 print(prefix_ok("https://example.com/df3/v2"))
 ```
 
-**Expected**
+**Kết quả kỳ vọng**
 
 ```text
 base-ok
 double-prefix risk
 ```
 
-**Failure modes**
+**Lỗi thường gặp**
 
-- Nhét `v2` vào `cdnUrl` vì bảng README có `v2` trong đường đã resolve. Tiền tố là việc của client.
-- Chỉ upload `df_bg.wasm` dưới `v2/pkg/` và để tar.gz ở đường 1.1.2. Cặp file phải cùng thế hệ gói.
-- Nhét `v2` vào `cdnUrl` rồi để bản ≥ 1.2.0 thêm tiếp, request 404 ở `.../v2/v2/...`.
-- Băm file trên laptop rồi đăng byte khác lên CDN.
+- Tự thêm `/v2` vào `cdnUrl` vì nhìn thấy `v2` trong cột đường dẫn đã phân giải của bảng README, khiến client bản ≥ 1.2.0 nối thêm một lần nữa và gửi yêu cầu lỗi 404 tới `.../v2/v2/...`.
+- Chỉ tải `df_bg.wasm` lên đường dẫn `v2/pkg/` nhưng lại để tệp `.tar.gz` ở đường dẫn cũ của bản 1.1.2, làm lệch thế hệ giữa hai tệp.
+- Tính mã băm SHA-256 trên máy cá nhân nhưng lại tải một bản biên dịch khác lên CDN.
 
 ## Bẫy thường gặp
 
-- Đánh giá sản phẩm bằng dung lượng `npm install`.
-- Không có manifest, nên đổi hop vẫn “thành công” và làm gãy overlap-add.
-- Ship WASM bản debug.
-- Phá cache bằng query mỗi lần tải trang (`?t=Date.now()`), vô hiệu CDN.
-- Trộn client ≤ 1.1.2 và ≥ 1.2.0 trong một thư mục khi chưa có đủ cả hai layout.
+- Đánh giá tải trọng mạng của sản phẩm chỉ dựa vào dung lượng lệnh `npm install`.
+- Thiếu tệp manifest, khiến việc thay đổi độ dài hop vẫn nạp thành công về mặt kỹ thuật nhưng làm hỏng bước overlap-add.
+- Phát hành tệp WASM bản debug lên môi trường sản phẩm.
+- Gắn chuỗi truy vấn phá cache ở mỗi lần tải trang (ví dụ `?t=Date.now()`), làm vô hiệu hóa hoàn toàn lợi ích của CDN.
+- Phục vụ lẫn lộn client bản ≤ 1.1.2 và ≥ 1.2.0 trên cùng một thư mục khi chưa bố trí đủ cả hai cấu trúc đường dẫn.
 
 ## Bài tập
 
-1. Viết các trường `config.json` của bạn phải có để hop DeepFilter 48 kHz không trôi.
-2. Đề xuất ngân sách dung lượng nén cho web mobile và desktop, và nêu núm nào (INT8, mô hình siêu nhẹ, tải trễ) chạm từng ngân sách.
-3. Tài liệu hóa một lần rollback khôi phục cặp artifact trước mà không sửa kho sản phẩm.
-4. Liệt kê câu hỏi giấy phép phải trả lời trước khi phân phối lại `DeepFilterNet3_onnx.tar.gz` cho mục đích thương mại.
-5. Một đồng đội đặt `cdnUrl` thành `https://cdn.example.com/df3/v2`. Client ≥ 1.2.0 sẽ xin URL nào nếu nó theo README và lại thêm `v2`?
+1. Liệt kê các trường bắt buộc cần có trong tệp `config.json` để đảm bảo cấu hình hop 48 kHz của DeepFilter không bị lệch giữa các phiên bản.
+2. Đề xuất ngân sách dung lượng nén phù hợp cho web di động và web máy tính để bàn, đồng thời nêu rõ biện pháp tương ứng (INT8, mô hình siêu nhẹ, tải trễ) để đạt từng ngân sách.
+3. Mô tả quy trình rollback khôi phục lại cặp tệp tài nguyên phiên bản trước mà không cần chỉnh sửa mã nguồn kho sản phẩm.
+4. Liệt kê các câu hỏi pháp lý về giấy phép cần làm rõ trước khi phân phối lại tệp `DeepFilterNet3_onnx.tar.gz` cho mục đích thương mại.
+5. Một đồng nghiệp cấu hình `cdnUrl` là `https://cdn.example.com/df3/v2`. Client phiên bản ≥ 1.2.0 tuân theo README sẽ gửi yêu cầu tới những URL nào?
 
 ### Gợi ý đáp án
 
-1. Sample rate, hop, cửa sổ, tên input của mô hình, shape state, và phiên bản gói mà các shape đã được kiểm.
-2. Mobile: lượng tử hóa hoặc đổi mô hình nhỏ hơn, giữ cặp file trên CDN, không nhét vào npm. Desktop: tải trễ chấp nhận được nếu join không bị chặn (bài 07-02).
-3. Giữ thư mục trước. Trỏ `cdnUrl` vào base resolve tới thư mục đó, hoặc ghim gói cũ. Đừng ghi đè URL bất biến.
-4. Giấy phép upstream, giấy phép kép Apache-2.0 OR MIT của gói, thương hiệu, và mirror của bạn có được host lại kho hay không. Đọc model card upstream. Đừng đoán “phi thương mại” khi chưa có chữ.
-5. `https://cdn.example.com/df3/v2/v2/pkg/df_bg.wasm` và `.../v2/v2/models/DeepFilterNet3_onnx.tar.gz`. Đó là lỗi tiền tố kép.
+1. Cần ghi rõ tần số lấy mẫu (sample rate), độ dài hop, kích thước cửa sổ, tên các tensor đầu vào, kích thước tensor trạng thái và phiên bản gói đã dùng để kiểm chứng các kích thước đó.
+2. Trên di động: ưu tiên lượng tử hóa hoặc chọn mô hình nhỏ hơn, đặt cặp tệp trên CDN thay vì gộp vào npm. Trên máy tính để bàn: có thể chấp nhận tải trễ miễn là không chặn thao tác tham gia cuộc gọi (bài 07-02).
+3. Giữ nguyên thư mục tài nguyên cũ trên CDN; khi cần rollback chỉ cần trỏ `cdnUrl` về đường dẫn gốc của phiên bản trước hoặc ghim lại phiên bản gói cũ, tuyệt đối không ghi đè lên URL đã gắn `immutable`.
+4. Cần kiểm tra điều khoản giấy phép của kho nguồn gốc, giấy phép kép Apache-2.0/MIT của gói, quy định về nhãn hiệu và quyền tự lưu trữ lại (mirror) tệp trọng số; luôn đọc kỹ model card gốc thay vì tự suy đoán là “phi thương mại”.
+5. Client sẽ yêu cầu `https://cdn.example.com/df3/v2/v2/pkg/df_bg.wasm` và `.../v2/v2/models/DeepFilterNet3_onnx.tar.gz` — đây chính là lỗi lặp tiền tố.
 
 ## Đọc thêm
 
-- README gói, mục Custom CDN Configuration: [deepfilternet3-noise-filter](https://www.npmjs.com/package/deepfilternet3-noise-filter).
-- [Tài liệu ONNX Runtime](https://onnxruntime.ai/docs/) về artifact mô hình đã tối ưu.
-- Kho upstream [DeepFilterNet3_onnx.tar.gz](https://github.com/Rikorose/DeepFilterNet/blob/main/models/DeepFilterNet3_onnx.tar.gz).
-- Chương 07 về tải bằng TrackProcessor của LiveKit và chính sách khi CDN lỗi.
+- README của gói, mục *Custom CDN Configuration*: [deepfilternet3-noise-filter](https://www.npmjs.com/package/deepfilternet3-noise-filter).
+- [Tài liệu ONNX Runtime](https://onnxruntime.ai/docs/) về định dạng tệp mô hình đã tối ưu hóa.
+- Tệp trọng số gốc [DeepFilterNet3_onnx.tar.gz](https://github.com/Rikorose/DeepFilterNet/blob/main/models/DeepFilterNet3_onnx.tar.gz).
+- Chương 07 về quy trình nạp mô hình qua `TrackProcessor` của LiveKit và chính sách xử lý khi CDN gặp sự cố.
 
 ## Video tham khảo
 
-- [Faster and Lighter Model Inference with ONNX Runtime from Cloud to Client](https://www.youtube.com/watch?v=WDww8ce12Mc) — Microsoft Developer, tiếng Anh. **xem trước.** Xem đường từ đồ thị đã huấn luyện tới file nhỏ hơn mà client tải được. Đóng gói trong bài là file này cộng WASM và cache, không phải mạng mới.
-- [What is a CDN (Content Delivery Network) and How does a CDN Work?](https://www.youtube.com/watch?v=rIAIzf6utOc) — Cloudflare, tiếng Anh. CDN cache file đó gần người dùng. Xem cache đối origin; kho mô hình chỉ là asset tĩnh lớn.
-- [Quantization explained with PyTorch - Post-Training Quantization, Quantization-Aware Training](https://www.youtube.com/watch?v=0VdNflU08yA) — Umar Jamil, tiếng Anh. Lượng tử hóa là đòn bẩy kích thước trong gói. Xem giá độ chính xác trước khi mừng file tải nhỏ hơn.
+- [Faster and Lighter Model Inference with ONNX Runtime from Cloud to Client](https://www.youtube.com/watch?v=WDww8ce12Mc) — Microsoft Developer, tiếng Anh. **Xem trước.** Video minh họa chặng đường chuyển đổi từ đồ thị huấn luyện sang tệp triển khai gọn nhẹ cho máy khách — nền tảng của bước đóng gói kết hợp WASM và cache.
+- [What is a CDN (Content Delivery Network) and How does a CDN Work?](https://www.youtube.com/watch?v=rIAIzf6utOc) — Cloudflare, tiếng Anh. Giải thích cơ chế cache tại biên so với máy chủ gốc, giúp hình dung rõ cách phân phối các tệp mô hình tĩnh có dung lượng lớn.
+- [Quantization explained with PyTorch - Post-Training Quantization, Quantization-Aware Training](https://www.youtube.com/watch?v=0VdNflU08yA) — Umar Jamil, tiếng Anh. Trình bày vai trò của lượng tử hóa trong việc giảm kích thước gói tải và cái giá phải đánh đổi về độ chính xác.

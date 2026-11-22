@@ -11,46 +11,46 @@ lesson_type: required
 draft: false
 ---
 
-Gói npm `deepfilternet3-noise-filter` **1.3.0** là phương tiện đưa DeepFilterNet3 vào app LiveKit và Web Audio. Nó không phải giáo trình. Bài này ánh xạ các method công khai sang frame, gain, WASM, CDN, và TrackProcessor của LiveKit, để capstone đổi một kỹ thuật bạn đo được. Bài khóa không sửa kho sản phẩm. Checkout tùy chọn của giảng viên là `/Users/nguyenlelinh/ncc/mezon-noise-suppression`.
+Gói npm `deepfilternet3-noise-filter` **1.3.0** là công cụ đưa DeepFilterNet3 vào các ứng dụng LiveKit và Web Audio, chứ không phải toàn bộ nội dung cốt lõi của khóa học. Bài học này ánh xạ từng phương thức công khai của gói về đúng các khái niệm nền tảng như khung xử lý (frame), hệ số khuếch đại (gain), WASM, CDN và TrackProcessor của LiveKit, để dự án cuối khóa (capstone) tập trung cải tiến một kỹ thuật đo đạc được mà không cần can thiệp sửa đổi kho mã nguồn sản phẩm.
 
 ![API processor công khai đứng trước đường publish TrackProcessor của LiveKit]({{ site.imgurl }}/generated/livekit-trackprocessor.png)
 
-*Figure. Bề mặt npm là một TrackProcessor cộng một core Web Audio, không phải một thuật toán khử nhiễu thứ hai.*
+*Hình. Giao diện npm cung cấp một TrackProcessor và một lớp core Web Audio, không phải một thuật toán khử nhiễu thứ hai.*
 
 ## Mục tiêu học tập
 
-Bạn ánh xạ từng lời gọi công khai sang một ý của khóa, chọn cấu hình hay fork với lập luận bảo trì, và nêu việc mở rộng không cần sửa cây sản phẩm.
+Sau bài học này, bạn sẽ ánh xạ được từng lời gọi API công khai với kiến thức tương ứng trong khóa học, quyết định được khi nào chỉ cần cấu hình và khi nào bắt buộc phải fork kèm lập luận bảo trì rõ ràng, đồng thời xác định được các hướng mở rộng mà không cần chỉnh sửa mã nguồn gốc của gói.
 
 ## Kế hoạch 60 phút
 
-- **0–10 phút** — Core, TrackProcessor, asset.
-- **10–25 phút** — Bảng API đối với Chương 02–06.
-- **25–40 phút** — Các núm: mức, bypass, CDN, SIMD.
-- **40–50 phút** — Cấu hình, bọc, hoặc fork.
-- **50–60 phút** — Mini-lab và ràng buộc capstone.
+- **0–10 phút** — Tổng quan ba lớp: Core, TrackProcessor và tài nguyên (asset).
+- **10–25 phút** — Bảng ánh xạ API sang kiến thức Chương 02–06.
+- **25–40 phút** — Các tham số điều chỉnh: mức khử, bypass, CDN và SIMD.
+- **40–50 phút** — Chiến lược cấu hình, bọc lớp trung gian hay fork.
+- **50–60 phút** — Thực hành mini-lab và ràng buộc cho dự án cuối khóa.
 
-## Bề mặt công khai
+## Giao diện API công khai
 
-Cài bằng `npm install deepfilternet3-noise-filter`. Peer dependency: `livekit-client` ^2. Ghi chú bundler trong README vẫn đúng: mã worklet được inline thành blob URL, nên không cần plugin copy.
+Cài đặt thư viện bằng `npm install deepfilternet3-noise-filter` (với peer dependency `livekit-client` ^2). Theo ghi chú trên README, mã nguồn worklet đã được nhúng nội tuyến dưới dạng blob URL nên các trình đóng gói hiện đại không cần cấu hình thêm plugin sao chép tệp.
 
 ### `DeepFilterNoiseFilterProcessor`
 
-Lớp triển khai TrackProcessor (móc biến đổi track của LiveKit). `name` là `deepfilternet3-noise-filter`.
+Lớp triển khai giao diện TrackProcessor (móc biến đổi track của LiveKit) với thuộc tính `name` là `deepfilternet3-noise-filter`:
 
-- Option của constructor: `sampleRate`, `noiseReductionLevel`, `enabled`, `assetConfig.cdnUrl`.
-- `static isSupported()` — có `AudioContext` và `WebAssembly`.
-- `init` và `restart` — dựng hoặc dựng lại đồ thị 48 kHz trên một `MediaStreamTrack`.
-- `setSuppressionLevel(level)` — chuyển 0–100 xuống core.
-- `await setEnabled(boolean)` — bypass hoặc bật lại khử nhiễu; trả về cờ enabled.
-- `suspend`, `resume` — trạng thái nguồn của `AudioContext`.
-- `destroy` — gỡ đồ thị và core.
-- Gắn bằng `await audioTrack.setProcessor(filter)`, rồi `publishTrack`.
+- Tham số khởi tạo (constructor options): `sampleRate`, `noiseReductionLevel`, `enabled`, `assetConfig.cdnUrl`.
+- `static isSupported()` — kiểm tra trình duyệt có hỗ trợ `AudioContext` và `WebAssembly` hay không.
+- `init` và `restart` — khởi tạo hoặc dựng lại đồ thị xử lý 48 kHz trên một `MediaStreamTrack`.
+- `setSuppressionLevel(level)` — truyền mức khử nhiễu trong khoảng 0–100 xuống lớp core.
+- `await setEnabled(boolean)` — bật khử nhiễu hoặc chuyển sang bypass; trả về trạng thái `enabled` sau khi cập nhật.
+- `suspend`, `resume` — điều khiển trạng thái hoạt động của `AudioContext`.
+- `destroy` — giải phóng đồ thị xử lý và lớp core.
+- Cách gắn vào LiveKit: gọi `await audioTrack.setProcessor(filter)`, sau đó gọi `publishTrack`.
 
-`DeepFilterNoiseFilter(options)` là factory nhỏ trả về một processor. Trong snippet của khóa hãy ưu tiên class để vòng đời còn nhìn thấy.
+Hàm `DeepFilterNoiseFilter(options)` là hàm factory gọn nhẹ trả về một thể hiện của processor. Trong các đoạn mã học tập, nên ưu tiên dùng trực tiếp lớp `DeepFilterNoiseFilterProcessor` để dễ theo dõi vòng đời đối tượng.
 
 ### `DeepFilterNet3Core`
 
-Core Web Audio mà processor dùng, và bạn cũng dùng riêng được:
+Đây là lớp lõi Web Audio được processor gọi bên dưới và cũng có thể sử dụng độc lập:
 
 ```javascript
 import { DeepFilterNet3Core, DeepFilterNoiseFilter, DeepFilterNoiseFilterProcessor } from "deepfilternet3-noise-filter";
@@ -64,64 +64,64 @@ proc.setNoiseSuppressionEnabled(true);
 proc.destroy();
 ```
 
-`initialize` tải và biên dịch. `createAudioWorkletNode` ném lỗi nếu bạn bỏ qua bước đó. `setNoiseSuppressionEnabled(false)` là bypass của core; `setEnabled` của processor gọi nó. `destroy` thả worklet và asset đã biên dịch.
+Phương thức `initialize` tải và biên dịch tài nguyên; `createAudioWorkletNode` sẽ ném lỗi nếu bạn bỏ qua bước khởi tạo này. `setNoiseSuppressionEnabled(false)` kích hoạt chế độ bypass ở tầng core (và `setEnabled` của processor chính là lớp gọi lên phương thức này). `destroy` giải phóng node worklet cùng tài nguyên đã biên dịch.
 
-AudioWorklet (callback xử lý âm thanh trên luồng realtime) là node mà `createAudioWorkletNode` trả về.
+AudioWorklet (callback xử lý âm thanh trên luồng thời gian thực) chính là đối tượng node do `createAudioWorkletNode` trả về.
 
-### Asset
+### Tệp tài nguyên
 
-`df_bg.wasm` là bản WASM (WebAssembly — mã nhị phân chạy trong trình duyệt) mà README mô tả (`wasm-pack`, cờ SIMD cho ≥ 1.2.0). `DeepFilterNet3_onnx.tar.gz` là kho upstream. Changelog 1.3.0 ghi lần nâng tract **0.23.3** cho đường WASM đó. Layout CDN (mạng phân phối nội dung) là bài 07-03. Kho: [mezonai/mezon-noise-suppression](https://github.com/mezonai/mezon-noise-suppression).
+Tệp `df_bg.wasm` là bản dựng WASM (WebAssembly — mã nhị phân chạy trong trình duyệt) được biên dịch bằng `wasm-pack` (có bật cờ SIMD từ bản ≥ 1.2.0), đi kèm gói mô hình nguồn gốc `DeepFilterNet3_onnx.tar.gz`. Ghi chú phát hành bản 1.3.0 nêu việc nâng cấp `tract` lên **0.23.3** cho đường WASM này. Cấu trúc đường dẫn CDN (mạng phân phối nội dung) được trình bày chi tiết ở bài 07-03. Kho mã nguồn: [mezonai/mezon-noise-suppression](https://github.com/mezonai/mezon-noise-suppression).
 
-SIMD (một lệnh xử lý nhiều số) là tính năng của file WASM, không phải một option constructor.
+Lưu ý rằng SIMD (một lệnh xử lý nhiều dữ liệu) là thuộc tính của tệp nhị phân WASM khi biên dịch, không phải một tham số truyền vào constructor.
 
-## API sang ý của khóa
+## Ánh xạ API về kiến thức của khóa học
 
-| API hoặc artifact | Ý của khóa |
+| API hoặc tệp tài nguyên | Kiến thức tương ứng trong khóa học |
 |-------------------|------------|
-| `sampleRate` 48 kHz | Chương 02, PCM và tiếng nói full-band |
-| Node AudioWorklet | Chương 05, callback realtime |
-| Frame trong WASM | Chương 02 về hop; ERB và deep filter của DeepFilter, Chương 04 |
-| `noiseReductionLevel` 0–100 | Mức mạnh của gain, không phải lời hứa về SI-SDR |
+| `sampleRate` 48 kHz | Chương 02: PCM và âm thanh giọng nói toàn dải |
+| Node AudioWorklet | Chương 05: ràng buộc callback thời gian thực |
+| Khung xử lý trong WASM | Chương 02 về hop; Chương 04 về băng ERB và deep filter |
+| `noiseReductionLevel` 0–100 | Độ mạnh của hệ số suy giảm gain, không phải cam kết chỉ số SI-SDR |
 | `cdnUrl` trên CDN | Chương 06 về đóng gói và bài 07-03 |
-| WASM SIMD ≥ 1.2.0 | Chương 06; khẳng định 20–30% của README |
-| `setProcessor` | Bài 07-01, điểm chèn A |
-| `await setEnabled(false)` | Bypass mà không publish lần thứ hai |
-| Trọng số INT8, nếu bạn lượng tử offline | Bài 06-02, làm trước khi upload |
+| WASM SIMD ≥ 1.2.0 | Chương 06; mức tăng tốc 20–30% nêu trong README |
+| `setProcessor` | Bài 07-01: điểm chèn A trên luồng gửi |
+| `await setEnabled(false)` | Chuyển sang bypass mà không cần phát hành lại track |
+| Trọng số INT8 (nếu lượng tử hóa offline) | Bài 06-02: thực hiện trước khi đăng tải lên CDN |
 
-Không có method công khai để đặt tên input ONNX (định dạng trao đổi đồ thị), opset, hay một route máy chủ riêng. Nếu capstone cần đồ thị mới, đó là fork hoặc runtime riêng, không phải option giấu.
+Gói không cung cấp phương thức công khai để đổi tên tensor đầu vào ONNX (định dạng trao đổi đồ thị), đổi phiên bản opset hay định tuyến sang máy chủ xử lý riêng. Nếu dự án cuối khóa yêu cầu đồ thị mô hình hoàn toàn mới, bạn cần fork hoặc dựng runtime riêng thay vì tìm một tùy chọn ẩn.
 
-Gương native tùy chọn, chỉ là phần kéo dài: API frame Rust `df-core` ở kho anh em, Chương 09. Đừng chặn capstone trình duyệt vì nó.
+Ngoài ra, phần mở rộng tùy chọn phía native sử dụng API xử lý khung bằng Rust (`df-core`) sẽ được giới thiệu ở Chương 09; không để phần mở rộng này cản trở tiến độ dự án cuối khóa trên trình duyệt.
 
-## Các núm
+## Phân tích các tham số điều chỉnh
 
-| Núm | Vặn lên | Rủi ro |
+| Tham số | Tác động khi tăng/bật | Rủi ro đi kèm |
 |-----|---------|--------|
-| Mức khử | Sàn nhiễu thấp hơn | Giọng mỏng, nhiễu nhạc ở gain gần 0 |
-| Enabled | Khử nhiễu bật | CPU, nhiệt, độ trễ |
-| CDN đối với byte đóng gói sẵn | Cache dùng chung, npm nhỏ hơn | Lần join đầu phụ thuộc mạng |
-| Bản SIMD | Hệ số realtime thấp hơn ở nơi instantiate được | Safari trước 16.4 fail đóng |
+| Mức khử nhiễu | Hạ thấp nền nhiễu sâu hơn | Giọng nghe mỏng, phát sinh nhiễu nhạc ở vùng gain gần 0 |
+| Trạng thái bật (`enabled`) | Kích hoạt bộ khử nhiễu | Tăng tải CPU, tỏa nhiệt và thêm độ trễ |
+| CDN so với nhúng sẵn | Tận dụng cache chung, gói npm gọn hơn | Lượt tham gia đầu tiên phụ thuộc vào mạng |
+| Bản dựng SIMD | Giảm hệ số thời gian thực trên máy hỗ trợ | Trình duyệt Safari trước 16.4 báo lỗi không khởi tạo được |
 
-Hãy cặp mọi lần đổi núm với Chương 08 (SI-SDR trên mix tổng hợp, DNSMOS hoặc bài nghe ngắn trên clip thật) và hệ số realtime trên một thiết bị gọi tên. Bump dependency mà không có bảng thì không phải kết quả.
+Mọi thay đổi tham số cần được đánh giá cùng hệ thống đo lường của Chương 08 (SI-SDR trên bản trộn tổng hợp, DNSMOS hoặc bài nghe thử trên đoạn âm thực tế) kết hợp đo hệ số thời gian thực trên thiết bị cụ thể. Việc chỉ nâng phiên bản thư viện mà không có bảng số liệu đối chiếu không được tính là kết quả nghiên cứu.
 
-## Mở rộng mà không sửa sản phẩm
+## Các hướng mở rộng không cần sửa mã nguồn sản phẩm
 
-1. Harness đánh giá: WAV vào, WAV ra, SI-SDR và DNSMOS.
-2. Chính sách UX: tắt khử nhiễu ở chế độ nhạc hoặc khi hệ số realtime ở mức cao lâu.
-3. Layout CDN và header cache của riêng bạn.
-4. Telemetry thời gian init và lý do fallback, không upload audio.
-5. Một kế hoạch fork viết ra giấy nếu loader không chứa được kho khác.
-6. Phần kéo dài: parity API frame trong Rust `df-core`.
+1. Xây dựng bộ công cụ đánh giá tự động: đầu vào WAV, đầu ra WAV, tính toán SI-SDR và DNSMOS.
+2. Thiết kế chính sách UX thông minh: tự động tắt khử nhiễu khi chuyển sang chế độ nhạc hoặc khi hệ số thời gian thực duy trì ở mức cao kéo dài.
+3. Tự triển khai cấu trúc CDN và tối ưu hóa chính sách header cache.
+4. Thu thập telemetry cho thời gian khởi tạo và nguyên nhân fallback (không tải âm thanh người dùng).
+5. Lập bản thiết kế kế hoạch fork khi bộ nạp mặc định không đáp ứng được định dạng gói mô hình mới.
+6. Phần mở rộng tùy chọn: đối chiếu tương đương API xử lý từng khung trên Rust `df-core`.
 
-## Cấu hình đối với fork
+## Khi nào nên cấu hình và khi nào nên fork
 
-| Tình huống | Ưu tiên |
+| Tình huống | Phương án ưu tiên |
 |------------|---------|
-| Base CDN, mức mặc định, UX bật/tắt | Cấu hình `assetConfig` và constructor |
-| Lỗi vòng đời hoặc lệch phiên bản LiveKit | Báo upstream, hoặc một lớp bọc mỏng trong app của bạn |
-| Kiến trúc mô hình mới | Fork hoặc gói mới; giữ Apache-2.0 OR MIT, khớp upstream |
-| Bài tập khóa | Kho của bạn, ghi chú của bạn, hoặc kho Rust anh em. Không phải cây sản phẩm của giảng viên |
+| Đổi đường dẫn CDN, mức khử mặc định, giao diện bật/tắt | Cấu hình qua `assetConfig` và tham số constructor |
+| Lỗi vòng đời hoặc sai khác phiên bản LiveKit | Báo lỗi lên kho gốc, hoặc viết một lớp bọc (wrapper) mỏng trong ứng dụng |
+| Đưa vào kiến trúc mô hình mới | Fork hoặc tạo gói mới; giữ đúng giấy phép Apache-2.0 hoặc MIT theo kho gốc |
+| Bài tập và dự án khóa học | Thực hiện trên kho cá nhân hoặc kho Rust thử nghiệm, không sửa trực tiếp kho sản phẩm |
 
-## Đường join đã chú thích
+## Đoạn mã tích hợp có chú thích liên kết bài học
 
 ```javascript
 // 07-01 điểm chèn A, local trước encode
@@ -143,7 +143,7 @@ filter.setSuppressionLevel(60);
 
 ## Mini-lab
 
-Chạy `python3 api_map.py`. Script gắn mỗi lời gọi với kiểu sở hữu nó trong 1.3.0.
+Lưu đoạn mã sau thành `api_map.py` và chạy `python3 api_map.py`. Chương trình ánh xạ từng phương thức công khai về đúng lớp sở hữu nó trong phiên bản 1.3.0.
 
 ```python
 calls = {
@@ -157,7 +157,7 @@ for name in sorted(calls):
     print(f"{name} -> {calls[name]}")
 ```
 
-**Expected**
+**Kết quả kỳ vọng**
 
 ```text
 createAudioWorkletNode -> DeepFilterNet3Core
@@ -167,45 +167,45 @@ setNoiseSuppressionEnabled -> DeepFilterNet3Core
 setProcessor -> LiveKit LocalAudioTrack
 ```
 
-**Failure modes**
+**Lỗi thường gặp**
 
-- Gọi `setEnabled` trên core. Method của core là `setNoiseSuppressionEnabled`.
-- Gọi `setNoiseSuppressionEnabled` trên processor. Method của processor là `setEnabled`, và nên được await.
-- Coi `setProcessor` là method của class npm. Nó là `LocalAudioTrack.setProcessor`.
-- Sửa `/Users/nguyenlelinh/ncc/mezon-noise-suppression` như một phần bài tập.
+- Gọi `setEnabled` trên lớp core (phương thức đúng của core là `setNoiseSuppressionEnabled`).
+- Gọi `setNoiseSuppressionEnabled` trên processor (phương thức đúng của processor là `setEnabled`, và nên dùng `await`).
+- Nhầm `setProcessor` là phương thức thuộc gói npm (thực tế đây là phương thức `LocalAudioTrack.setProcessor` của LiveKit).
+- Chỉnh sửa trực tiếp kho mã nguồn sản phẩm khi làm bài tập khóa học.
 
 ## Bẫy thường gặp
 
-1. Capstone chỉ bump dependency.
-2. Đổ lỗi cho mô hình khi 404 CDN là do tiền tố kép.
-3. Phân phối lại trọng số mà chưa đọc giấy phép upstream.
-4. Commit của khóa nằm trong cây sản phẩm.
+1. Làm dự án cuối khóa chỉ dừng ở mức nâng cấp phiên bản dependency.
+2. Quy lỗi cho mô hình khi nguyên nhân thực sự của lỗi 404 CDN là lặp tiền tố đường dẫn.
+3. Phân phối lại tệp trọng số mà chưa đọc kỹ điều khoản giấy phép nguồn gốc.
+4. Đưa các commit thử nghiệm của khóa học vào thẳng kho mã nguồn sản phẩm.
 
 ## Bài tập
 
-1. Mở rộng bảng mini-lab với `init`, `restart`, `destroy` và `setSuppressionLevel`.
-2. Đề xuất một cải tiến capstone không cần sửa source gói, và nêu metric.
-3. Đề xuất một cải tiến cần fork, và biện minh vì sao cấu hình không làm được.
-4. So mức khử 40 và 80 trên một clip ồn. Bạn nghe gì ở các bin yên?
-5. Vì sao `isSupported()` trả về đúng vẫn không cho phép bỏ qua kiểm Safari 16.4?
+1. Mở rộng bảng ánh xạ trong mini-lab với thêm 4 phương thức: `init`, `restart`, `destroy` và `setSuppressionLevel`.
+2. Đề xuất một cải tiến cho dự án cuối khóa không cần chỉnh sửa mã nguồn của gói, kèm chỉ số đánh giá cụ thể.
+3. Đề xuất một cải tiến bắt buộc phải fork mã nguồn và giải thích vì sao tham số cấu hình không thể đáp ứng được.
+4. So sánh mức khử nhiễu 40 và 80 trên cùng một đoạn ghi âm nhiều tạp âm; mô tả sự khác biệt nghe thấy ở các đoạn nền yên lặng.
+5. Giải thích vì sao dù `isSupported()` trả về `true`, bạn vẫn không được bỏ qua bước kiểm tra mốc trình duyệt Safari 16.4.
 
 ### Gợi ý đáp án
 
-1. `init`, `restart` và `destroy` nằm trên processor (LiveKit gọi `init` / `restart`). `setSuppressionLevel` có trên cả hai; processor chuyển xuống core.
-2. Một mirror CDN, một chính sách bypass, hoặc harness SI-SDR quanh file WAV. Metric: delta SI-SDR, DNSMOS, hoặc hệ số realtime p95.
-3. Một bộ toán tử mới hoặc layout kho mà loader không diễn tả được. Cấu hình chỉ đặt sample rate, mức, enabled, và `cdnUrl`.
-4. Mức 80 nên cắt nhiều nhiễu hơn và có thể làm mỏng phụ âm xát hoặc tạo nhiễu nhạc ở sàn. Mức 40 để lại nhiều nhiễu dư hơn. Dùng cùng một clip.
-5. `isSupported()` chỉ kiểm `AudioContext` và `WebAssembly`. SIMD là bài 06-03; Safari trước 16.4 làm module ≥ 1.2.0 fail lúc compile.
+1. Ba phương thức `init`, `restart` và `destroy` thuộc về `DeepFilterNoiseFilterProcessor` (trong đó LiveKit gọi `init`/`restart`); `setSuppressionLevel` có mặt trên cả hai lớp, với processor chuyển tiếp giá trị xuống core.
+2. Ví dụ: xây dựng mirror CDN, thiết lập chính sách bypass tự động theo RTF hoặc viết công cụ đo SI-SDR trên tập WAV; các chỉ số đánh giá tương ứng là độ chênh lệch SI-SDR, DNSMOS hoặc RTF p95.
+3. Ví dụ: thay đổi tập toán tử hoặc cấu trúc gói mô hình mà bộ nạp hiện tại không hỗ trợ, bởi cấu hình công khai chỉ cho phép chỉnh `sampleRate`, mức khử, trạng thái `enabled` và `cdnUrl`.
+4. Mức 80 cắt nhiễu mạnh hơn nhưng dễ làm mỏng các phụ âm xát hoặc tạo nhiễu nhạc ở nền âm; mức 40 giữ giọng tự nhiên hơn nhưng để lọt nhiều nhiễu dư hơn.
+5. `isSupported()` chỉ kiểm tra sự hiện diện của `AudioContext` và `WebAssembly`, không kiểm tra hỗ trợ `simd128` (bài 06-03); do đó Safari trước bản 16.4 vẫn báo lỗi biên dịch đối với bản dựng ≥ 1.2.0.
 
 ## Đọc thêm
 
-- npm [deepfilternet3-noise-filter](https://www.npmjs.com/package/deepfilternet3-noise-filter) và [GitHub](https://github.com/mezonai/mezon-noise-suppression).
-- Upstream [DeepFilterNet](https://github.com/Rikorose/DeepFilterNet), gồm Schröter và cộng sự, ICASSP 2022, arXiv:2110.05588.
-- LiveKit [TrackProcessor / setProcessor on LocalAudioTrack](https://docs.livekit.io/transport/media/publish/).
-- [tract](https://github.com/sonos/tract) và [ONNX Runtime](https://onnxruntime.ai/docs/) cho phía runtime của Chương 06.
+- Trang npm [deepfilternet3-noise-filter](https://www.npmjs.com/package/deepfilternet3-noise-filter) và kho [GitHub](https://github.com/mezonai/mezon-noise-suppression).
+- Dự án gốc [DeepFilterNet](https://github.com/Rikorose/DeepFilterNet), bao gồm bài báo Schröter và cộng sự (ICASSP 2022, arXiv:2110.05588).
+- Tài liệu LiveKit về [TrackProcessor / setProcessor on LocalAudioTrack](https://docs.livekit.io/transport/media/publish/).
+- [tract](https://github.com/sonos/tract) và [ONNX Runtime](https://onnxruntime.ai/docs/) cho tầng runtime ở Chương 06.
 
 ## Video tham khảo
 
-- [DeepFilterNet Noise Suppression Demo](https://www.youtube.com/watch?v=EO7n96YwnyE) — Hendrik Schröter, tiếng Anh. **xem trước.** Nghe bộ khử mà gói npm là phương tiện. Bài ánh xạ các method công khai lên hành vi này, không phải một tour API riêng.
-- [Group calling architectures in WebRTC: MCU, SFU & P2P](https://www.youtube.com/watch?v=d2N0d6CKrbk) — Tsahi Levent-Levi, tiếng Anh. Chuyển tiếp track là phía LiveKit của bề mặt công khai. Video giải thích SFU; nó không ghi kiểu của npm.
-- [AudioWorklet :: What, Why, and How - Hongchan Choi](https://www.youtube.com/watch?v=g1L4O1smMC0) — WebAudio PDX, tiếng Anh. Callback audio là chỗ processor của gói phải trả về đúng hạn.
+- [DeepFilterNet Noise Suppression Demo](https://www.youtube.com/watch?v=EO7n96YwnyE) — Hendrik Schröter, tiếng Anh. **Xem trước.** Nghe trực tiếp hiệu quả xử lý của bộ khử nhiễu mà gói npm này tích hợp, giúp gắn kết các phương thức công khai với hành vi âm thanh thực tế.
+- [Group calling architectures in WebRTC: MCU, SFU & P2P](https://www.youtube.com/watch?v=d2N0d6CKrbk) — Tsahi Levent-Levi, tiếng Anh. Giải thích cơ chế chuyển tiếp track của SFU — bối cảnh phía LiveKit của bề mặt API.
+- [AudioWorklet :: What, Why, and How - Hongchan Choi](https://www.youtube.com/watch?v=g1L4O1smMC0) — WebAudio PDX, tiếng Anh. Làm rõ giới hạn thời gian của luồng callback nơi processor phải trả về đúng hạn.

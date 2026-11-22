@@ -11,32 +11,32 @@ lesson_type: required
 draft: false
 ---
 
-Kalman không phải “một mask khác”. Đó là **bộ theo dõi Bayesian đệ quy**: dự đoán trạng thái tiếng nói kế tiếp, rồi hiệu chỉnh bằng quan sát nhiễu mới. Trong SE và AEC, tư duy Kalman xuất hiện ở bộ lọc thích nghi, theo dõi echo dư, và hybrid AEC+NS (ví dụ Kalman AEC cổ điển rồi postfilter neural nhỏ). Bài này giữ mức **trực giác và sơ đồ khối**—đủ để đọc paper và debug hybrid—không biến thành giáo trình điều khiển.
+Bộ lọc Kalman không phải là "một dạng mặt nạ phổ khác" mà là một **bộ theo dõi Bayes đệ quy**: ở mỗi bước, nó dự đoán trạng thái tiếng nói tiếp theo rồi hiệu chỉnh lại dựa trên phép đo có nhiễu mới nhận được. Trong tăng cường tiếng nói (SE) và khử vọng (AEC), tư duy Kalman xuất hiện ở các bộ lọc thích nghi, bộ theo dõi tiếng vọng dư và các kiến trúc lai AEC+NS (ví dụ AEC Kalman cổ điển nối tiếp bộ hậu lọc mạng nơ-ron gọn nhẹ). Bài học này dừng ở mức **trực giác và sơ đồ khối** — đủ để đọc bài báo và gỡ lỗi hệ thống lai — mà không đi sâu vào lý thuyết điều khiển tổng quát.
 
 ## Mục tiêu học tập
 
-Bạn giải thích vòng predict–update với hiệp phương sai nhiễu quá trình/đo, ánh xạ SE sang phác thảo không gian trạng thái, đối chiếu Kalman với gain Wiener từng khung, và nhận diện pattern sản phẩm: Kalman/LMS/RLS làm front-end cho residual suppressor neural.
+Sau bài học này, bạn sẽ giải thích được vòng lặp dự đoán–cập nhật (predict–update) cùng vai trò của hiệp phương sai nhiễu quá trình và nhiễu đo, ánh xạ bài toán SE sang mô hình không gian trạng thái, so sánh Kalman với độ lợi Wiener theo từng khung, và nhận diện mô hình triển khai thực tế: dùng Kalman/LMS/RLS làm tầng tiền xử lý cho bộ khử phần dư bằng mạng nơ-ron.
 
 ## Kế hoạch 60 phút
 
-- **0–10 phút** — Vì sao theo dõi đệ quy hơn “ước lượng từ đầu mỗi khung”.
-- **10–25 phút** — Mô hình trạng thái, predict, trực giác Kalman gain.
-- **25–40 phút** — Thể hiện tiếng nói/AEC: theo dõi hệ số AR hoặc đường echo.
-- **40–50 phút** — Hybrid: Kalman AEC + neural postfilter (con trỏ khảo sát).
-- **50–60 phút** — Bẫy, bài tập, nối WebRTC APM (03-04).
+- **0–10 phút** — Vì sao theo dõi đệ quy hiệu quả hơn việc ước lượng lại từ đầu ở mỗi khung.
+- **10–25 phút** — Mô hình không gian trạng thái, bước dự đoán và trực giác về độ lợi Kalman (Kalman gain).
+- **25–40 phút** — Ứng dụng trong tiếng nói và AEC: theo dõi hệ số AR hoặc đáp ứng xung đường vọng.
+- **40–50 phút** — Kiến trúc lai: AEC Kalman kết hợp hậu lọc mạng nơ-ron (các mốc tham khảo).
+- **50–60 phút** — Các bẫy thường gặp, bài tập và cầu nối sang WebRTC APM (bài 03-04).
 
 ## Giải thích cốt lõi
 
-### Kalman một câu
+### Nguyên lý Kalman tóm gọn
 
-Giữ niềm tin về trạng thái ẩn $$x_\ell$$ (mẫu tiếng sạch, hệ số LPC, hoặc đáp ứng xung echo). Mỗi khung:
+Hệ thống duy trì một ước lượng kèm độ bất định về trạng thái ẩn $$x_\ell$$ (có thể là mẫu tiếng nói sạch, hệ số LPC hoặc đáp ứng xung đường vọng). Tại mỗi khung:
 
-1. **Predict** theo động học: $$x_{\ell|\ell-1}=A x_{\ell-1|\ell-1}$$.
-2. **Update** với đo $$y_\ell=H x_\ell+v_\ell$$: kéo dự đoán về quan sát tỷ lệ với độ tin cậy tương đối.
+1. **Dự đoán (Predict)** theo mô hình động học: $$x_{\ell|\ell-1}=A x_{\ell-1|\ell-1}$$.
+2. **Cập nhật (Update)** với phép đo $$y_\ell=H x_\ell+v_\ell$$: kéo giá trị dự đoán về phía quan sát theo tỷ lệ tương ứng với độ tin cậy của phép đo.
 
-**Kalman gain** $$K_\ell$$ lớn khi đo đáng tin—tin mic hơn—và nhỏ khi đo nhiễu—chạy theo mô hình.
+**Độ lợi Kalman** $$K_\ell$$ lớn khi phép đo đáng tin cậy (ưu tiên tín hiệu từ micro) và nhỏ khi phép đo nhiều nhiễu (ưu tiên dự đoán từ mô hình).
 
-### Cartoon vô hướng
+### Mô hình vô hướng giản lược
 
 $$
 x_\ell = x_{\ell-1}+w_\ell,\quad y_\ell=x_\ell+v_\ell,
@@ -46,50 +46,50 @@ $$
 K=\frac{p^{-}}{p^{-}+r},\quad \hat{x}=\hat{x}^{-}+K(y-\hat{x}^{-}).
 $$
 
-So với Wiener: $$K$$ giống $$\xi/(\xi+1)$$ nếu đọc $$p^{-}/r$$ như SNR tiên nghiệm. Kalman = Wiener **cộng bộ nhớ** qua trạng thái và phương sai dự đoán. Trên hình, đường cam là kiểu mức sàn mà một tracker đệ quy giữ, và đường xanh là gain mà sàn đó nuôi. Một bước Kalman là một cách tường minh về thống kê để cập nhật sàn; bản thân hình vẫn là NS cổ điển, không phải sơ đồ khối của bộ lọc.
+So với bộ lọc Wiener, $$K$$ có dạng tương đồng với $$\xi/(\xi+1)$$ nếu coi $$p^{-}/r$$ như một dạng SNR tiên nghiệm. Nói ngắn gọn, Kalman giống như bộ lọc Wiener **có thêm bộ nhớ** thông qua trạng thái và phương sai dự đoán. Trên hình minh họa, đường cam đại diện cho mức nền mà một bộ theo dõi đệ quy duy trì, còn đường cong bên phải là độ lợi được tính từ nền đó. Bước cập nhật Kalman cung cấp một cơ chế thống kê tường minh để cập nhật nền ổn định; bản thân hình vẽ vẫn minh họa khử nhiễu cổ điển chứ không phải sơ đồ khối chi tiết của bộ lọc Kalman.
 
 ![Sàn nhiễu được theo dõi, cạnh gain theo SNR mà sàn đó dùng để tính]({{ site.imgurl }}/generated/spectral-subtraction-wiener.png)
 
-*Hình. Đường cam là một tracker sàn nhiễu; đường bên phải là gain mà tracker đó nuôi — phần mà một bước cập nhật Kalman đang cố giữ ổn định.*
+*Hình. Đường cam biểu diễn bộ theo dõi sàn nhiễu; đường bên phải là độ lợi suy ra từ sàn đó — phần mà bước cập nhật đệ quy kiểu Kalman giúp giữ ổn định theo thời gian.*
 
 ### Vì sao kỹ sư âm thanh quan tâm
 
-| Ứng dụng | Trạng thái $$x$$ | Đo $$y$$ |
-|----------|------------------|----------|
-| Theo dõi tiếng sạch | mẫu / biên độ phổ | mic nhiễu |
-| LPC / formant | hệ số AR | phần dư / phổ |
-| Ước lượng đường AEC | $$\mathbf{h}$$ | mic, hồi quy từ far-end |
-| PSD echo dư | công suất echo dư | lỗi sau adaptive filter |
+| Ứng dụng | Trạng thái ẩn $$x$$ | Phép đo $$y$$ |
+|----------|---------------------|---------------|
+| Theo dõi tiếng nói sạch | Mẫu tín hiệu / biên độ phổ | Tín hiệu micro có nhiễu |
+| Mô hình LPC / formant | Các hệ số tự hồi quy (AR) | Phần dư / phổ tín hiệu |
+| Ước lượng đường vọng AEC | Đáp ứng xung $$\mathbf{h}$$ | Tín hiệu micro hồi quy theo tín hiệu far-end |
+| Mật độ phổ công suất vọng dư | Công suất vọng dư | Tín hiệu lỗi sau bộ lọc thích nghi |
 
-**Bộ lọc thích nghi** (NLMS, RLS) trong AEC là anh em gần: ước lượng đệ quy đường echo. Kalman cho lịch gain có thống kê; NLMS cho bước chuẩn hóa rẻ. WebRTC APM / SpeexDSP nghiêng về adaptive filter thực dụng; paper hybrid thường nói “Kalman AEC” theo nghĩa tracker hiệp phương sai.
+Các **bộ lọc thích nghi** (NLMS, RLS) trong AEC là họ hàng gần của Kalman vì cùng ước lượng đệ quy đường vọng. Kalman cung cấp lịch cập nhật độ lợi dựa trên mô hình hiệp phương sai, còn NLMS dùng bước cập nhật chuẩn hóa với chi phí thấp hơn. WebRTC APM và SpeexDSP ưu tiên các bộ lọc thích nghi thực dụng, trong khi nhiều bài báo kiến trúc lai gọi là "Kalman AEC" theo nghĩa bộ theo dõi có cập nhật hiệp phương sai.
 
-### Hybrid cổ điển + neural
+### Kiến trúc lai: cổ điển kết hợp mạng nơ-ron
 
-1. Adaptive filter / Kalman hủy echo **tuyến tính** có tham chiếu far-end.
-2. Mạng **nhỏ** (ULCNet / GTCRN / postfilter DF) dọn echo dư + nhiễu mà mô hình tuyến tính không bắt được.
+1. Bộ lọc thích nghi hoặc Kalman triệt tiêu phần tiếng vọng **tuyến tính** dựa trên tín hiệu tham chiếu far-end.
+2. Một mạng nơ-ron **nhỏ** (kiểu ULCNet, GTCRN hoặc bộ hậu lọc DeepFilterNet) dọn sạch tiếng vọng dư phi tuyến và nhiễu nền mà mô hình tuyến tính không xử lý hết.
 
-Con trỏ khảo sát: Align-ULCNet và hybrid ULCNet+adaptive filter; GSC+DeepFilterNet2 cho nhiễu ego có hướng.
+Các mốc tham khảo tiêu biểu trong nghiên cứu gồm Align-ULCNet, kiến trúc lai ULCNet + bộ lọc thích nghi, và GSC + DeepFilterNet2 cho bài toán nhiễu có hướng (ego-noise).
 
-**Đạo đức kỹ thuật:** đừng bắt mạng học hủy echo tuyến tính thuần nếu đã có tham chiếu—hãy đưa residual đã làm sạch.
+**Bài học kỹ thuật:** Đừng ép mạng nơ-ron phải tự học hủy tiếng vọng tuyến tính thuần túy khi đã có sẵn tín hiệu tham chiếu — hãy để bộ lọc thích nghi xử lý phần tuyến tính rồi đưa tín hiệu dư sạch hơn vào mạng.
 
-## Checklist: khi nào nghĩ kiểu Kalman
+## Danh mục kiểm tra: khi nào nên dùng tư duy Kalman
 
-- Có **mô hình động học** (đường echo biến chậm; envelope AR).
-- Có **tham chiếu** (far-end cho AEC).
-- Residual sau canceller tuyến tính vẫn cần cleaner phi tuyến.
-- Ngân sách CPU chặt—ưu tiên adaptive cổ điển + NS nhỏ hơn mạng end-to-end khổng lồ.
+- Khi bài toán có **mô hình động học** rõ ràng (đường vọng thay đổi chậm, đường bao AR).
+- Khi có **tín hiệu tham chiếu** (far-end cho AEC).
+- Khi phần dư sau bộ hủy tuyến tính vẫn cần khử phi tuyến.
+- Khi ngân sách CPU chặt — kết hợp bộ lọc thích nghi cổ điển với mạng NS gọn nhẹ hiệu quả hơn một mạng đầu–cuối khổng lồ.
 
 ## Bẫy thường gặp
 
-- Coi Kalman là “khử nhiễu thần kỳ” mà không chỉ rõ trạng thái/đo.
-- Sai $$A$$ hoặc $$H$$ → lệch hệ thống.
-- Hiệp phương sai phình số (cần dạng ổn định SPD).
-- Kalman đầy đủ trên vector STFT khổng lồ trong khi gần đúng chéo / NLMS mới thực tế.
-- Quên neural residual thêm latency và state streaming (Ch. 05–06).
+- Coi Kalman là "bộ khử nhiễu vạn năng" mà không định nghĩa rõ vector trạng thái và mô hình đo.
+- Thiết lập sai ma trận $$A$$ hoặc $$H$$ dẫn tới sai lệch hệ thống.
+- Mất ổn định số ở ma trận hiệp phương sai (cần duy trì tính đối xứng xác định dương SPD).
+- Áp dụng Kalman toàn ma trận lên vector STFT chiều lớn trong khi xấp xỉ đường chéo hoặc NLMS mới khả thi ở thời gian thực.
+- Quên rằng tầng mạng nơ-ron hậu lọc vẫn cộng thêm độ trễ và trạng thái streaming (Chương 05–06).
 
 ## Mini-lab
 
-**Mục tiêu.** Một bước predict–update vô hướng. In Kalman gain khi phép đo đáng tin và khi phép đo nhiễu.
+**Mục tiêu.** Thực hiện một bước dự đoán–cập nhật vô hướng và in độ lợi Kalman trong hai trường hợp: phép đo đáng tin cậy và phép đo nhiễu mạnh.
 
 ```python
 def kalman_gain(p, q, r):
@@ -101,32 +101,32 @@ for r in (0.1, 10.0):
     print("r", r, "K", round(K, 3))
 ```
 
-**Kỳ vọng.** Phương sai tiên nghiệm sau bước predict là \(1.1\). Với \(r=0.1\), \(K\approx 0.917\) (tin phép đo). Với \(r=10\), \(K\approx 0.099\) (bám dự đoán). Cùng dạng một gain Wiener: lớn khi “SNR” \(p^{-}/r\) lớn.
+**Kết quả kỳ vọng.** Phương sai tiên nghiệm sau bước dự đoán bằng \(1.1\). Với \(r=0.1\), ta có \(K\approx 0.917\) (tin tưởng phép đo); với \(r=10\), ta có \(K\approx 0.099\) (bám sát dự đoán). Công thức có cùng dạng với độ lợi Wiener: giá trị tăng khi tỷ số \(p^{-}/r\) lớn.
 
-**Khi hỏng.** Cập nhật \(p\) bằng phép đo trước khi tính \(K\) sẽ đổi cả hai số. Hoán \(q\) và \(r\) làm cảm biến nhiễu trông đáng tin hơn cảm biến sạch. Đây là hoạt hình vô hướng của gain, không phải bộ lọc Kalman tiếng nói và không phải cài tracker PSD nhiễu.
+**Lỗi thường gặp.** Cập nhật \(p\) bằng phép đo trước khi tính \(K\) sẽ làm sai cả hai kết quả; hoán đổi nhầm \(q\) và \(r\) sẽ khiến cảm biến nhiễu trông đáng tin hơn cảm biến sạch. Lưu ý đây chỉ là mô phỏng vô hướng minh họa cơ chế độ lợi, không phải bộ lọc Kalman đầy đủ cho tiếng nói hay bộ theo dõi PSD nhiễu.
 
 ## Bài tập
 
-1. Cài predict–update vô hướng; kích $$x$$ bằng sine chậm; quan sát $$K$$ khi đổi $$r$$.
-2. Sơ đồ một trang: AEC với state $$=\mathbf{h}$$; đánh dấu postfilter neural.
-3. Ba điểm giống / khác giữa Wiener decision-directed và Kalman cho PSD tiếng nói.
-4. Brief thiết kế: trình duyệt có echo loa → WebRTC AEC → neural NS dư; nêu trách nhiệm từng khối.
+1. Cài đặt vòng lặp dự đoán–cập nhật vô hướng với trạng thái $$x$$ là một sóng sin biến thiên chậm và quan sát sự thay đổi của $$K$$ khi điều chỉnh $$r$$.
+2. Vẽ sơ đồ một trang cho hệ thống AEC có trạng thái $$=\mathbf{h}$$, đánh dấu rõ vị trí gắn bộ hậu lọc mạng nơ-ron.
+3. Nêu ba điểm giống và khác nhau giữa bộ lọc Wiener decision-directed và bộ lọc Kalman cho mật độ phổ công suất tiếng nói.
+4. Viết bản phác thảo thiết kế cho tình huống gọi trên trình duyệt có tiếng vọng loa theo chuỗi: WebRTC AEC → bộ khử nhiễu dư mạng nơ-ron, nêu rõ trách nhiệm của từng khối.
 
 ### Gợi ý đáp án
 
-1. \(K\) phải giảm khi \(r\) tăng, và ước lượng phải trễ một dao động nhanh của \(y\) khi \(r\) lớn.
-2. Các tap far-end là hồi quy; mic là \(y\); khối neural thấy \(e=y-\hat{h}*x\), không phải mic thô.
-3. Cả hai đều đệ quy và đều thu gain khi nhiễu át. Wiener decision-directed theo một tỉ số công suất; Kalman theo một trạng thái và một phương sai, và có mô hình quá trình tường minh.
-4. AEC sở hữu echo tuyến tính khi có tham chiếu far-end. Tầng neural sở hữu phần còn lại: echo dư và nhiễu nền. Đừng bắt mạng tìm lại \(\mathbf{h}\).
+1. Giá trị \(K\) phải giảm khi \(r\) tăng, đồng thời ước lượng sẽ đáp ứng chậm hơn trước biến động nhanh của \(y\) khi \(r\) lớn.
+2. Các mẫu trễ của far-end đóng vai trò vector hồi quy, tín hiệu micro là \(y\), và khối mạng nơ-ron nhận đầu vào là tín hiệu dư \(e=y-\hat{h}*x\) thay vì tín hiệu micro thô.
+3. Cả hai đều có tính đệ quy và đều hạ độ lợi khi nhiễu lấn át; điểm khác là Wiener decision-directed theo dõi một tỷ số công suất, còn Kalman theo dõi tường minh cả trạng thái lẫn phương sai dựa trên mô hình động học quá trình.
+4. AEC chịu trách nhiệm triệt tiêu tiếng vọng tuyến tính dựa trên tham chiếu far-end; tầng mạng nơ-ron xử lý phần còn lại gồm vọng dư phi tuyến và nhiễu nền mà không phải học lại \(\mathbf{h}\).
 
 ## Đọc thêm
 
-- R. E. Kalman, 1960.
-- Haykin, *Adaptive Filter Theory* (NLMS/RLS).
+- R. E. Kalman, bài báo nền tảng năm 1960.
+- Haykin, *Adaptive Filter Theory* (NLMS và RLS).
 - Tổng quan WebRTC Audio Processing Module.
-- Con trỏ hybrid Kalman/ULCNet AENR (Align-ULCNet, mức tên).
+- Các mốc kiến trúc lai Kalman/ULCNet cho AENR (Align-ULCNet, ở mức khái niệm).
 
 ## Video tham khảo
 
-- [Why Use Kalman Filters? | Understanding Kalman Filters, Part 1](https://www.youtube.com/watch?v=mwn8xhgNpFY) — MATLAB, tiếng Anh. **xem trước.** Xem hình dự đoán rồi hiệu chỉnh. Bộ theo dõi nhiễu chỉ cập nhật sàn là cùng ý hai bước với trạng thái nhỏ hơn nhiều.
-- [Kalman Filter - VISUALLY EXPLAINED!](https://www.youtube.com/watch?v=-DiZGpAh7T4) — Kapil Sachdeva, tiếng Anh. Xem bước cập nhật hình: độ bất định co lại khi có đo mới; đó là trực giác của bộ theo dõi tiếng nói đệ quy.
+- [Why Use Kalman Filters? | Understanding Kalman Filters, Part 1](https://www.youtube.com/watch?v=mwn8xhgNpFY) — MATLAB, tiếng Anh. **Xem trước.** Trình bày trực quan chu trình dự đoán rồi hiệu chỉnh — cùng tư duy hai bước với bộ theo dõi nền nhiễu nhưng tổng quát hơn.
+- [Kalman Filter - VISUALLY EXPLAINED!](https://www.youtube.com/watch?v=-DiZGpAh7T4) — Kapil Sachdeva, tiếng Anh. Minh họa cách độ bất định thu hẹp lại sau mỗi bước cập nhật phép đo, tạo trực giác rõ ràng cho các bộ theo dõi tiếng nói đệ quy.

@@ -11,62 +11,62 @@ lesson_type: required
 draft: false
 ---
 
-Sau capstone, chọn một hướng và ba mươi ngày luyện tạo ra file, không phải danh sách đọc bạn sẽ không mở. Ba hướng dưới đây dùng lại bản đồ đánh giá: SI-SDR xâm nhập khi có tham chiếu sạch, DNSMOS hoặc `n/a` trên audio thật, ghi chú nghe, và RTF khi việc là thời gian thực. Chủ đề kề được gọi tên để bạn chọn thí nghiệm cuối tuần. Chúng không phải khóa thứ hai bạn phải học xong.
+Sau khi hoàn thành dự án cuối khóa, bước hiệu quả nhất là chọn duy nhất một hướng chuyên sâu và thực hiện lộ trình thực hành 30 ngày tạo ra sản phẩm cụ thể, thay vì gom một danh sách đọc dài nhưng không bao giờ mở. Cả ba hướng dưới đây đều kế thừa chung bản đồ đánh giá của khóa học: SI-SDR xâm nhập khi có bản gốc sạch, DNSMOS (hoặc `n/a`) trên bản ghi thực tế, ghi chú lắng nghe và RTF khi xử lý thời gian thực. Các chủ đề mở rộng đi kèm chỉ nhằm gợi ý những thí nghiệm gọn nhẹ cuối tuần, không phải một khóa học thứ hai bắt buộc phải hoàn thành.
 
 ![Bản đồ đánh giá để chọn dự án tiếp]({{ site.imgurl }}/generated/eval-metric-map.png)
 
-*Hình. Hướng nào bạn chọn, bản đồ vẫn đúng. Một bộ lọc cổ điển, một lần tái hiện bài báo, và một chính sách LiveKit đều được chấm theo cột chúng thật sự dịch chuyển.*
+*Hình. Dù chọn hướng chuyên sâu nào, bản đồ đánh giá vẫn giữ nguyên giá trị: một bộ lọc DSP cổ điển, một bản tái hiện bài báo mạng nơ-ron hay một chính sách tích hợp LiveKit đều được đánh giá dựa trên đúng cột chỉ số mà chúng tác động.*
 
-## Bạn làm được gì sau bài này
+## Mục tiêu học tập
 
-Bạn chọn được DSP cổ điển, tăng cường tiếng nói bằng mạng, hoặc sản phẩm hóa, viết lịch ba mươi ngày với một file sẽ commit mỗi tuần, và gọi một chủ đề kề với lệnh hoặc phép đo cuối tuần cụ thể. Bạn cũng biến cây `capstone/` thành món portfolio không phụ thuộc repo sản phẩm chung.
+Sau bài học này, bạn sẽ chọn được một trong ba hướng đi (DSP cổ điển, tăng cường giọng nói bằng mạng nơ-ron hoặc sản phẩm hóa), xây dựng kế hoạch 30 ngày với tệp bàn giao cụ thể theo từng tuần, chọn một chủ đề thực nghiệm cuối tuần kèm phép đo rõ ràng, và hoàn thiện cây thư mục `capstone/` thành một dự án hồ sơ năng lực (portfolio) độc lập với kho sản phẩm chung.
 
-## Hướng A — đào sâu cổ điển
+## Hướng A — Đào sâu xử lý tín hiệu số (DSP) cổ điển
 
-Viết lại overlap-add đến khi một sine khôi phục trong dung sai bạn in ra. Đọc SpeexDSP (<https://github.com/xiph/speexdsp>) hoặc WebRTC APM (<https://webrtc.googlesource.com/src/+/refs/heads/main/modules/audio_processing/>) đủ để nói khối khử nhiễu chịu trách nhiệm gì, tách khỏi AEC. Trên file stereo bạn tự ghi, mô tả một lỗi beamforming (người nói lệch bên, mic tham chiếu ồn) mà không nhận một thuật toán mới.
+Tự cài đặt lại phép cộng chồng lấp (overlap-add) cho đến khi tín hiệu sóng sin được khôi phục trong đúng dung sai bạn in ra. Đọc mã nguồn SpeexDSP (<https://github.com/xiph/speexdsp>) hoặc WebRTC APM (<https://webrtc.googlesource.com/src/+/refs/heads/main/modules/audio_processing/>) đủ sâu để phân định rõ vai trò của khối khử nhiễu tách biệt khỏi khối khử vọng (AEC). Trên một bản thu stereo tự ghi, phân tích một tình huống thất bại của kỹ thuật tạo chùm tia (beamforming) — ví dụ người nói lệch trục hoặc micro tham chiếu bị nhiễu — mà không cần tự tuyên bố một thuật toán mới.
 
-Vé ra: ghi chú `path-a/when-classical.md` cho một clip mà cổng phổ đơn giản hoặc gain kiểu Wiener thắng mô hình nặng về RTF và không làm xấu ghi chú nghe. Chỉ đưa SI-SDR nếu bạn còn tham chiếu sạch.
+**Sản phẩm hoàn thành:** Tệp ghi chú `path-a/when-classical.md` phân tích một trường hợp cụ thể nơi cổng phổ đơn giản hoặc bộ lọc khuếch đại kiểu Wiener vượt trội mô hình mạng nặng về RTF mà không làm suy giảm kết quả nghe thử (chỉ ghi SI-SDR nếu có bản gốc sạch).
 
-## Hướng B — tăng cường tiếng nói bằng mạng
+## Hướng B — Tăng cường giọng nói bằng mạng nơ-ron
 
-Mỗi tuần đọc một bài gốc từ bài 10-01, bắt đầu với arXiv:2110.05588, arXiv:2205.05474, và arXiv:2305.08227. Tái hiện một lần đo thời gian ONNX Runtime hoặc tract trên CPU laptop và viết RTF là thời gian tường chia thời lượng audio, kèm tên CPU. Nếu bạn so DeepFilterNet3 với một tên siêu nhẹ (FastEnhancer, μNet, Fast-ULCNet, GTCRN), giữ so sánh trên clip **của bạn** và đừng bịa URL bài báo. Các tên kế tục DPDFNet, DeepFilterGAN, và HDF-Net cùng loại: chỉ là tên cho đến khi trích dẫn thật nằm trước mặt.
+Mỗi tuần đọc trọn vẹn một bài báo gốc trong danh mục bài 10-01, bắt đầu từ `arXiv:2110.05588`, `arXiv:2205.05474` và `arXiv:2305.08227`. Tái hiện một phép đo tốc độ bằng ONNX Runtime hoặc `tract` trên CPU laptop, báo cáo RTF bằng thời gian thực tế chia cho thời lượng âm thanh kèm tên CPU cụ thể. Nếu so sánh DeepFilterNet3 với các mô hình siêu nhẹ đã điểm tên (FastEnhancer, μNet, Fast-ULCNet, GTCRN), hãy thực hiện trên chính tập mẫu **của bạn** và không tự bịa URL bài báo; các tên như DPDFNet, DeepFilterGAN và HDF-Net cũng chỉ nên dùng như mốc tham khảo cho đến khi bạn trực tiếp mở trích dẫn gốc.
 
-Vé ra: `path-b/table.md` với sáu cột của bài 08-04 và một đoạn giới hạn. Không ngôn ngữ bảng xếp hạng.
+**Sản phẩm hoàn thành:** Tệp `path-b/table.md` theo đúng cấu trúc 6 cột của bài 08-04 kèm một đoạn phân tích giới hạn, tránh văn phong quảng bá bảng xếp hạng.
 
-## Hướng C — sản phẩm hóa
+## Hướng C — Sản phẩm hóa và triển khai thực tế
 
-Ở trên đường LiveKit công khai: mic, `DeepFilterNoiseFilterProcessor`, `setProcessor`, publish. Đo thời gian khởi động lạnh của `{cdnUrl}/v2/pkg/df_bg.wasm` và `{cdnUrl}/v2/models/DeepFilterNet3_onnx.tar.gz` (tiền tố mà 1.3.0 tự thêm từ ≥ 1.2.0) trên mạng bạn thật sự có, rồi lặp khi CDN bị chặn. Rust `df-core` tùy chọn vẫn là phương án kéo thay hộp WASM. Nếu backend là passthrough, README portfolio nói vậy.
+Bám sát luồng công khai trên LiveKit: micro → `DeepFilterNoiseFilterProcessor` → `setProcessor` → phát hành track. Đo thời gian khởi động lạnh của `{cdnUrl}/v2/pkg/df_bg.wasm` và `{cdnUrl}/v2/models/DeepFilterNet3_onnx.tar.gz` (với tiền tố `v2/` do bản 1.3.0 tự động thêm) trên điều kiện mạng thực tế của bạn, sau đó kiểm thử lại kịch bản CDN bị chặn. Nhánh mở rộng Rust `df-core` vẫn là tùy chọn thay thế cho hộp WASM; nếu mới dừng ở bước sao chép thẳng, tệp README trên portfolio phải ghi rõ `passthrough`.
 
-Vé ra: `path-c/design.md` với thời gian init, RTF p95 hoặc `n/a`, và log lỗi từ CDN bị chặn.
+**Sản phẩm hoàn thành:** Tệp `path-c/design.md` tổng hợp thời gian khởi tạo, chỉ số RTF p95 (hoặc `n/a`) và nhật ký xử lý lỗi khi CDN bị chặn.
 
-## Cuối tuần kề
+## Các thí nghiệm mở rộng cuối tuần
 
-| Chủ đề | Artifact cuối tuần |
+| Chủ đề | Sản phẩm thực hành cuối tuần |
 |--------|---------------------|
-| AEC | Một bản ghi echo át nhiễu, cộng ghi chú rằng NS sẽ không xóa echo |
-| Nhiều mic | Một file stereo và một đoạn kênh nào bạn tin |
-| Người nói đích | Một clip babble nơi DNSMOS và tai bạn bất đồng |
-| Codec | Cùng một câu qua Opus bitrate thấp, trước và sau NS |
-| Phụ đề | WER hoặc đếm lỗi tay trên mười câu, không nhận MOS |
+| Khử vọng (AEC) | Một bản thu có tiếng vọng lấn át tạp âm, kèm giải thích vì sao khử nhiễu (NS) không thể xóa tiếng vọng |
+| Đa micro (Multi-mic) | Một bản thu stereo kèm đoạn phân tích ngắn giải thích nên tin cậy kênh nào |
+| Tách người nói đích | Một đoạn tạp âm đám đông (babble) nơi điểm DNSMOS và cảm nhận tai nghe trái ngược nhau |
+| Bộ mã hóa (Codec) | So sánh cùng một câu nói qua Opus bitrate thấp trước và sau khi khử nhiễu |
+| Phụ đề tự động (ASR) | Đo WER hoặc đếm lỗi nhận dạng thủ công trên 10 câu (không đánh đồng với MOS) |
 
-## Lịch ba mươi ngày
+## Lộ trình thực hành 30 ngày
 
-| Ngày | File thêm | Xong khi |
+| Giai đoạn | Tệp cần bổ sung | Tiêu chí hoàn thành |
 |------|-----------|----------|
-| 1–3 | `notes/si_sdr.py` chạy lại lab 13.80 / −10.67 | Cả hai float khớp bài 08-01 |
-| 4–7 | `audio/CLIPS.txt` với 20 tên file | File chưa có điểm |
-| 8–14 | MVP hướng (`path-a`, `path-b`, hoặc `path-c`) | README có một lệnh |
-| 15–21 | `metrics/suite.md` và một ghi chú nghe của bạn cùng nhóm | Checker 08-04 in 6 hàng dữ liệu, hoặc bạn ghi ít hơn và vì sao |
-| 22–26 | `DEMO.md` dưới năm phút | Audio dự phòng có tên |
-| 27–30 | Vá tài liệu trong fork **của bạn**, hoặc ADR ở chỗ làm | Không commit vào repo sản phẩm Mezon chung trừ khi đó là việc ngoài khóa |
+| Ngày 1–3 | `notes/si_sdr.py` chạy lại bài lab `13.80` / `−10.67` | Cả hai giá trị khớp chính xác bài 08-01 |
+| Ngày 4–7 | `audio/CLIPS.txt` gồm 20 tên tệp | Danh sách được chốt trước khi có điểm số |
+| Ngày 8–14 | Bản MVP của hướng đã chọn (`path-a`, `path-b` hoặc `path-c`) | Tệp README có lệnh chạy tái lập rõ ràng |
+| Ngày 15–21 | `metrics/suite.md` và ghi chú nghe thử cùng nhóm | Script kiểm tra bài 08-04 báo đủ 6 hàng dữ liệu (hoặc giải thích rõ nếu ít hơn) |
+| Ngày 22–26 | Kịch bản `DEMO.md` dài không quá 5 phút | Đính kèm tên tệp âm thanh dự phòng rõ ràng |
+| Ngày 27–30 | Cập nhật tài liệu trên fork **cá nhân** hoặc viết bản ADR tại nơi làm việc | Không commit vào kho sản phẩm Mezon chung trừ khi là công việc ngoài khóa học |
 
-## Nội dung portfolio
+## Cấu trúc hồ sơ năng lực (Portfolio)
 
-Đưa phác kiến trúc, bảng metric, protocol AB tiếng Anh và tiếng Việt, bản demo không quá ba phút, và thẻ đọc từ 10-01. Gỡ đường tuyệt đối máy cục bộ. Checkout giảng viên tùy chọn không thuộc portfolio công khai.
+Một portfolio kỹ thuật thuyết phục nên bao gồm: bản phác thảo kiến trúc, bảng chỉ số 6 cột, quy trình nghe thử AB song ngữ Anh – Việt, bản ghi demo tối đa 3 phút và các thẻ đọc tài liệu từ bài 10-01. Trước khi công khai, nhớ xóa bỏ toàn bộ đường dẫn tuyệt đối của máy cá nhân.
 
 ## Mini-lab
 
-Tạo `path_plan.md`:
+Tạo tệp `path_plan.md` theo mẫu dưới đây:
 
 ```text
 path: A
@@ -75,7 +75,7 @@ weekend: aec
 command: python3 notes/si_sdr.py
 ```
 
-Dùng `A`, `B`, hoặc `C`. `weekend` phải là một trong `aec`, `multimic`, `target`, `codec`, `captions`.
+Giá trị `path` chọn một trong `A`, `B` hoặc `C`; giá trị `weekend` chọn một trong `aec`, `multimic`, `target`, `codec`, `captions`. Kiểm tra định dạng bằng đoạn mã sau:
 
 ```python
 from pathlib import Path
@@ -87,7 +87,7 @@ print("weekend", "ok" if weekend_ok else "fix")
 print("command", "ok" if "command:" in text else "fix")
 ```
 
-Đầu ra kỳ vọng:
+**Kết quả kỳ vọng**
 
 ```text
 path ok
@@ -95,26 +95,26 @@ weekend ok
 command ok
 ```
 
-Kiểu hỏng: ba hướng trong một tháng; chủ đề cuối tuần không có artifact; mục tiêu RTF không có thiết bị; kế hoạch bắt đầu bằng cách không fork gì mà sửa cây sản phẩm chung.
+**Lỗi thường gặp.** Ôm đồm cả ba hướng trong cùng một tháng; ghi tên chủ đề cuối tuần mà không có sản phẩm bàn giao cụ thể; đặt mục tiêu RTF mà không nêu thiết bị đo; hoặc bắt đầu kế hoạch bằng việc sửa thẳng kho sản phẩm chung thay vì tạo fork riêng.
 
 ## Bài tập
 
-1. Điền `path_plan.md` cho hướng bạn sẽ làm thật. Chạy checker.
-2. Viết tên file từng tuần vào cùng file, dưới header bốn dòng.
-3. Gọi một lỗ tài liệu upstream (trang processor LiveKit, README npm, hoặc README DeepFilterNet) bạn vá được bằng một đoạn, và câu claim của đoạn đó.
-4. Phác mục README portfolio liên kết năm artifact. Nếu có Rust, gồm luật passthrough.
-5. Nêu cột nào trên bản đồ đánh giá hướng của bạn sẽ để `n/a` và vì sao.
+1. Hoàn thiện `path_plan.md` cho hướng đi thực tế bạn chọn rồi chạy script kiểm tra.
+2. Bổ sung danh sách tên tệp dự kiến hoàn thành theo từng tuần ngay bên dưới phần tiêu đề 4 dòng của tệp đó.
+3. Chỉ ra một điểm thiếu rõ ràng trong tài liệu gốc (trang processor LiveKit, README npm hoặc README DeepFilterNet) mà bạn có thể viết bổ sung một đoạn hướng dẫn, kèm khẳng định chính của đoạn đó.
+4. Phác thảo mục README cho portfolio liên kết tới cả 5 nhóm sản phẩm; nếu có nhánh Rust, đảm bảo tuân thủ quy tắc ghi nhãn `passthrough`.
+5. Xác định cột nào trên bản đồ đánh giá sẽ ghi `n/a` trong hướng bạn chọn và giải thích lý do.
 
 ### Gợi ý đáp án
 
-1. Một chữ. Đổi hướng ngày 20 là kế hoạch mới, không phải điểm thưởng.
-2. Tên file phải tạo được trên máy bạn. Đừng trỏ thư mục nhà của giảng viên.
-3. Lỗ thật: tiền tố `v2/`, hoặc khác nhau giữa `setEnabled(false)` và tải asset thất bại.
-4. Liên kết file, không phải repo riêng bạn không chia sẻ được.
-5. Audio thật để SI-SDR là `n/a`. Lab khôi phục DSP thuần có thể để DNSMOS là `n/a`.
+1. Chọn duy nhất một chữ cái (`A`, `B` hoặc `C`); việc đổi hướng giữa chừng ở ngày 20 đồng nghĩa bắt đầu lại kế hoạch mới.
+2. Mọi đường dẫn tệp phải tự tái tạo được trên máy của người đọc, không trỏ tới đường dẫn cục bộ trên máy khác.
+3. Các điểm thực tế thường thiếu rõ ràng: quy tắc tự thêm tiền tố `v2/` hoặc sự khác biệt giữa `setEnabled(false)` và lỗi tải tài nguyên CDN.
+4. Liên kết trực tiếp đến từng tệp công khai, không trỏ vào kho riêng tư mà người đánh giá không mở được.
+5. Bản ghi thực tế luôn ghi `n/a` ở cột SI-SDR; còn bài lab khôi phục tín hiệu DSP thuần có thể ghi `n/a` ở cột DNSMOS.
 
 ## Video tham khảo
 
-- [The Fast Fourier Transform (FFT)](https://www.youtube.com/watch?v=E8HeD-MUrjY) — Steve Brunton, tiếng Anh. **xem trước.** Đường cổ điển bắt đầu ở đây: giá DFT, rồi FFT bạn có thể cài.
-- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, tiếng Anh. Đường neural là kiến trúc này cộng các paper, không phải khảo sát mới các mô hình không tên.
-- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, tiếng Anh. Đường sản phẩm là dữ liệu, bài nghe, và ngân sách độ phức tạp trên một cuộc gọi thật.
+- [The Fast Fourier Transform (FFT)](https://www.youtube.com/watch?v=E8HeD-MUrjY) — Steve Brunton, tiếng Anh. **Xem trước.** Điểm khởi đầu lý tưởng cho Hướng A: hiểu rõ độ phức tạp của DFT và cơ sở cài đặt FFT.
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, tiếng Anh. Trọng tâm cho Hướng B: nắm chắc một kiến trúc và chuỗi bài báo gốc thay vì lướt qua nhiều tên mô hình rời rạc.
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, tiếng Anh. Định hướng cốt lõi cho Hướng C: kết hợp dữ liệu thực, kiểm thử lắng nghe và ngân sách độ phức tạp trên cuộc gọi thật.

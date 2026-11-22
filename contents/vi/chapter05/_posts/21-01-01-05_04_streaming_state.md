@@ -11,61 +11,61 @@ lesson_type: required
 draft: false
 ---
 
-Một enhancer streaming là hàm của hop hiện tại và của state sống sót từ hop trước: đuôi chồng STFT (short-time Fourier transform, biến đổi Fourier thời gian ngắn), véctơ GRU (gated recurrent unit, đơn vị hồi tiếp có cổng), lịch sử deep filter, và các mẫu chưa đọc trong ring. Reset bó đó giữa cuộc gọi thì hop kế không khớp đuôi. Bạn nghe một click hoặc một chùm nhiễu dài một hop.
+Một bộ tăng cường giọng nói chạy theo luồng (streaming) là hàm của cả hop hiện tại lẫn toàn bộ trạng thái (state) được giữ lại từ hop trước đó: đuôi chồng lấp của STFT (short-time Fourier transform, biến đổi Fourier thời gian ngắn), véctơ trạng thái của GRU (gated recurrent unit, đơn vị hồi tiếp có cổng), lịch sử khung của bộ lọc sâu (deep filter) và các mẫu chưa đọc trong ring buffer. Nếu xóa trắng cụm trạng thái này giữa cuộc gọi, hop kế tiếp sẽ không còn khớp với phần đuôi trước đó, khiến người nghe nghe thấy tiếng tách (click) hoặc một chùm nhiễu kéo dài bằng một hop.
 
 ![Ring buffer mà các mẫu chưa đọc là state phải sống qua hop kế]({{ site.imgurl }}/generated/ring-buffer.png)
 
-*Figure. Cung chưa đọc của ring là state: nó phải là cùng một vùng nhớ ở callback kế. Cùng luật áp cho véctơ GRU và cho bốn khung STFT quá khứ mà filter sâu 5 tap vẫn cần. Xóa cái nào ở biên hop cũng là một xung. Người nghe nghe thành click hoặc một chùm nhiễu ngắn.*
+*Hình. Cung chứa các mẫu chưa đọc trong ring buffer là một phần của trạng thái: nó phải nằm trên cùng vùng nhớ đó ở callback kế tiếp. Quy tắc tương tự áp dụng cho véctơ ẩn của GRU và cho 4 khung STFT quá khứ mà bộ lọc sâu 5 tap vẫn cần dùng. Xóa bất kỳ thành phần nào trong số này tại biên hop đều tạo ra một bước nhảy đột ngột, nghe thành tiếng tách hoặc một chùm nhiễu ngắn.*
 
 ## Mục tiêu học tập
 
-Bạn liệt kê state mà một hop kiểu DeepFilterNet đưa ngược lại, tính đuôi chồng ở khung 20 ms / 10 ms đã công bố, và crossfade khi mute thay vì xóa đuôi đó.
+Sau bài học này, bạn sẽ liệt kê được đầy đủ các trạng thái mà một hop kiểu DeepFilterNet phải truyền ngược lại cho bước tiếp theo, tính được độ dài đuôi chồng lấp ở cấu hình cửa sổ 20 ms / hop 10 ms đã công bố, và áp dụng kỹ thuật chuyển mờ chéo (crossfade) khi tắt/bật tiếng (mute) thay vì xóa trắng phần đuôi đó.
 
 ## Kế hoạch 60 phút
 
-- **0–10 phút** — Một click lúc bật, truy ra đuôi chồng bị xóa.
-- **10–25 phút** — Kiểm kê: ring, STFT, GRU, 5 tap, cổng SNR.
-- **25–40 phút** — Mute, đổi thiết bị, underrun: ba lần reset khác nhau.
-- **40–50 phút** — Cuộc gọi dài và trôi, không bịa paper.
-- **50–60 phút** — Mini-lab, bài tập.
+- **0–10 phút** — Phân tích một tiếng tách lúc bật khử nhiễu và truy vết về lỗi xóa đuôi chồng lấp.
+- **10–25 phút** — Kiểm kê trạng thái: ring buffer, đuôi STFT, GRU, lịch sử 5 tap và cổng SNR.
+- **25–40 phút** — Tắt tiếng (mute), đổi thiết bị và underrun: ba tình huống reset khác nhau.
+- **40–50 phút** — Cuộc gọi kéo dài và hiện tượng trôi trạng thái (drift).
+- **50–60 phút** — Thực hành mini-lab và làm bài tập.
 
 ## Giải thích cốt lõi
 
-### Cái gì phải là cùng một đối tượng ở hop kế
+### Những thành phần trạng thái phải được duy trì sang hop kế tiếp
 
-| State | Cỡ ở 48 kHz | Nếu xóa giữa cuộc gọi |
+| Trạng thái | Kích thước ở 48 kHz | Hệ quả nếu xóa giữa cuộc gọi |
 |-------|-------------|------------------------|
-| Ring đầu vào | 0–479 mẫu đang chờ hop 480 mẫu | Một lỗ, hoặc một quantum lặp |
-| Đuôi OLA | **480 mẫu = 10 ms** | Một bước 10 ms. Đó là click |
-| GRU | 256 trong setup DeepFilterNet2 | Gain nhảy từ state khởi tạo: thường là một chùm nhiễu |
-| Lịch sử deep filter | 4 khung quá khứ, 96 bin thấp trong demo 2023 | Hài rơi tối đa 4 hop (40 ms) |
-| Bộ chuẩn hóa mức | Trung bình mũ, suy giảm 1 s (đặc trưng ICASSP) | Nhảy mức khoảng một giây |
-| Cổng SNR | $$\xi$$ đang chạy (04-03) | Im lặng nếu bạn ép $$\xi<-10$$ dB |
-| Gain đã làm trơn | Một giá trị mỗi băng ($$\lambda=0{,}6$$ trong RNNoise) | Một spike gain dài một khung |
+| Ring buffer đầu vào | 0–479 mẫu đang chờ đủ hop 480 mẫu | Tạo khoảng trống âm thanh hoặc lặp lại một quantum |
+| Đuôi cộng chồng (OLA) | **480 mẫu = 10 ms** | Tạo bước nhảy biên độ kéo dài 10 ms, nghe thành tiếng tách |
+| Trạng thái ẩn GRU | 256 phần tử trong cấu hình DeepFilterNet2 | Hệ số khuếch đại nhảy đột ngột về trạng thái khởi tạo, thường gây chùm nhiễu |
+| Lịch sử bộ lọc sâu | 4 khung quá khứ trên 96 bin tần số thấp (demo 2023) | Các thành phần hài bị sụt giảm trong tối đa 4 hop (40 ms) |
+| Bộ chuẩn hóa mức tín hiệu | Trung bình trượt mũ, hằng số suy giảm 1 s (đặc trưng ICASSP) | Mức âm lượng bị nhảy bậc trong khoảng một giây |
+| Cổng SNR | Giá trị $$\xi$$ đang cập nhật liên tục (bài 04-03) | Gây im lặng đột ngột nếu ép $$\xi<-10$$ dB |
+| Hệ số khuếch đại làm trơn | Một giá trị cho mỗi băng tần ($$\lambda=0{,}6$$ trong RNNoise) | Tạo gai khuếch đại kéo dài một khung |
 
-ONNX Runtime chỉ giữ bó này nếu đồ thị phơi nó ra và bạn chép đầu ra về đầu vào lần kế. Một lời gọi không state vẫn trả một tensor; đó là enhancer sai. Session mới mỗi hop cũng phá RTF (real-time factor, hệ số thời gian thực; bài 05-01). Một véctơ state, một cuộc gọi. Hai tab dùng chung sẽ ăn cập nhật của nhau và cả hai đều click.
+ONNX Runtime chỉ duy trì cụm trạng thái này nếu đồ thị mô hình khai báo rõ các tensor trạng thái ở đầu vào/đầu ra và bạn sao chép đầu ra của hop này đưa ngược lại làm đầu vào cho hop kế tiếp. Một lời gọi không trạng thái (stateless) vẫn trả về tensor hợp lệ về mặt cú pháp, nhưng đó không phải là bộ khử nhiễu streaming đúng nghĩa. Việc khởi tạo lại session ở mỗi hop cũng phá vỡ hoàn toàn ngân sách RTF (real-time factor, hệ số thời gian thực; xem bài 05-01). Nguyên tắc bất di bất dịch là mỗi cuộc gọi sở hữu một véctơ trạng thái riêng: nếu hai tab dùng chung một vùng trạng thái, chúng sẽ ghi đè cập nhật của nhau và cả hai đều phát ra tiếng tách.
 
-### Reset nghe như thế nào
+### Hiện tượng nghe được khi reset trạng thái
 
-Cửa sổ 960 điểm và hop 480 điểm cất **480 mẫu (10 ms)** mà khung kế phải cộng vào. Nếu hop $$n$$ kết thúc gần biên độ 0,3 và bạn xóa đuôi đó, đầu ra bước khoảng 0,3. Bước đó là một click: bạn đã bỏ phần chồng mà cửa sổ cần.
+Với cửa sổ 960 mẫu và hop 480 mẫu, mỗi khung sau khi biến đổi ngược sẽ giữ lại **480 mẫu (10 ms)** đuôi để cộng chồng vào khung kế tiếp. Nếu hop $$n$$ kết thúc ở biên độ khoảng 0,3 mà bạn xóa trắng phần đuôi này, tín hiệu đầu ra sẽ nhảy bậc một lượng xấp xỉ 0,3. Bước nhảy gián đoạn đó chính là tiếng tách, vì phần chồng lấp cần thiết để tái tạo liên tục cửa sổ đã bị loại bỏ.
 
-Reset GRU thường là một chùm. Từ số không, các ước lượng SNR và gain đầu tiên là thứ activation khởi tạo phát ra, thường là “không có tiếng” hoặc “gain đầy”, trong một hoặc hai hop 10 ms. Gain đầy trên bin nhiễu là một chùm nhiễu; cổng ép $$\xi<-10$$ dB (04-03) là một lỗ. Cả hai thẳng hàng với nút người dùng vừa bấm.
+Trong khi đó, xóa trạng thái GRU thường gây ra một chùm nhiễu ngắn. Khi bị ép về 0, các ước lượng SNR và hệ số khuếch đại ở một hoặc hai hop 10 ms đầu tiên sẽ phản ánh giá trị kích hoạt khởi tạo — thường là “không có giọng nói” hoặc “giữ nguyên biên độ (gain đầy)”. Giữ gain đầy trên các bin chứa nhiễu sẽ tạo thành một chùm nhiễu, còn cổng SNR ép $$\xi<-10$$ dB (bài 04-03) sẽ tạo thành một khoảng lặng hụt hơi. Cả hai hiện tượng đều xảy ra ngay thời điểm người dùng vừa bấm nút.
 
-Xóa cứng là mute sai. Crossfade từ ướt sang khô trong một hop (480 mẫu, khoảng 3,75 quantum 128 mẫu). Fade các mẫu trong ring, không fade đơn vị ẩn, nếu GRU đã ấm trong lúc bypass.
+Do đó, xóa cứng bộ đệm là cách xử lý mute sai. Cách đúng là thực hiện chuyển mờ chéo (crossfade) từ tín hiệu đã xử lý (wet) sang tín hiệu gốc (dry) trong khoảng một hop (480 mẫu, tương ứng khoảng 3,75 quantum 128 mẫu). Nếu GRU vẫn được giữ ấm trong lúc bypass, chỉ cần áp dụng fade trên các mẫu trong ring buffer chứ không can thiệp vào trạng thái ẩn của mạng.
 
-### Chính sách
+### Chính sách xử lý theo từng sự kiện
 
-1. **Cold start.** Số không là đúng trước hop nghe được đầu tiên. Chạy vài hop im trước cuộc gọi để bộ chuẩn hóa 1 s rời đúng số không.
-2. **Bật.** Đừng xóa đuôi đang giữ audio khô. Crossfade khô sang ướt trong 10–20 ms. Giữ GRU đã ấm trong lúc bypass.
-3. **Tắt.** Crossfade ướt sang khô và đóng băng GRU. Xóa nó khiến lần bật sau thành một chùm.
-4. **Thiết bị hoặc sample rate mới.** Reset đầy đủ và độ dài hop mới. Quantum 44,1 kHz vào STFT 48 kHz sẽ không fade thành đúng.
-5. **Underrun.** Bypass (05-03) đến khi ring đầu ra giữ một hop, rồi fade. Xóa đuôi mà không fade thì click đúng lúc bạn đang giấu một click.
+1. **Khởi động lạnh (cold start).** Khởi tạo toàn bộ trạng thái bằng 0 trước hop âm thanh nghe được đầu tiên, đồng thời chạy trước vài hop im lặng trước khi cuộc gọi bắt đầu để bộ chuẩn hóa 1 giây ổn định dần khỏi điểm 0 tuyệt đối.
+2. **Bật bộ khử nhiễu.** Không xóa đuôi chồng lấp đang chứa tín hiệu gốc; thực hiện crossfade từ tín hiệu gốc sang tín hiệu đã xử lý trong 10–20 ms, đồng thời giữ GRU ở trạng thái ấm trong suốt thời gian bypass.
+3. **Tắt bộ khử nhiễu.** Thực hiện crossfade từ tín hiệu đã xử lý sang tín hiệu gốc và đóng băng trạng thái GRU; nếu xóa trắng GRU, lần bật lại kế tiếp sẽ phát sinh một chùm nhiễu.
+4. **Đổi thiết bị hoặc tần số lấy mẫu.** Thực hiện reset toàn bộ trạng thái và cập nhật lại độ dài hop. Một chuỗi quantum 44,1 kHz đưa vào bộ STFT thiết kế cho 48 kHz sẽ không thể khắc phục bằng crossfade.
+5. **Underrun.** Chuyển sang bypass (bài 05-03) cho tới khi ring buffer đầu ra tích lũy đủ một hop rồi mới fade quay lại. Xóa đuôi chồng lấp mà không fade sẽ tạo ra thêm một tiếng tách ngay tại thời điểm bạn đang cố che giấu một tiếng tách khác.
 
-### Cuộc gọi dài
+### Cuộc gọi kéo dài
 
-Cuộc gọi 45 phút ở hop 10 ms là $$45\times 60\times 100=270\,000$$ lần cập nhật GRU. Trôi là một bước đi chậm của véctơ đó (âm đục hoặc bơm), khác một click dài một hop. Bài 04-05 chỉ nêu Fast-ULCNet như mục shortlist cho thảo luận stream dài; không paper nào được trích ở đây. Hãy hòa state về không trong vài trăm mili giây im lặng. Hòa tức thì là một reset. So một clip hiệu chuẩn ở phút 1 và phút 40.
+Một cuộc gọi dài 45 phút với hop 10 ms trải qua $$45\times 60\times 100=270\,000$$ bước cập nhật GRU liên tiếp. Hiện tượng trôi trạng thái (drift) là sự dịch chuyển chậm của véctơ ẩn theo thời gian — khiến âm thanh bị đục dần hoặc có cảm giác bơm tiếng — khác hẳn với tiếng tách đột ngột dài một hop. Lưu ý rằng bài 04-05 chỉ liệt kê Fast-ULCNet trong danh sách tham khảo cho chủ đề luồng dài, chứ không trích dẫn bài báo nào tại đây. Một biện pháp thực tế là kéo dần trạng thái về 0 trong vài trăm mili giây khi phát hiện khoảng lặng (kéo tức thì sẽ tương đương một lần reset), đồng thời so sánh bản ghi của cùng một đoạn âm thanh hiệu chuẩn ở phút thứ 1 và phút thứ 40 để kiểm tra độ ổn định.
 
-### Vòng phản hồi
+### Vòng lặp phản hồi trạng thái
 
 ```text
 state = initial   # zeros only before audio starts
@@ -74,18 +74,18 @@ for hop in stream:
     emit y
 ```
 
-Kiểm shape một lần: GRU vào và ra (256 trong setup DF2), bốn khung phức quá khứ dưới ngưỡng deep filter, một đuôi 480 số thực. Binding lệch sẽ đọc tensor kế tiếp và nghe như mô hình hỏng.
+Cần kiểm tra kích thước (shape) của từng tensor ngay lúc khởi tạo: đầu vào/đầu ra GRU (256 trong cấu hình DF2), 4 khung phức quá khứ dưới ngưỡng tần số của bộ lọc sâu, và đuôi chồng lấp 480 số thực. Nếu gán lệch thứ tự binding, mô hình sẽ đọc nhầm sang tensor kế tiếp và phát ra âm thanh méo như thể trọng số bị hỏng.
 
 ## Bẫy thường gặp
 
-- Session suy luận mới mỗi hop (mất state, mất RTF).
-- Một đối tượng state dùng chung hai tab.
-- Seek file offline mà không reset, nên file hai thừa kế GRU của file một.
-- Cho rằng worklet nạp lại vẫn giữ state WASM. Module mới là cold start.
+- Tạo session suy luận mới ở mỗi hop, vừa làm mất toàn bộ trạng thái vừa phá hỏng RTF.
+- Dùng chung một đối tượng trạng thái cho hai tab trình duyệt khác nhau.
+- Tua (seek) trong tệp âm thanh offline mà không reset trạng thái, khiến tệp thứ hai thừa kế trạng thái GRU từ tệp thứ nhất.
+- Mặc định rằng khi tải lại AudioWorklet thì trạng thái bên trong WASM vẫn còn; thực tế mỗi module nạp mới đều là một lần khởi động lạnh.
 
 ## Mini-lab
 
-**Mục tiêu.** Nghe reset bằng một con số. Dựng đuôi chồng hai hop dài 4 mẫu (đồ chơi thay đuôi 480 mẫu), phát tổng, rồi xóa đuôi và phát lại.
+**Mục tiêu.** Định lượng tác động của việc xóa trạng thái bằng một con số cụ thể. Xây dựng phép cộng chồng lấp (overlap-add) cho hai hop với đuôi chồng lấp dài 4 mẫu (mô hình thu gọn thay cho 480 mẫu), xuất kết quả bình thường, sau đó xóa trắng phần đuôi về 0 và so sánh sự chênh lệch.
 
 ```bash
 python3 - << 'PY'
@@ -107,33 +107,33 @@ print("step", float(mixed[0] - mixed_reset[0]))
 PY
 ```
 
-**Expected**. `continuous [0.8, 0.8] tail [0.1, 0.1]`, `after_zero_tail [0.4, 0.4]`, `step 0.4`. Đường liên tục cộng đuôi trước (0,4, 0,4) vào phần chồng của khung kế. Xóa đuôi làm rơi phần đóng góp đó và đầu ra bước 0,4 trên các mẫu ấy. Phóng 0,4 lên hop thật 480 mẫu thì bước đó là một click. Reset GRU là cùng thí nghiệm với một véctơ khó vẽ hơn: hop đầu sau số không là một quá độ chưa được train, nghe thành click hoặc chùm nhiễu.
+**Kết quả kỳ vọng.** `continuous [0.8, 0.8] tail [0.1, 0.1]`, `after_zero_tail [0.4, 0.4]`, và `step 0.4`. Ở đường xử lý liên tục, đuôi của khung trước (`[0.4, 0.4]`) được cộng vào phần chồng lấp của khung kế tiếp. Khi xóa đuôi về 0, phần đóng góp đó biến mất và đầu ra bị hụt một bậc bằng 0,4. Khi phóng đại lên hop thực tế 480 mẫu, bước nhảy gián đoạn đó sẽ nghe rõ thành một tiếng tách. Reset trạng thái GRU cũng có bản chất tương tự với một véctơ phức tạp hơn: hop đầu tiên sau khi xóa về 0 rơi vào trạng thái quá độ chưa từng gặp lúc huấn luyện, phát ra tiếng tách hoặc một chùm nhiễu.
 
-**Failure modes**. Xóa `tail` “cho an toàn” mỗi hop rồi ship một click mỗi hop. Reset khi mute mà không crossfade. Dùng chung `tail` cho hai stream nên mỗi hop cộng chồng của stream kia. Coi bước 0,4 là vấn đề RTF — CPU đúng giờ; state thì sai.
+**Lỗi thường gặp.** Xóa `tail` “cho chắc ăn” ở mỗi hop rồi tạo ra tiếng tách đều đặn sau từng hop; reset trạng thái khi mute mà không crossfade; dùng chung một biến `tail` cho hai luồng âm thanh khiến chúng cộng chồng lấp sang nhau; hoặc chẩn đoán nhầm bước nhảy 0,4 là lỗi RTF trong khi CPU vẫn xử lý đúng hạn còn nguyên nhân nằm ở quản lý trạng thái.
 
 ## Bài tập
 
-1. **Kiểm kê.** Với một hop kiểu DF3, liệt kê năm đối tượng state và chủ sở hữu (trường worklet, đầu vào ONNX, ring).
-2. **Độ dài click.** Cửa sổ 960, hop 480, sample rate 48 kHz. Một reset cứng đã xóa bao nhiêu mili giây đuôi?
-3. **Chính sách.** Viết hành động mute, unmute và đổi mic, mỗi cái một câu. Cái nào được phép xóa GRU?
-4. **Trôi và reset.** Một người báo click đúng lúc bật NS, người khác báo âm đục sau 40 phút. Lỗi nào là reset state, lỗi nào là trôi?
+1. **Kiểm kê trạng thái.** Với một hop kiểu DF3, hãy liệt kê 5 thành phần trạng thái quan trọng cùng đối tượng nắm giữ chúng (thuộc tính worklet, đầu vào ONNX hay ring buffer).
+2. **Độ dài vùng bị ảnh hưởng.** Với cửa sổ 960 mẫu, hop 480 mẫu ở tần số 48 kHz, một lần reset cứng sẽ xóa mất bao nhiêu mili giây của phần đuôi chồng lấp?
+3. **Chính sách vận hành.** Hãy viết ngắn gọn (mỗi tình huống một câu) cách xử lý khi mute, unmute và đổi micro. Trường hợp nào trong ba trường hợp này được phép xóa trạng thái GRU?
+4. **Phân biệt trôi trạng thái và reset.** Một người dùng phản ánh nghe tiếng tách đúng lúc bật khử nhiễu, trong khi người khác báo âm thanh bị đục dần sau 40 phút gọi. Lỗi nào do reset trạng thái, lỗi nào do trôi trạng thái?
 
 ### Gợi ý đáp án
 
-1. Occupancy ring đầu vào, đuôi OLA 480 số thực, GRU (256 trong setup DF2; xác nhận trên I/O ONNX), bốn khung lịch sử deep filter, và trung bình chạy của đặc trưng ERB. Worklet sở hữu các ring; I/O đồ thị sở hữu GRU nếu nó là một đầu vào.
-2. $$480/48000=10$$ ms audio. Đó là độ dài của click, không phải RTF.
-3. Mute và unmute: crossfade 10–20 ms và đóng băng GRU. Đổi mic hoặc sample rate: xóa khi chưa phát, warm-up trên im lặng, rồi mở mic. Chỉ trường hợp thứ ba được xóa GRU.
-4. Click lúc bật là một reset. Âm đục sau 40 phút là trôi ($$240\,000$$ hop) hoặc RTF nhiệt. Xóa giữa câu không chữa trôi.
+1. Năm thành phần gồm: các mẫu đang nằm trong ring buffer đầu vào, đuôi OLA 480 số thực, trạng thái ẩn GRU (256 phần tử trong cấu hình DF2; cần xác nhận lại trên I/O của file ONNX thực tế), 4 khung lịch sử của bộ lọc sâu, và trung bình trượt của đặc trưng ERB. Worklet quản lý các ring buffer; giao diện I/O của đồ thị quản lý trạng thái GRU nếu nó được tách thành tensor đầu vào.
+2. $$480/48000=10$$ ms âm thanh. Đây là thời lượng của đoạn gián đoạn gây tiếng tách, không liên quan đến RTF.
+3. Khi mute và unmute: áp dụng crossfade trong 10–20 ms và giữ/đóng băng trạng thái GRU. Khi đổi micro hoặc tần số lấy mẫu: reset sạch trạng thái khi chưa phát âm thanh, làm nóng mô hình trên vài hop im lặng rồi mới mở luồng. Chỉ trường hợp thứ ba mới được phép xóa GRU.
+4. Tiếng tách xuất hiện đúng lúc bật tính năng là lỗi reset trạng thái. Âm thanh bị đục dần sau 40 phút (tương đương $$240\,000$$ hop) là hiện tượng trôi trạng thái hoặc suy giảm RTF do quá nhiệt; việc xóa trạng thái giữa câu nói không giải quyết được lỗi trôi.
 
 ## Đọc thêm
 
-- Bài 04-02 và 04-03 cho lịch sử 5 tap, GRU rộng 256 trong DeepFilterNet2, và cổng SNR trong [arXiv:2305.08227](https://arxiv.org/abs/2305.08227).
-- Bài 05-03 cho ring giữ đuôi giữa các quantum 128 mẫu.
-- Tài liệu I/O binding của ONNX Runtime, để đưa tensor state trở lại mà không dựng lại session.
-- MDN, [AudioWorklet](https://developer.mozilla.org/en-US/docs/Web/API/AudioWorklet), cho đời processor: worklet mới là state mới, và hop đầu là cold start.
+- Bài 04-02 và 04-03 về lịch sử 5 tap, GRU độ rộng 256 trong DeepFilterNet2 và cổng SNR trong [arXiv:2305.08227](https://arxiv.org/abs/2305.08227).
+- Bài 05-03 về ring buffer giữ phần đuôi giữa các quantum 128 mẫu.
+- Tài liệu I/O binding của ONNX Runtime về cách truyền ngược tensor trạng thái mà không cần khởi tạo lại session.
+- MDN, [AudioWorklet](https://developer.mozilla.org/en-US/docs/Web/API/AudioWorklet), về vòng đời processor: nạp mới worklet đồng nghĩa tạo trạng thái mới và hop đầu tiên là khởi động lạnh.
 
 ## Video tham khảo
 
-- [Gated Recurrent Unit | GRU | Explained in detail](https://www.youtube.com/watch?v=IBs8D8PWMc8) — Learn With Jay, tiếng Anh. **xem trước.** Xem cổng cập nhật giữ trạng thái qua các bước. Vector GRU của bộ khử streaming là trạng thái giữa các hop.
-- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, tiếng Anh. GRU encoder là trạng thái hồi tiếp mà bài nói không được xóa giữa cuộc gọi.
-- [RNNoise, Neural Speech Enhancement, and the Browser](https://www.youtube.com/watch?v=nsscrYdrGRE) — W3C, tiếng Anh. GRU nhỏ phát gain mỗi frame là cùng ý trạng thái streaming ở thang giảng.
+- [Gated Recurrent Unit | GRU | Explained in detail](https://www.youtube.com/watch?v=IBs8D8PWMc8) — Learn With Jay, tiếng Anh. **Xem trước.** Video giải thích cách cổng cập nhật duy trì trạng thái qua từng bước thời gian — đúng với vai trò véctơ GRU giữa các hop trong bộ khử nhiễu streaming.
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, tiếng Anh. Bộ mã hóa GRU chính là trạng thái hồi tiếp không được phép xóa giữa cuộc gọi.
+- [RNNoise, Neural Speech Enhancement, and the Browser](https://www.youtube.com/watch?v=nsscrYdrGRE) — W3C, tiếng Anh. Mô hình GRU gọn nhẹ xuất hệ số khuếch đại theo từng khung là ví dụ trực quan ở quy mô giảng dạy cho khái niệm trạng thái streaming.
