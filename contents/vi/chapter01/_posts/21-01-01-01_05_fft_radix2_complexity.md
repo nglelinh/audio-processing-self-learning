@@ -48,6 +48,14 @@ $$
 
 Chi phí thỏa \(T(N)=2T(N/2)+\Theta(N)\). Khai triển ra \(\log_2 N\) thế hệ, mỗi thế hệ cộng lại \(\Theta(N)\), nên \(T(N)=\Theta(N\log N)\). Với \(N=1024\), \(\log_2 N=10\) và tỷ số hạng đầu \(N^2/(N\log_2 N)=102.4\). Đó là khoảng trăm lần ít phép nhân-cộng hơn, trước khi kể real-FFT bỏ nửa phổ thừa. Không phải tuyên bố thời gian tường giảm đúng 102 lần; hằng số, SIMD và overhead Python đổi tỷ số đo — mini-lab để thấy bậc đó. Twiddle là phép quay butterfly. Plan FFT tạo **một lần**; **không allocate** trên audio thread; ưu tiên SIMD (Ch. 06).
 
+### Video ngắn: vì sao FFT tính nhanh
+
+Reel ngắn của MathDiagram, đặt câu hỏi vì sao FFT tính biến đổi Fourier nhanh đến vậy. Xem sau phần tách chẵn/lẻ ở trên.
+
+<div class="video-embed" style="text-align:center;margin:1em 0;"><iframe src="https://www.facebook.com/plugins/video.php?href=https%3A%2F%2Fwww.facebook.com%2Freel%2F4039621483008687&show_text=false&width=315&height=560" width="315" height="560" style="border:none;overflow:hidden;max-width:100%;" scrolling="no" frameborder="0" allowfullscreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"></iframe></div>
+
+Nếu video không tải được, [xem trên Facebook](https://www.facebook.com/reel/4039621483008687).
+
 Speech PCM thực → real-FFT gần nửa công phức vì phổ Hermitian. Cửa sổ 960 mẫu (20 ms ở 48 kHz full-band của `deepfilternet3-noise-filter`) có \(960=2^6\cdot 3\cdot 5\), nên mixed-radix chạy thẳng, không bắt buộc lũy thừa hai. Pad 1024 vẫn được nhưng đổi tâm bin — **khớp training**. Chạy plan dài 256 chỉ vì “FFT nghĩa là lũy thừa hai” trên khung 48 kHz là đổi \(N\), không phải làm nhanh cùng một DFT.
 
 NS cổ điển nhỏ: FFT có thể chiếm đa số. DeepFilterNet-class: matmul thường chiếm đa số, nhưng FFT vẫn đáng kể ở rate cao / hop nhỏ / build không SIMD.

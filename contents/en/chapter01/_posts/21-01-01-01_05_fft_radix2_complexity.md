@@ -63,6 +63,14 @@ Unroll it: \(T(N)=\Theta(N)+2\Theta(N/2)+4\Theta(N/4)+\cdots\), and there are \(
 
 The twiddle \(e^{-j2\pi k/N}\) is the “butterfly” rotation. In-place implementations overwrite buffers; **bit-reversed** order appears in some stages — libraries hide this, but debugging raw implementations needs awareness.
 
+### Short video: why FFT is fast
+
+A short reel from MathDiagram that asks how the FFT computes the Fourier transform so efficiently. Watch it after the even/odd split above.
+
+<div class="video-embed" style="text-align:center;margin:1em 0;"><iframe src="https://www.facebook.com/plugins/video.php?href=https%3A%2F%2Fwww.facebook.com%2Freel%2F4039621483008687&show_text=false&width=315&height=560" width="315" height="560" style="border:none;overflow:hidden;max-width:100%;" scrolling="no" frameborder="0" allowfullscreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"></iframe></div>
+
+If the video does not load, [open it on Facebook](https://www.facebook.com/reel/4039621483008687).
+
 ### Complexity comparison (order of magnitude)
 
 | \(N\) | \(N^2\) | \(N\log_2 N\) |
