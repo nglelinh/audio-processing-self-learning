@@ -11,90 +11,90 @@ lesson_type: required
 draft: false
 ---
 
-Khi có **hai micro trở lên**, hình học cho đòn bẩy mà NS một kênh không có: chọn lọc không gian. Beamforming, generalized sidelobe cancellation (GSC) và independent vector analysis (IVA) là front-end đa kênh cổ điển có thể nuôi enhancer neural mono. Bài này dạy trực giác kỹ sư—delay-and-sum, cartoon MVDR, GSC blocking matrix, IVA như tách mù—và hybrid như GSC+DeepFilterNet2 hay IVA+GTCRN trong công việc SNR thấp / drone / dual-mic (chỉ con trỏ khảo sát).
+Khi thiết bị có **từ hai micro trở lên**, hình học mảng thu mang lại một lợi thế mà khử nhiễu đơn kênh không có: khả năng chọn lọc theo hướng không gian. Beamforming, bộ triệt búp phụ tổng quát (Generalized Sidelobe Canceller, GSC) và phân tích vector độc lập (Independent Vector Analysis, IVA) là các tầng tiền xử lý đa kênh cổ điển có thể cung cấp đầu vào sạch hơn cho bộ khử nhiễu mạng nơ-ron đơn kênh. Bài học này trình bày trực giác kỹ thuật về delay-and-sum, MVDR giản lược, ma trận chặn của GSC, IVA theo hướng tách nguồn mù, cùng các mô hình lai như GSC+DeepFilterNet2 hay IVA+GTCRN trong bối cảnh SNR thấp, drone hoặc thiết bị hai micro (ở mức định hướng khảo sát).
 
 ## Mục tiêu học tập
 
-Bạn giải thích mục tiêu delay-and-sum và MVDR bằng lời thường, phác thảo GSC (beamformer cố định + blocking matrix + canceller thích nghi), tóm tắt IVA như bộ tách đa kênh mù, và quyết định khi nào front-end không gian + DeepFilterNet mono thắng NS chỉ mono.
+Sau bài học này, bạn sẽ giải thích được mục tiêu của delay-and-sum và MVDR bằng ngôn ngữ trực quan, phác thảo cấu trúc GSC (beamformer cố định + ma trận chặn + bộ hủy nhiễu thích nghi), tóm tắt vai trò tách nguồn mù đa kênh của IVA, và xác định khi nào kết hợp tầng tiền xử lý không gian với DeepFilterNet đơn kênh hiệu quả hơn chạy NS đơn kênh thuần túy.
 
 ## Kế hoạch 60 phút
 
-- **0–10 phút** — Narrative laptop 2 mic: mục tiêu vs nhiễu hướng khác.
-- **10–25 phút** — Steering vector, delay-and-sum, mục tiêu MVDR.
-- **25–40 phút** — Cấu trúc GSC; nhánh thích nghi hủy gì.
-- **40–50 phút** — Con trỏ IVA / BSS; hybrid front-end + neural refine.
-- **50–60 phút** — Bẫy, bài tập, thực tế sản phẩm (Mezon thường vẫn mono).
+- **0–10 phút** — Tình huống mở đầu với laptop 2 micro: tách người nói mục tiêu khỏi nguồn nhiễu ở hướng khác.
+- **10–25 phút** — Vector lái hướng (steering vector), delay-and-sum và bài toán tối ưu MVDR.
+- **25–40 phút** — Cấu trúc GSC và vai trò triệt nhiễu của nhánh thích nghi.
+- **40–50 phút** — Định hướng IVA / tách nguồn mù (BSS) và kiến trúc lai tiền xử lý không gian + tinh chỉnh mạng nơ-ron.
+- **50–60 phút** — Các bẫy thường gặp, bài tập và thực tế sản phẩm (Mezon chủ yếu vẫn xử lý mono).
 
 ## Giải thích cốt lõi
 
-### Mô hình không gian (phác far-field)
+### Mô hình không gian (xấp xỉ trường xa)
 
-Micro $$m=1\ldots M$$, sóng phẳng hướng $$\theta$$ tần số $$f$$ có **steering vector** $$\mathbf{a}(\theta,f)$$. Phổ xếp chồng:
+Với mảng gồm $$m=1\ldots M$$ micro, một sóng phẳng đến từ hướng $$\theta$$ tại tần số $$f$$ được đặc trưng bởi **vector lái hướng (steering vector)** $$\mathbf{a}(\theta,f)$$. Vector phổ xếp chồng từ các micro có dạng:
 
 $$
 \mathbf{y}(f,\ell)=\mathbf{a}(\theta,f)\,S(f,\ell)+\mathbf{v}(f,\ell).
 $$
 
-Beamformer: $$Z=\mathbf{w}^H\mathbf{y}$$.
+Đầu ra của beamformer tuyến tính là tổ hợp phức $$Z=\mathbf{w}^H\mathbf{y}$$.
 
 ### Delay-and-sum
 
-Chọn trễ (pha) để mục tiêu cộng đồng pha rồi trung bình. Có lợi với nhiễu **không kết hợp**; nhiễu giao thoa **kết hợp** từ hướng khác chỉ bị suy giảm một phần. Baseline giảng dạy tốt.
+Phương pháp này bù độ trễ (dịch pha) giữa các micro sao cho tín hiệu từ hướng mục tiêu cộng đồng pha rồi lấy trung bình. Kỹ thuật này cải thiện tốt với nhiễu **không tương quan (incoherent)**, còn nhiễu giao thoa **tương quan (coherent)** đến từ hướng khác chỉ giảm một phần. Đây là mốc đối chiếu nền tảng rất hữu ích khi giảng dạy và kiểm thử.
 
-### Cartoon MVDR
+### Mô hình giản lược MVDR
 
 $$
 \min_{\mathbf{w}}\mathbf{w}^H\mathbf{R}_{yy}\mathbf{w}\quad\text{s.t.}\quad\mathbf{w}^H\mathbf{a}=1.
 $$
 
-Nghiệm $$\mathbf{w}\propto\mathbf{R}_{yy}^{-1}\mathbf{a}$$ (đã chuẩn hóa) tạo null về phía nhiễu giao thoa. Ước lượng $$\mathbf{R}$$ bền vững là phần khó—lệch steering gây **tự triệt tiêu mục tiêu**.
+Nghiệm chuẩn hóa $$\mathbf{w}\propto\mathbf{R}_{yy}^{-1}\mathbf{a}$$ giữ nguyên độ lợi ở hướng mục tiêu đồng thời hướng vùng triệt tiêu (null) về phía nguồn nhiễu giao thoa. Thách thức lớn nhất trong thực tế là ước lượng ổn định ma trận hiệp phương sai $$\mathbf{R}$$: chỉ cần lệch hướng lái (steering mismatch) sẽ dẫn tới **tự triệt tiêu chính tín hiệu mục tiêu**.
 
-### GSC
+### Cấu trúc GSC
 
-1. **Fixed beamformer (FBF)** — nhìn mục tiêu.
-2. **Blocking matrix (BM)** — chiếu bỏ mục tiêu → tham chiếu “không mục tiêu”.
-3. **Adaptive noise canceler** — NLMS/RLS trừ nhiễu ước từ BM khỏi đầu ra FBF.
+1. **Fixed beamformer (FBF)** — hướng búp chính về phía người nói mục tiêu.
+2. **Blocking matrix (BM)** — chiếu vuông góc để loại bỏ tín hiệu mục tiêu, tạo ra tín hiệu tham chiếu "chỉ gồm nhiễu".
+3. **Adaptive noise canceler** — dùng bộ lọc thích nghi NLMS/RLS để trừ phần nhiễu ước lượng từ nhánh BM khỏi đầu ra của FBF.
 
-**Vì sao thích GSC:** lọc thích nghi không ràng buộc trên tham chiếu nhiễu; dễ gắn VAD để đóng băng lúc mục tiêu nói.
+**Ưu điểm của GSC:** Nhánh thích nghi hoạt động không ràng buộc trên tín hiệu tham chiếu nhiễu và rất dễ kết hợp với VAD để đóng băng cập nhật mỗi khi người nói mục tiêu lên tiếng.
 
-### IVA (con trỏ)
+### IVA (định hướng khảo sát)
 
-**IVA** và BSS liên quan tách nguồn từ hỗn hợp đa mic không cần steering tường minh, dùng độc lập thống kê. Mức dạy:
+**IVA** và các kỹ thuật tách nguồn mù (BSS) liên quan tách các nguồn âm từ hỗn hợp đa micro dựa trên tính độc lập thống kê mà không cần biết trước vector lái hướng tường minh. Ở phạm vi khóa học này, hãy nắm hai ý chính:
 
-- Coi IVA là **front-end không gian mù** cho ước lượng thô mục tiêu + nhiễu giao thoa.
-- Mạng nhẹ (GTCRN-class) tinh chỉnh đầu ra IVA—pattern paper dual-channel SNR thấp.
+- Xem IVA như một **tầng tiền xử lý không gian mù** tạo ra ước lượng sơ bộ cho tín hiệu mục tiêu và nguồn nhiễu giao thoa.
+- Dùng một mạng gọn nhẹ (nhóm GTCRN) phía sau để tinh chỉnh đầu ra của IVA — đây là mẫu thiết kế phổ biến trong các bài báo xử lý hai kênh ở SNR thấp.
 
-### Hybrid + neural mono
+### Kiến trúc lai kết hợp mạng nơ-ron đơn kênh
 
-- **GSC → DeepFilterNet2**: hủy nhiễu ego có hướng (drone), DF2 dọn nhiễu khuếch tán dư.
-- **IVA → GTCRN**: tách mù rồi CRN nhỏ tinh chỉnh.
-- **Chỉ DF3 mono**: mặc định đúng khi $$M=1$$ (đa số tab trình duyệt).
+- **GSC → DeepFilterNet2**: hủy nhiễu có hướng (như tiếng cánh quạt drone) ở tầng không gian, sau đó DeepFilterNet2 dọn phần nhiễu khuếch tán còn sót.
+- **IVA → GTCRN**: tách nguồn mù đa kênh rồi tinh chỉnh bằng mạng CRN gọn nhẹ.
+- **Chỉ dùng DF3 đơn kênh**: lựa chọn mặc định hợp lý khi $$M=1$$ (phần lớn các tab trình duyệt).
 
-**Ghi chú Mezon:** đường npm / WASM thường **mono**. Đa mic là stretch—học front-end để thiết kế pipeline native tương lai mà không viết lại lõi neural. Beamformer sẽ là một tiền lọc không gian đứng trước processor mono đó: nhiều micro vào, một kênh ra, rồi mới tới gain theo bin của suppressor một kênh. Hình dưới là đường sản phẩm một kênh. Nó không chứa beamformer; cách đọc trung thực là beamformer phải ngồi ở đâu — phía trước `DeepFilterNoiseFilterProcessor`.
+**Ghi chú về Mezon:** Đường tích hợp npm/WASM mặc định là **đơn kênh (mono)**. Xử lý đa micro thuộc phần mở rộng — học các tầng tiền xử lý không gian giúp bạn thiết kế pipeline ứng dụng native về sau mà không phải viết lại lõi mạng nơ-ron. Trong kiến trúc đó, beamformer đóng vai trò bộ lọc không gian đặt trước bộ xử lý đơn kênh: nhận nhiều micro, xuất ra một kênh duy nhất rồi mới đi vào bộ khử nhiễu theo bin. Hình dưới minh họa luồng xuất bản đơn kênh của sản phẩm (không chứa beamformer); nếu bổ sung, beamformer sẽ nằm ngay phía trước `DeepFilterNoiseFilterProcessor`.
 
 ![Đường publish LiveKit qua DeepFilterNoiseFilterProcessor một kênh, chặng mà beamformer sẽ phải nuôi]({{ site.imgurl }}/generated/livekit-trackprocessor.png)
 
-*Hình. Đây là đường publish mono; beamformer không được vẽ, và sẽ ngồi trước DeepFilterNoiseFilterProcessor để processor vẫn chỉ thấy một kênh.*
+*Hình. Sơ đồ luồng xuất bản đơn kênh; beamformer không nằm trong sơ đồ này mà sẽ đứng ngay trước `DeepFilterNoiseFilterProcessor` để bộ xử lý vẫn chỉ nhận đúng một kênh đầu vào.*
 
-## Checklist quyết định
+## Danh mục quyết định nhanh
 
-- $$M=1$$ → NS mono cổ điển/neural; bỏ beamforming.
-- $$M\ge 2$$, biết hướng mục tiêu, nhiễu có hướng mạnh → GSC / MVDR.
-- $$M\ge 2$$, hình học không rõ / người nói chuyển động → IVA / BF thích nghi bền + neural.
-- CPU rất hẹp → delay-and-sum đơn giản + NS siêu nhẹ hơn IVA đầy đủ.
-- `getUserMedia` đôi khi đã downmix mono sau OS—kiểm tra số kênh thật.
+- $$M=1$$ → dùng NS đơn kênh (cổ điển hoặc mạng nơ-ron), bỏ qua beamforming.
+- $$M\ge 2$$, biết rõ hướng mục tiêu và có nhiễu định hướng mạnh → chọn GSC hoặc MVDR.
+- $$M\ge 2$$, không rõ hình học mảng hoặc người nói di chuyển → cân nhắc IVA hoặc beamforming thích nghi bền vững kết hợp mạng nơ-ron.
+- Ngân sách CPU rất hẹp → kết hợp delay-and-sum đơn giản với NS siêu nhẹ thay vì chạy IVA đầy đủ.
+- Lưu ý `getUserMedia` đôi khi đã bị hệ điều hành gộp sẵn thành mono — luôn kiểm tra số kênh thực tế nhận được.
 
 ## Bẫy thường gặp
 
-- Lệch steering → **hủy mục tiêu** (nghe như NS ăn tiếng nói).
-- Thích nghi GSC lúc mục tiêu nói không có VAD → rò tiếng nói vào BM.
-- Coi mic stereo laptop đã hiệu chuẩn hình học.
-- STFT đa kênh lệch trễ kênh (USB clock).
-- Kỳ vọng beamforming xử lý **echo** không có far-end—vẫn cần AEC.
+- Lệch vector lái hướng → **tự triệt tiêu tiếng nói mục tiêu** (nghe giống như NS cắt mất giọng).
+- Để GSC thích nghi ngay lúc mục tiêu đang nói mà thiếu VAD → tiếng nói rò vào ma trận chặn BM và bị xóa ngược lại.
+- Mặc định cặp micro stereo trên laptop đã được hiệu chuẩn chính xác về mặt hình học.
+- Tính STFT đa kênh trên các micro bị lệch đồng hồ hoặc lệch trễ kênh (như thiết bị USB riêng lẻ).
+- Kỳ vọng beamforming tự xử lý được **tiếng vọng** mà không cần tham chiếu far-end — hệ thống vẫn bắt buộc phải có AEC.
 
 ## Mini-lab
 
-**Mục tiêu.** Trễ trường xa giữa hai micro cách 2 cm, ở broadside và ở 45°.
+**Mục tiêu.** Tính độ trễ truyền âm trường xa giữa hai micro đặt cách nhau 2 cm tại góc thẳng đứng (broadside, 0°) và góc nghiêng 45°.
 
 ```python
 import numpy as np
@@ -105,32 +105,32 @@ for deg in (0, 45):
     print(deg, "deg", round(tau * 1e6, 1), "us", round(tau * fs, 2), "samples")
 ```
 
-**Kỳ vọng.** Broadside: `0.0 µs`, `0.0` mẫu. Ở 45°: khoảng `41.2 µs`, khoảng `1.98` mẫu ở 48 kHz. Delay-and-sum ở 48 kHz là một dịch phân số mẫu, không phải bộ lọc “cả phòng” nhiều tap.
+**Kết quả kỳ vọng.** Tại góc broadside (0°): `0.0 µs`, tương đương `0.0` mẫu. Tại góc 45°: khoảng `41.2 µs`, tương đương khoảng `1.98` mẫu ở 48 kHz. Có thể thấy delay-and-sum ở 48 kHz đòi hỏi phép dịch phân số mẫu (fractional delay) chứ không phải bộ lọc nhiều tap cỡ cả căn phòng.
 
-**Khi hỏng.** Đưa độ vào `np.sin` mà không đổi sang radian sẽ ra trễ vô nghĩa (ca 45° sẽ không còn khoảng 2 mẫu). Quên \(\sin\theta\) và dùng \(d/c\) cho mọi góc thì broadside trông như endfire. In “số mẫu” ở 16 kHz thì 45° khoảng 0.66, nên giả định 48 kHz phải hiện trong script.
+**Lỗi thường gặp.** Truyền trực tiếp đơn vị độ vào `np.sin` mà quên đổi sang radian sẽ cho kết quả vô nghĩa (góc 45° không còn gần 2 mẫu); quên nhân \(\sin\theta\) và lấy \(d/c\) cho mọi góc sẽ làm góc broadside cho kết quả giống góc dọc trục (endfire); nếu đổi sang 16 kHz thì góc 45° chỉ tương ứng khoảng 0.66 mẫu, nên giả định 48 kHz phải được thể hiện rõ trong mã nguồn.
 
 ## Bài tập
 
-1. 2 mic $$d=2\,\mathrm{cm}$$, $$f=2\,\mathrm{kHz}$$, $$c=343$$: tính trễ liên mic broadside vs 45°.
-2. Vẽ GSC; đánh dấu chỗ gắn postfilter neural.
-3. Brief một trang: chế độ dual-mic native tái sử dụng DF3 ONNX mono + chỉ thêm delay-and-sum.
-4. Đọc một abstract hybrid (GSC+DF2 hoặc IVA+GTCRN); 3 gạch: giai đoạn cổ điển đóng góp gì vs neural.
+1. Với mảng 2 micro cách nhau $$d=2\,\mathrm{cm}$$, tần số $$f=2\,\mathrm{kHz}$$ và tốc độ âm thanh $$c=343\,\mathrm{m/s}$$, hãy tính độ trễ giữa hai micro ở góc broadside và góc 45°.
+2. Vẽ sơ đồ khối GSC và đánh dấu rõ vị trí gắn bộ hậu lọc mạng nơ-ron.
+3. Viết bản tóm tắt thiết kế dài một trang cho chế độ hai micro trên ứng dụng native: tái sử dụng mô hình DF3 ONNX đơn kênh và chỉ bổ sung thêm delay-and-sum ở phía trước.
+4. Đọc tóm tắt (abstract) của một bài báo kiến trúc lai (GSC+DF2 hoặc IVA+GTCRN) và tóm lược trong 3 gạch đầu dòng phần đóng góp của tầng cổ điển so với tầng mạng nơ-ron.
 
 ### Gợi ý đáp án
 
-1. Trễ broadside bằng 0. Ở 45°, \(\tau=d\sin\theta/c\) khoảng 41 µs, cỡ hai mẫu ở 48 kHz.
-2. Postfilter neural gắn vào ngõ ra GSC, sau phép trừ thích nghi, trên một kênh.
-3. Delay-and-sum phát một dạng sóng; ONNX mono hiện có không mọc thêm đầu vào thứ hai.
-4. Chặng cổ điển dùng micro thừa (null hoặc độc lập thống kê). Chặng neural vẫn là enhancer một kênh trên thứ chặng không gian đã cho qua.
+1. Độ trễ ở góc broadside bằng 0; ở góc 45°, \(\tau=d\sin\theta/c\approx 41.2\,\mu\mathrm{s}\), tương đương gần 2 mẫu ở 48 kHz.
+2. Bộ hậu lọc mạng nơ-ron được gắn ngay sau đầu ra đơn kênh của GSC (sau phép trừ của nhánh thích nghi).
+3. Delay-and-sum gộp hai tín hiệu micro thành một dạng sóng đơn kênh duy nhất, nên đồ thị ONNX mono hiện có không cần thêm đầu vào thứ hai.
+4. Tầng cổ điển khai thác thông tin không gian từ nhiều micro (tạo hướng triệt tiêu hoặc dùng tính độc lập thống kê), còn tầng mạng nơ-ron vẫn đóng vai trò bộ tăng cường đơn kênh xử lý phần nhiễu dư lọt qua tầng không gian.
 
 ## Đọc thêm
 
 - Van Trees, *Optimum Array Processing*.
-- Griffiths & Jim — GSC kinh điển.
-- Ghi chú kỹ thuật multi-mic WebRTC / mobile.
-- Hybrid khảo sát: GSC–DeepFilterNet2, IVA+GTCRN (mức tên).
-- DeepFilterNet2 — tầng neural mono thường *sau* làm sạch không gian.
+- Griffiths & Jim — bài báo kinh điển về cấu trúc GSC.
+- Tài liệu kỹ thuật xử lý đa micro của WebRTC và thiết bị di động.
+- Các mốc tham khảo kiến trúc lai: GSC–DeepFilterNet2 và IVA+GTCRN (ở mức khái niệm).
+- DeepFilterNet2 — ví dụ điển hình cho tầng mạng nơ-ron đơn kênh đặt *sau* khâu lọc không gian.
 
 ## Video tham khảo
 
-- [What is Beamforming? ("the best explanation I’ve ever heard")](https://www.youtube.com/watch?v=A1n5Hhwtz78) — Iain Explains Signals, Systems, and Digital Comms, tiếng Anh. **xem trước.** Xem độ trễ căn một hướng trước khi cộng. Delay-and-sum là hình học front-end bài bắt đầu; GSC và IVA là bước sau khi phép cộng đó không đủ.
+- [What is Beamforming? ("the best explanation I’ve ever heard")](https://www.youtube.com/watch?v=A1n5Hhwtz78) — Iain Explains Signals, Systems, and Digital Comms, tiếng Anh. **Xem trước.** Minh họa cách căn chỉnh độ trễ theo một hướng trước khi cộng tín hiệu — đúng trực giác hình học của delay-and-sum làm nền cho GSC và IVA.

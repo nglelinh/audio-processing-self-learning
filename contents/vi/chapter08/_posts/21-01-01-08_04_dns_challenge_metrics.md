@@ -11,31 +11,31 @@ lesson_type: required
 draft: false
 ---
 
-Một trung bình SI-SDR là cách bài báo được trích và cách sản phẩm bị bất ngờ. Microsoft DNS Challenge ([microsoft/DNS-Challenge](https://github.com/microsoft/DNS-Challenge)) là khuôn công khai khóa này chép ở kích thước nhỏ: cặp tổng hợp nơi metric xâm nhập hợp lệ, ghi thật nơi chúng không hợp lệ, một lát nghe, và một cột hệ thống để phần mềm thời gian thực không núp sau bảng chất lượng. Từng kỳ challenge đổi thực đơn metric. Ghim năm hoặc bài báo bạn theo. Đừng nhận “thắng DNS Challenge” nếu bạn không chạy blind set năm đó với protocol năm đó.
+Chỉ dựa vào một con số trung bình SI-SDR là cách nhiều bài báo được trích dẫn nhưng cũng là lý do khiến sản phẩm thực tế gặp sự cố ngoài dự kiến. Cuộc thi Microsoft DNS Challenge ([microsoft/DNS-Challenge](https://github.com/microsoft/DNS-Challenge)) cung cấp khuôn mẫu đánh giá công khai mà khóa học mô phỏng lại ở quy mô gọn nhẹ: gồm cặp dữ liệu tổng hợp (nơi các chỉ số xâm nhập có hiệu lực), bản ghi thực tế (nơi chỉ số xâm nhập không áp dụng được), lát cắt kiểm thử lắng nghe và cột hiệu năng hệ thống để chi phí thời gian thực không bị che khuất sau bảng chất lượng âm thanh. Do mỗi năm cuộc thi lại điều chỉnh danh mục chỉ số, bạn cần ghi rõ năm hoặc bài báo đang tham chiếu, và không tuyên bố “đạt chuẩn DNS Challenge” nếu chưa chạy đúng tập kiểm thử mù và quy trình của năm đó.
 
 ![Bản đồ đánh giá cho cả bộ metric]({{ site.imgurl }}/generated/eval-metric-map.png)
 
-*Hình. Bộ metric là cả bản đồ, không phải một ô. SI-SDR, DNSMOS, nghe, và RTF trả lời các câu khác nhau. Ô trống ghi `n/a`, không điền bù.*
+*Hình. Hệ thống đánh giá là toàn bộ bản đồ chứ không phải một ô đơn lẻ: SI-SDR, DNSMOS, kiểm thử lắng nghe và RTF trả lời những câu hỏi khác nhau. Ô nào không áp dụng được thì ghi `n/a`, tuyệt đối không điền số ước đoán.*
 
-## Bạn làm được gì sau bài này
+## Mục tiêu học tập
 
-Bạn dựng được phiếu sáu cột, một hàng một clip, chạy checker từ chối cột thiếu, và giải thích ô nào phải là `n/a`. Bạn cũng tách epsilon hồi quy của lab khỏi mọi con số xuất hiện trong bài báo.
+Sau bài học này, bạn sẽ xây dựng được bảng báo cáo 6 cột (mỗi hàng một đoạn âm thanh), chạy script kiểm tra tự động để bắt lỗi thiếu cột, giải thích chính xác ô nào bắt buộc ghi `n/a`, và phân biệt rõ ngưỡng sai số hồi quy nội bộ (epsilon) của phòng lab với các con số xuất hiện trong bài báo.
 
-## Các track đáng giữ
+## Các hạng mục đánh giá cần duy trì
 
-| Track | Vật liệu | Metric hợp lệ |
+| Hạng mục (Track) | Dữ liệu đầu vào | Chỉ số hợp lệ |
 |-------|----------|----------------|
-| Tổng hợp | Cặp ồn/sạch bạn sinh | SI-SDR, PESQ/STOI nếu chọn, delta so với bypass |
-| Thật | Ghi kiểu họp, không file sạch | DNSMOS nếu ghim checkpoint, không thì `n/a` |
-| Nghe | Cùng điều kiện, clip ngắn | Ghi chú AB: thắng, thua, hoặc hòa |
-| Hệ thống | Máy sẽ demo | RTF p95, cộng init hoặc fallback nếu đã đo |
-| Hạ nguồn tùy chọn | Một bản ASR cố định | Delta WER hoặc CER, không thay MOS |
+| Tổng hợp | Cặp tín hiệu ồn/sạch tự tạo | SI-SDR, PESQ/STOI (tùy chọn), mức cải thiện so với bypass |
+| Thực tế | Bản ghi cuộc họp thực, không có bản sạch | DNSMOS (khi cố định checkpoint), nếu chưa chạy thì ghi `n/a` |
+| Lắng nghe | Cùng các điều kiện nhiễu, đoạn ngắn | Ghi chú kết quả AB: thắng, thua hoặc hòa |
+| Hệ thống | Thiết bị dùng để trình diễn (demo) | RTF p95, kèm thời gian khởi tạo hoặc fallback nếu có đo |
+| Hạ nguồn (tùy chọn) | Một phiên bản nhận dạng giọng nói (ASR) cố định | Độ chênh lệch WER hoặc CER (không thay thế MOS) |
 
-Dữ liệu tổng hợp cho bạn núm SNR và một tham chiếu. Nó cũng nói dối khi ngân hàng nhiễu sạch hơn phòng thật. Dữ liệu thật là sản phẩm và từ chối SI-SDR. Luật là không chỉnh trên một cột. Đóng băng một tập nghe cuối mà bạn không mở khi còn đang đổi mức.
+Dữ liệu tổng hợp mang lại khả năng điều chỉnh SNR linh hoạt và có tín hiệu tham chiếu chính xác, nhưng dễ tạo ảo giác lạc quan khi kho nhiễu quá “sạch” so với môi trường thật. Ngược lại, bản ghi thực tế phản ánh đúng sản phẩm nhưng không thể tính SI-SDR. Nguyên tắc cốt lõi là không tối ưu mô hình chỉ dựa trên một cột duy nhất, đồng thời đóng băng riêng một tập nghe thử cuối cùng mà bạn không mở ra trong lúc tinh chỉnh tham số.
 
-## Bố trí harness
+## Tổ chức thư mục bộ công cụ đánh giá (harness)
 
-Để harness trong thư mục của bạn hoặc fork. Đừng đặt vào cây sản phẩm chung `mezonai/mezon-noise-suppression`, và đừng bắt checkout giảng viên tại `/Users/nguyenlelinh/ncc/mezon-noise-suppression`.
+Hãy đặt bộ công cụ đánh giá trong kho cá nhân hoặc nhánh fork của riêng bạn, không đưa vào kho sản phẩm chung `mezonai/mezon-noise-suppression`:
 
 ```text
 eval/
@@ -48,13 +48,13 @@ eval/
   reports/YYYY-MM-DD.md
 ```
 
-`meta.csv` cần ít nhất `clip_id,condition,snr_db,clean_path,noisy_path`. Hàng thật để `clean_path` trống. Tái lập được là phần đầu báo cáo: phiên bản gói (npm `deepfilternet3-noise-filter` 1.3.0 nếu đó là bản bạn chạy), tên archive `DeepFilterNet3_onnx.tar.gz`, tên checkpoint DNSMOS hoặc `not run`, OS, và thiết bị đo RTF. Nếu enhance tất định, nói vậy. Nếu không, ghi seed.
+Tệp `meta.csv` cần tối thiểu các cột `clip_id,condition,snr_db,clean_path,noisy_path`, trong đó các hàng bản ghi thực tế để trống cột `clean_path`. Để đảm bảo khả năng tái lập, phần đầu báo cáo phải ghi rõ phiên bản gói (ví dụ `deepfilternet3-noise-filter` 1.3.0), tên tệp nén mô hình `DeepFilterNet3_onnx.tar.gz`, tên checkpoint DNSMOS (hoặc `not run`), hệ điều hành và thiết bị đo RTF. Nếu quá trình xử lý mang tính tất định (deterministic), cần nêu rõ; nếu không, phải ghi lại giá trị hạt giống (seed).
 
-Không có ngưỡng SI-SDR hay DNSMOS chính thức để chép vào CI. Bạn có thể chọn epsilon lab sau khi có baseline trên đúng tập này, và phải ghi đó là nội bộ. Bảng trong bài báo không phải epsilon đó.
+Không tồn tại ngưỡng SI-SDR hay DNSMOS chính thức nào để sao chép thẳng vào CI. Sau khi có số liệu nền (baseline) trên chính tập dữ liệu của mình, bạn có thể đặt một ngưỡng epsilon nội bộ cho kiểm thử hồi quy và ghi chú rõ nguồn gốc nội bộ đó — bảng số liệu trong bài báo khoa học không phải epsilon cho dự án của bạn.
 
-ASR tùy chọn: chọn một phiên bản engine, phiên âm bản ồn và bản enhance cùng cấu hình, báo delta. Enhance giúp DNSMOS mà hại WER là sự thật sản phẩm, không phải mâu thuẫn để giấu.
+Với nhánh đánh giá ASR tùy chọn: cố định một phiên bản engine ASR, phiên âm cả bản gốc nhiễu lẫn bản đã khử nhiễu theo cùng cấu hình rồi báo cáo mức chênh lệch. Việc bộ khử nhiễu giúp tăng điểm DNSMOS nhưng lại làm xấu đi tỉ lệ lỗi từ (WER) là một thực tế sản phẩm quan trọng, không phải mâu thuẫn cần che giấu.
 
-## Khung báo cáo
+## Khung báo cáo đánh giá
 
 ```markdown
 ## NS eval — <date>
@@ -71,13 +71,13 @@ Ship, không ship, hoặc ship sau cờ — và cột nào ép quyết định.
 Ngôn ngữ, thiết bị, và metric bạn không chạy.
 ```
 
-Overfit lộ ra khi bộ chỉ có giọng bạn, một quán, và một trung bình không có hàng theo điều kiện. Chạy lại sau khi đổi WASM hoặc SIMD. Bằng mẫu hiếm khi sống sót sau khi đổi runtime, nên metric phải đi cùng binary.
+Hiện tượng quá khớp (overfit) lộ rõ khi tập kiểm thử chỉ gồm giọng của chính tác giả, một bối cảnh quán cà phê duy nhất và một con số trung bình gộp không phân tách theo điều kiện. Ngoài ra, bất cứ khi nào thay đổi tệp WASM hoặc cấu hình SIMD, bạn phải chạy lại toàn bộ bộ đánh giá: kết quả khớp từng mẫu hiếm khi giữ nguyên khi đổi runtime, nên chỉ số chất lượng phải luôn gắn liền với đúng tệp nhị phân phát hành.
 
 ## Mini-lab
 
-Tạo `suite.md` với bảng markdown **sáu hàng dữ liệu**. Header phải có các cột: clip id, condition, SI-SDR hoặc `n/a`, DNSMOS hoặc `n/a`, listening note, RTF p95. Dùng `n/a` khi metric không hợp lệ hoặc chưa chạy. Ít nhất một hàng là clip thật (`n/a` ở SI-SDR) và ít nhất một hàng là tổng hợp. Ghi chú nghe ngắn (`new`, `old`, `tie`, hoặc `not listened`). RTF p95 là số bạn đo hoặc `n/a` nếu chưa đo.
+Tạo tệp `suite.md` chứa bảng Markdown gồm đúng **6 hàng dữ liệu**. Hàng tiêu đề bắt buộc có đủ 6 cột: `clip id`, `condition`, `SI-SDR` (hoặc `n/a`), `DNSMOS` (hoặc `n/a`), `listening note`, và `RTF p95`. Ghi `n/a` ở những ô không hợp lệ hoặc chưa chạy; đảm bảo có ít nhất một hàng là bản ghi thực tế (ghi `n/a` ở cột SI-SDR) và ít nhất một hàng là cặp tổng hợp. Cột ghi chú lắng nghe dùng nhãn ngắn (`new`, `old`, `tie` hoặc `not listened`), còn cột RTF p95 điền giá trị đo thực tế hoặc `n/a` nếu chưa đo.
 
-Checker `check_suite.py`:
+Kiểm tra tệp bằng script `check_suite.py`:
 
 ```python
 from pathlib import Path
@@ -91,14 +91,14 @@ print("missing", missing or "none")
 print("data_rows", len(data))
 ```
 
-Đầu ra kỳ vọng:
+**Kết quả kỳ vọng**
 
 ```text
 missing none
 data_rows 6
 ```
 
-Ví dụ hình dạng (sáu hàng của bạn phải là clip của bạn; một hàng này chỉ cho thấy các ô):
+Ví dụ minh họa cấu trúc một hàng (6 hàng trong bài làm phải là dữ liệu của riêng bạn):
 
 ```markdown
 | clip id | condition | SI-SDR or n/a | DNSMOS or n/a | listening note | RTF p95 |
@@ -106,25 +106,27 @@ Ví dụ hình dạng (sáu hàng của bạn phải là clip của bạn; một
 | syn_fan_01 | synthetic fan, 10 dB | 13.80 | n/a | tie | 0.35 |
 ```
 
-Số 13.80 ở đây là float lab bài 08-01, dán để kiểu cột rõ. Nó không phải số đo DeepFilterNet. Kiểu hỏng: header ghi “quality” thay vì sáu tên; năm hàng; ghi thật với SI-SDR bịa; một số RTF chép vào mọi hàng mà không nói đó là số cả phiên; ngưỡng trông chính thức kiểu “DNSMOS phải vượt 3.5”.
+Con số `13.80` ở đây được lấy từ bài lab 08-01 nhằm minh họa định dạng cột, không phải số đo thực của DeepFilterNet.
+
+**Lỗi thường gặp.** Đổi tên tiêu đề cột thành nhãn chung chung kiểu “quality” thay vì 6 tên quy định; điền thiếu số hàng (chỉ có 5 hàng); bịa số SI-SDR cho bản ghi thực tế; sao chép cùng một chỉ số RTF cho mọi hàng mà không ghi chú đó là số đo chung cả phiên; hoặc đặt ra ngưỡng nghe có vẻ chính thức kiểu “DNSMOS phải vượt 3,5”.
 
 ## Bài tập
 
-1. Điền đủ sáu hàng, trộn điều kiện tổng hợp và thật. Chạy checker đến khi in `data_rows 6`.
-2. Viết header `meta.csv` cùng một hàng tổng hợp và một hàng thật.
-3. Đề xuất luật fail CI mà không giả làm ngưỡng DNSMOS chính thức.
-4. Nêu hai cách bộ metric overfit audio họp Mezon, và tập giữ lại chặn mỗi cách.
-5. Thêm cột ASR tùy chọn. Nói vì sao nó không được thay ghi chú nghe.
+1. Hoàn thiện đủ 6 hàng trong `suite.md` kết hợp cả điều kiện tổng hợp và thực tế, sau đó chạy `check_suite.py` cho đến khi kết quả trả về `data_rows 6`.
+2. Viết dòng tiêu đề cho tệp `meta.csv` kèm một dòng dữ liệu tổng hợp và một dòng dữ liệu thực tế.
+3. Đề xuất một quy tắc báo lỗi (fail) trong CI mà không ngụy tạo thành ngưỡng chuẩn chính thức của DNSMOS.
+4. Chỉ ra hai cách bộ chỉ số đánh giá dễ bị quá khớp với âm thanh cuộc họp Mezon, và nêu cách thiết lập tập kiểm thử giữ lại (holdout set) để ngăn chặn từng cách.
+5. Bổ sung cột đánh giá ASR tùy chọn vào bảng và giải thích vì sao cột này vẫn không thể thay thế cột ghi chú lắng nghe.
 
 ### Gợi ý đáp án
 
-1. Hàng thật: SI-SDR là `n/a`. Hàng chưa chạy DNSMOS: DNSMOS là `n/a`.
-2. Hàng thật: đường clean để trống. Đừng bịa file tham chiếu.
-3. Ví dụ chính sách: “trên golden set 12 clip này, fail nếu trung bình DNSMOS theo điều kiện giảm quá epsilon đã ghi trong báo cáo.” Epsilon là của bạn.
-4. Chỉ giọng tác giả; chỉ quán. Giữ ngoài những người nói khác và một điều kiện bàn phím hoặc quạt bạn không chỉnh trên đó.
-5. WER có thể tăng khi bộ khử hại phụ âm mà metric thích. Giữ ghi chú nghe.
+1. Hàng bản ghi thực tế bắt buộc ghi `n/a` ở cột SI-SDR; hàng chưa chạy mô hình DNSMOS thì ghi `n/a` ở cột DNSMOS.
+2. Với hàng bản ghi thực tế, để trống trường đường dẫn bản sạch (`clean_path`) thay vì tự tạo tệp tham chiếu giả.
+3. Ví dụ quy tắc minh bạch: “Trên tập golden set 12 đoạn này, báo lỗi CI nếu điểm trung bình DNSMOS theo từng điều kiện giảm quá mức epsilon đã ghi trong báo cáo” — khẳng định rõ epsilon là quy ước nội bộ.
+4. Hai dạng quá khớp phổ biến là chỉ dùng giọng của tác giả và chỉ thử trên bối cảnh quán cà phê; khắc phục bằng cách giữ riêng một tập holdout gồm nhiều người nói khác cùng điều kiện bàn phím hoặc quạt không dùng trong lúc tinh chỉnh.
+5. Tỉ lệ lỗi từ (WER) có thể tăng lên khi bộ khử nhiễu cắt hỏng phụ âm dù các chỉ số âm học khác vẫn cao; do đó vẫn cần duy trì cột ghi chú lắng nghe.
 
 ## Video tham khảo
 
-- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, tiếng Anh. **xem trước.** Xem đoạn challenge: cặp tổng hợp, bài nghe, và bộ dự đoán khách quan được báo cùng nhau. Một trung bình SI-SDR là thứ bài nói này không dừng lại.
-- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, tiếng Anh. Chỗ nhắc dữ liệu huấn luyện là một mô hình ngồi trên chất liệu DNS. Dùng bài nói như một dòng trong bộ metric, không phải cả bộ.
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, tiếng Anh. **Xem trước.** Phần giới thiệu cuộc thi DNS Challenge cho thấy cặp dữ liệu tổng hợp, kiểm thử lắng nghe và mô hình dự đoán khách quan luôn được báo cáo đồng thời thay vì dừng ở một điểm SI-SDR trung bình.
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, tiếng Anh. Phần trình bày về dữ liệu huấn luyện minh họa cách một mô hình cụ thể vận hành trên bộ dữ liệu DNS — chỉ nên xem là một dòng kết quả trong toàn bộ bảng đánh giá.

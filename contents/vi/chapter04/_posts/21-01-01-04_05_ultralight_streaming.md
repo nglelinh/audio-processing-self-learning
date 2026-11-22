@@ -11,83 +11,83 @@ lesson_type: required
 draft: false
 ---
 
-Một số sản phẩm không tiêu được ngân sách laptop của DeepFilterNet2. Các tên **GTCRN**, **FastEnhancer**, **μNet** và **Fast-ULCNet** là từ vựng shortlist cho enhancer streaming siêu nhẹ. Bài này **không** gắn tiêu đề paper, năm hay URL cho chúng. Bài dạy phép đo quyết định shortlist: bảng MAC và RTF (real-time factor, hệ số thời gian thực) thời gian tường tách nhau, và state GRU (gated recurrent unit, đơn vị hồi tiếp có cổng) chạy một giờ là một lỗi khác với hop chậm.
+Nhiều sản phẩm không đủ ngân sách tài nguyên như mức laptop mà DeepFilterNet2 giả định. Các tên gọi **GTCRN**, **FastEnhancer**, **μNet** và **Fast-ULCNet** thường xuất hiện trong danh sách rút gọn (shortlist) cho nhóm bộ tăng cường tiếng nói streaming siêu nhẹ. Bài học này **không** gắn tiêu đề bài báo, năm xuất bản hay URL cho bốn cái tên đó; thay vào đó, bài tập trung vào phương pháp đo kiểm để ra quyết định: lý giải vì sao bảng số phép tính MAC và hệ số RTF thực tế (wall-clock) thường tách rời nhau, và vì sao hiện tượng trôi trạng thái GRU sau một giờ chạy liên tục là một dạng lỗi khác hẳn với lỗi hop chậm.
 
 ![RTF đối chiếu quantum AudioWorklet: thời gian tường mỗi khối audio, không phải bảng MAC]({{ site.imgurl }}/generated/rtf-audioworklet.png)
 
-*Figure. RTF là thời gian tường chia thời gian audio. Một quantum AudioWorklet (luồng render của Web Audio) 128 mẫu ở 48 kHz dài khoảng 2,67 ms. Mô hình siêu nhẹ là mô hình có p95 thời gian tường vừa hop bạn thực sự chạy, trên CPU bạn thực sự ship. GTCRN, FastEnhancer, μNet và Fast-ULCNet chỉ là tên trên hình này — không paper, năm hay URL.*
+*Hình. RTF là tỷ số giữa thời gian xử lý thực tế và thời lượng âm thanh. Một quantum AudioWorklet 128 mẫu ở 48 kHz dài khoảng 2,67 ms. Mô hình siêu nhẹ đạt yêu cầu là mô hình giữ được phân vị p95 thời gian xử lý nằm gọn trong hop thực tế trên đúng CPU đích; bốn cái tên GTCRN, FastEnhancer, μNet và Fast-ULCNet chỉ đóng vai trò điểm neo trong danh sách rút gọn.*
 
 ## Mục tiêu học tập
 
-Bạn giải thích, với bảng DeepFilterNet2 làm ví dụ tính được, vì sao GMAC và RTF có thể đi ngược nhau; đặt bốn tên siêu nhẹ lên checklist chọn mà không bịa kết quả của chúng; và thiết kế một kiểm tra state dài không phụ thuộc paper nào trong số đó.
+Sau bài học này, bạn sẽ giải thích được (thông qua bảng số liệu có thể kiểm chứng của DeepFilterNet2) vì sao GMAC và RTF có thể biến thiên ngược chiều nhau; đưa bốn tên mô hình siêu nhẹ vào danh mục kiểm tra lựa chọn mà không suy đoán kết quả; và thiết kế bài kiểm tra ổn định trạng thái dài hạn độc lập với từng bài báo.
 
 ## Kế hoạch 60 phút
 
-- **0–10 phút** — DSP tai nghe và tab laptop: hai ngân sách.
-- **10–25 phút** — Số DF2 như chứng minh MAC lệch RTF.
-- **25–40 phút** — Bốn tên, mỗi tên một dòng, và thứ bạn vẫn phải đo.
-- **40–50 phút** — Trôi state qua hàng chục phút.
-- **50–60 phút** — Mini-lab, checklist, bài tập.
+- **0–10 phút** — So sánh hai ngân sách tài nguyên: chip DSP tai nghe và tab trình duyệt trên laptop.
+- **10–25 phút** — Dùng số liệu DF2 để chứng minh số MAC tách rời khỏi RTF thực tế.
+- **25–40 phút** — Định vị ngắn gọn bốn cái tên siêu nhẹ và danh mục thông số bắt buộc phải tự đo.
+- **40–50 phút** — Hiện tượng trôi trạng thái (state drift) qua hàng chục phút gọi liên tục.
+- **50–60 phút** — Mini-lab, danh mục kiểm tra và bài tập.
 
 ## Giải thích cốt lõi
 
-### Hai ngân sách không phải bảng DF2
+### Hai ngân sách phần cứng khác hẳn bảng đo DF2
 
-DeepFilterNet2 (arXiv:2205.05474) báo RTF **0,04** ở **0,356 GMAC** trên Core i5-8250U laptop, so với hàng ICASSP 0,348 GMAC và RTF **0,11**. Vòng tract 2023 báo RTF **0,19** trên i5-8250U. RNNoise, trên bảng DF2 đó, khoảng 0,06 M tham số, RTF 0,027, PESQ 2,33, so với PESQ 3,08 của DF2. Đó là những số compute duy nhất bài này coi là đã in. Tai nghe hoặc điện thoại là máy khác: RTF laptop không phải RTF điện thoại. Đồ thị siêu nhẹ nhắm bộ nhớ nhỏ hơn nhiều và một hop ngắn, và thường rơi gần PESQ 2,33 hơn 3,17. Điều đó chấp nhận được khi phương án kia là underrun.
+DeepFilterNet2 (arXiv:2205.05474) báo cáo RTF **0,04** ở mức **0,356 GMAC** trên laptop Core i5-8250U, so với bản ICASSP đạt 0,348 GMAC nhưng RTF **0,11**; trong khi vòng chạy `tract` năm 2023 ghi nhận RTF **0,19** trên cùng i5-8250U. Trên cùng bảng DF2, RNNoise có khoảng 0,06 M tham số, RTF 0,027 và PESQ 2,33 (so với PESQ 3,08 của DF2). Đây là những con số hiệu năng duy nhất đã được công bố mà bài học này trích dẫn. Tai nghe hay điện thoại là lớp phần cứng hoàn toàn khác, nên RTF laptop không thể suy diễn sang RTF di động. Các kiến trúc siêu nhẹ hướng tới bộ nhớ cực nhỏ và hop ngắn, thường chấp nhận điểm PESQ gần mức 2,33 hơn là 3,17 — sự đánh đổi hoàn toàn hợp lý khi lựa chọn còn lại là vỡ tiếng do underrun.
 
-### Vì sao bảng MAC nói dối
+### Vì sao cột MAC trong bài báo dễ gây hiểu nhầm
 
-Số MAC giả định mọi phép nhân-cộng có cùng thời gian tường. Không phải vậy.
+Đếm số phép nhân-cộng (MAC) ngầm giả định mọi phép tính đều mất thời gian thực tế như nhau, nhưng trên phần cứng thực tế điều này không đúng:
 
-- Gather theo nhóm hoặc theo băng nhảy trong bộ nhớ. ALU chờ cache. FastEnhancer là tên người ta nhắc khi lập luận này; trang này không trích paper đó.
-- Một GEMM dày hơi lớn hơn, được runtime hợp nhất, có thể xong sớm hơn một conv nhóm khéo mà kernel ONNX Runtime không vector hóa.
-- Kernel thời gian giữ một vòng activation quá khứ. DF2 cắt kernel từ $$2\times 3$$ xuống $$1\times 3$$ (trừ lớp vào) và RTF từ 0,11 xuống 0,04 trong khi GMAC đứng yên. Đó là cơ chế mang sang cách bạn đọc mọi đồ thị siêu nhẹ: đếm byte di chuyển mỗi hop, không chỉ MAC.
+- Các thao tác gom dữ liệu theo nhóm hoặc theo băng tần (gather) phải nhảy cóc trong bộ nhớ, khiến đơn vị tính toán (ALU) phải chờ bộ nhớ đệm (cache) — lập luận này thường gắn với tên gọi FastEnhancer (chỉ nêu tên, không trích bài báo ở đây).
+- Một phép nhân ma trận dày (GEMM) lớn hơn một chút nhưng được runtime hợp nhất (fused) thường hoàn thành nhanh hơn một lớp tích chập nhóm tinh vi mà ONNX Runtime không vector hóa tốt.
+- Lớp tích chập theo trục thời gian phải duy trì vòng đệm activation quá khứ. DF2 rút kernel từ $$2\times 3$$ xuống $$1\times 3$$ (trừ lớp đầu vào) giúp RTF giảm từ 0,11 xuống 0,04 dù GMAC hầu như đứng yên. Đây là nguyên tắc cốt lõi khi đánh giá mọi mô hình siêu nhẹ: hãy đếm lưu lượng byte di chuyển ở mỗi hop chứ không chỉ nhìn số MAC.
 
-**Luật đo (Chương 05).** Một luồng, bỏ warm-up, p50 và p95 của thời gian tường mỗi hop, chia cho độ dài hop. Chạy trên thiết bị đích theo nhịp callback. Cột MAC của paper là một giả thuyết.
+**Quy tắc đo kiểm (Chương 05):** Chạy đơn luồng, loại bỏ giai đoạn khởi động (warm-up), đo phân vị p50 và p95 thời gian xử lý thực tế mỗi hop rồi chia cho độ dài hop trên đúng thiết bị đích theo nhịp callback. Cột MAC trong bài báo chỉ nên coi là giả thuyết ban đầu.
 
-### Bốn tên, và chỉ là tên
+### Bốn cái tên định hướng (chỉ ở mức danh mục)
 
-| Tên | Vai trên shortlist khóa học | Bài này sẽ không nói |
-|-----|-----------------------------|----------------------|
-| **GTCRN** | Mạng hồi tiếp tích chập có nhóm, siêu nhẹ, được nhắc nhiều | Không tiêu đề, năm, URL, MAC, MOS |
-| **FastEnhancer** | Tên gắn với “nhanh trên thiết bị”, kể cả đo ONNX Runtime | Không số kết quả |
-| **μNet** | Tên gắn với bộ nhớ cực thấp (DSP, tai nghe) | Không số kết quả |
-| **Fast-ULCNet** | Tên gắn với tuyến ULCNet và state RNN của stream dài | Không số kết quả |
+| Tên | Vai trò trong danh sách rút gọn | Phạm vi bài học này không nêu |
+|-----|---------------------------------|-------------------------------|
+| **GTCRN** | Mạng tích chập–hồi tiếp theo nhóm siêu nhẹ, thường được nhắc tới | Không nêu tiêu đề, năm, URL, MAC hay MOS |
+| **FastEnhancer** | Tên gắn với định hướng tối ưu tốc độ trên thiết bị (kể cả đo trên ONNX Runtime) | Không nêu số liệu kết quả |
+| **μNet** | Tên gắn với ràng buộc bộ nhớ cực thấp (DSP, tai nghe) | Không nêu số liệu kết quả |
+| **Fast-ULCNet** | Tên gắn với nhánh ULCNet và bài toán trạng thái RNN trong luồng dài | Không nêu số liệu kết quả |
 
-Các chuỗi cùng cụm — ULCNet, UL-UNAS, AdaptCRN, CoFi-Lite, FSPEN — là từ vựng tùy chọn. Không phải nội dung thi, và không có citation ở đây.
+Một số cái tên cùng nhóm như ULCNet, UL-UNAS, AdaptCRN, CoFi-Lite hay FSPEN chỉ là từ vựng mở rộng tùy chọn, không nằm trong phạm vi kiểm tra và không gắn trích dẫn tại đây.
 
-### State chạy lâu hơn clip demo
+### Vấn đề trạng thái khi chạy dài hơn đoạn demo
 
-Clip 3 giây giấu trôi GRU. Ở hop 10 ms, 45 phút là $$45\times 60\times 100=270\,000$$ lần cập nhật. Lượng tử hóa, cổng không ổn, hoặc khoảng im lặng chưa thấy sẽ đẩy state ra khỏi vùng train. Bạn nghe nhiễu nhạc tăng chậm hoặc tiếng bị dúi chậm, không phải click tại $$t=0$$. Fast-ULCNet chỉ là tên shortlist gắn với thảo luận đó; trang này không nêu cách chữa từ paper. Phép thử không cần citation:
+Các đoạn nghe thử dài 3 giây che giấu hoàn toàn hiện tượng trôi trạng thái GRU. Với hop 10 ms, một cuộc gọi 45 phút tương ứng $$45\times 60\times 100=270\,000$$ bước cập nhật liên tiếp. Sai số lượng tử hóa, cổng hồi tiếp kém ổn định hoặc các khoảng lặng kéo dài ngoài phân bố huấn luyện có thể đẩy trạng thái ẩn lệch dần, gây ra nhiễu nhạc tăng chậm hoặc giọng nói bị suy hao dần theo thời gian thay vì lỗi tức thời tại $$t=0$$. Trong khi Fast-ULCNet thường được nhắc đến trong chủ đề này, bạn có thể áp dụng ngay các phép kiểm tra kỹ thuật độc lập sau:
 
-- Trong im lặng đã phát hiện, hòa state GRU về 0 trong vài trăm mili giây, không trong một hop. Zero cứng là click hoặc chùm nhiễu của bài 05-04.
-- Chặn chuẩn state nếu kiến trúc cho phép một tỷ lệ không đổi gain.
-- Ghi histogram gain ở phút 1 và phút 40. Lệch ở cùng mức vào là trôi.
+- Trong các khoảng lặng đã phát hiện, kéo mượt trạng thái GRU về 0 dần trong vài trăm mili giây thay vì đặt về 0 đột ngột trong một hop (đặt 0 cứng sẽ gây click hoặc lọt nhiễu như bài 05-04).
+- Giới hạn chuẩn (norm) của vector trạng thái nếu kiến trúc cho phép mà không làm sai lệch độ lợi.
+- Ghi biểu đồ phân bố (histogram) độ lợi tại phút thứ 1 và phút thứ 40 với cùng mức tín hiệu vào — sự dịch chuyển rõ rệt là dấu hiệu trôi trạng thái.
 
-### Khi đường DF3 vẫn thắng
+### Khi nào nhánh DeepFilterNet3 vẫn là lựa chọn phù hợp
 
-Ưu tiên mô hình gắn DeepFilterNet3 trên trình duyệt laptop khi WASM SIMD giữ được hop và vài megabyte trọng số chấp nhận được. Ưu tiên một tên siêu nhẹ trên DSP hoặc CPU rất nhỏ, nơi nhiễu dư được phép. Một cách chia mạch lạc: AEC cổ điển cộng suppressor dư rất nhỏ trên thiết bị, DF3 trong trình duyệt. File trọng số 16 kHz trong đồ thị 48 kHz không phải DF3 nhẹ; hãy resample có chủ đích.
+Hãy ưu tiên mô hình thuộc nhánh DeepFilterNet3 trên trình duyệt laptop khi WASM SIMD giữ vững ngân sách hop và kích thước trọng số vài megabyte là chấp nhận được. Ngược lại, hãy cân nhắc nhóm siêu nhẹ cho chip DSP hoặc CPU rất yếu nơi chấp nhận một phần nhiễu dư. Một phương án phân tầng hợp lý là dùng AEC cổ điển kết hợp bộ khử dư siêu nhẹ trên thiết bị nhúng, và dùng DF3 trên trình duyệt. Lưu ý không đưa trực tiếp trọng số 16 kHz vào đồ thị 48 kHz rồi coi đó là "DF3 bản nhẹ" — luôn phải lấy mẫu lại có chủ đích.
 
-## Checklist shortlist
+## Danh mục kiểm tra cho danh sách rút gọn
 
-1. Nhân quả, và bao nhiêu khung look-ahead?
-2. 16 kHz hay 48 kHz, và resampler nằm ở đâu?
-3. RTF p95 trên **thiết bị của bạn**, một luồng, cache nóng, nhịp callback.
-4. Byte trọng số và thời gian cold-start, tách khỏi RTF.
-5. Một lần chạy ít nhất 30 phút có đoạn im.
-6. Giấy phép của trọng số.
-7. Mọi toán tử có trong bản ONNX Runtime hoặc tract của bạn.
+1. Đồ thị có nhân quả không và cần bao nhiêu khung nhìn trước?
+2. Hoạt động ở 16 kHz hay 48 kHz, và bộ lấy mẫu lại đặt ở đâu?
+3. Phân vị p95 của RTF trên **đúng thiết bị đích** (đơn luồng, cache nóng, theo nhịp callback).
+4. Dung lượng trọng số và thời gian khởi động lạnh (tách biệt khỏi RTF).
+5. Kết quả chạy thử liên tục ít nhất 30 phút có xen lẫn khoảng lặng.
+6. Giấy phép sử dụng của bộ trọng số.
+7. Mọi toán tử trong đồ thị đều được hỗ trợ bởi phiên bản ONNX Runtime hoặc `tract` đang dùng.
 
 ## Bẫy thường gặp
 
-- Chọn người thắng từ cột MAC.
-- Port tích chập nhóm mà runtime WASM chạy thành vòng scalar.
-- Bỏ lần chạy 30 phút.
-- Đưa PCM 48 kHz vào mô hình có STFT train ở 16 kHz.
+- Chọn mô hình triển khai chỉ dựa trên cột MAC nhỏ nhất.
+- Chuyển đổi các lớp tích chập nhóm mà runtime WASM lại thực thi bằng vòng lặp vô hướng (scalar).
+- Bỏ qua bài kiểm tra ổn định liên tục 30 phút.
+- Đưa dữ liệu PCM 48 kHz trực tiếp vào mô hình có lưới STFT huấn luyện ở 16 kHz.
 
 ## Mini-lab
 
-**Mục tiêu.** Tái hiện so sánh DF2 “GMAC phẳng, RTF không phẳng” từ số đã công bố, rồi áp cùng phép thử tỷ số cho một cặp siêu nhẹ giả để thấy một quyết định trông thế nào trước khi có paper không được nêu tên.
+**Mục tiêu.** Kiểm chứng hiện tượng "GMAC xấp xỉ nhau nhưng RTF chênh lệch lớn" từ bảng số liệu công bố của DeepFilterNet2, sau đó áp dụng tiêu chí chọn theo p95 RTF trên một cặp mô hình giả định.
 
 ```bash
 python3 - << 'PY'
@@ -105,33 +105,33 @@ print("lower_p95_rtf", best[0])
 PY
 ```
 
-**Expected**. `DF ICASSP row: gmac=0.348 rtf=0.11 rtf_per_gmac=0.316` và `DF2 simplified: gmac=0.356 rtf=0.04 rtf_per_gmac=0.112`. Rồi `lower_p95_rtf modelB`. Model B nhiều MAC hơn mà RTF thấp hơn — đó là luật chọn.
+**Kết quả kỳ vọng.** `DF ICASSP row: gmac=0.348 rtf=0.11 rtf_per_gmac=0.316`, `DF2 simplified: gmac=0.356 rtf=0.04 rtf_per_gmac=0.112`, và cuối cùng `lower_p95_rtf modelB`. Dù `modelB` có số MAC cao hơn, nó vẫn thắng vì đạt RTF thực tế thấp hơn.
 
-**Failure modes**. Coi cặp giả là kết quả GTCRN hoặc FastEnhancer. Trích 0,04 như RTF điện thoại. Xếp hạng chỉ theo `rtf_per_gmac` khi p95, không phải trung bình, trượt hop.
+**Lỗi thường gặp.** Nhầm cặp số giả định là kết quả thực của GTCRN hay FastEnhancer; dùng RTF 0,04 của laptop cho điện thoại; hoặc chỉ xếp hạng theo tỷ số `rtf_per_gmac` trong khi phân vị p95 lại vượt hạn hop.
 
 ## Bài tập
 
-1. **Tình huống.** Với DSP đeo tai, laptop tầm trung trong Chrome, và loa họp cỡ Raspberry Pi, chọn DF3 hoặc “một tên siêu nhẹ” và nêu lý do ngân sách trong một câu.
-2. **Phác harness.** Số hop warm-up, độ dài hop, và phân vị bạn dùng làm cổng. Vì sao trung bình không phải cổng?
-3. **Trôi.** Hop 10 ms, 40 phút. Bao nhiêu lần cập nhật GRU? Bạn so cái gì ở đầu và ở cuối?
-4. **Tên.** Viết một câu cho mỗi GTCRN, FastEnhancer, μNet và Fast-ULCNet, không chữ số và không năm.
+1. **Chọn kiến trúc theo thiết bị.** Với ba môi trường: DSP tai nghe, Chrome trên laptop tầm trung và thiết bị loa họp cỡ Raspberry Pi, hãy chọn DF3 hoặc "một mô hình siêu nhẹ" và giải thích lý do ngân sách trong một câu.
+2. **Thiết kế bài đo hiệu năng.** Xác định số hop warm-up, độ dài hop và phân vị dùng làm ngưỡng đạt/không đạt; giải thích vì sao không dùng giá trị trung bình làm ngưỡng.
+3. **Tính toán trôi trạng thái.** Với hop 10 ms trong cuộc gọi 40 phút, mạng GRU thực hiện bao nhiêu lần cập nhật? Cần so sánh đại lượng nào giữa đầu và cuối phiên chạy?
+4. **Định vị danh mục.** Viết đúng một câu mô tả vai trò cho từng cái tên GTCRN, FastEnhancer, μNet và Fast-ULCNet mà không kèm con số hay năm xuất bản.
 
 ### Gợi ý đáp án
 
-1. DSP: siêu nhẹ, vì RTF 0,04 của DF2 đo trên Core i5. Chrome laptop: DF3, nếu WASM SIMD giữ p95 trong hop và cỡ tải chấp nhận được. Board cỡ Pi: paper DF2 nhận thời gian thực trên Pi 4 cho **mô hình đó**; một tên siêu nhẹ là phương án dự phòng nếu p95 bản build của bạn không đạt.
-2. Bỏ 50 hop đầu, hop = 10 ms = 0,01 s, cổng trên p95 (và nhìn p99). Trung bình giấu khung trễ gây underrun. Chương 05 tính đúng việc này.
-3. $$40\times 60\times 100=240\,000$$ lần cập nhật. So histogram gain băng hoặc chuẩn state trên một clip hiệu chuẩn lặp lại, không so cả waveform của cuộc gọi.
-4. Chỉ dùng vai một dòng trong bảng trên. Có chữ số nghĩa là bạn đã bịa một kết quả.
+1. DSP tai nghe: chọn mô hình siêu nhẹ vì RTF 0,04 của DF2 đo trên Core i5; Chrome trên laptop: chọn DF3 nếu WASM SIMD giữ p95 gọn trong hop và kích thước tải chấp nhận được; bo mạch cỡ Raspberry Pi: bài báo DF2 nêu khả năng chạy thời gian thực trên Pi 4 cho chính mô hình đó, còn mô hình siêu nhẹ là phương án dự phòng nếu p95 bản biên dịch thực tế không đạt.
+2. Bỏ qua 50 hop đầu để làm nóng cache, chọn hop = 10 ms = 0,01 s, và đặt ngưỡng trên p95 (đồng thời theo dõi p99) vì giá trị trung bình che giấu các khung trễ gây underrun (Chương 05).
+3. Tổng số bước cập nhật là $$40\times 60\times 100=240\,000$$ lần. Hãy so sánh histogram độ lợi băng tần hoặc chuẩn của vector trạng thái trên cùng một đoạn âm thanh hiệu chuẩn lặp lại, thay vì so trực tiếp hai dạng sóng khác nhau.
+4. Chỉ sử dụng phần mô tả vai trò một dòng trong bảng ở trên; việc thêm số liệu cụ thể khi chưa đọc tài liệu gốc đồng nghĩa với suy đoán.
 
 ## Đọc thêm
 
-- Schröter et al., DeepFilterNet2, [arXiv:2205.05474](https://arxiv.org/abs/2205.05474), cho hai hàng RTF 0,11 và 0,04. Đó là ví dụ MAC lệch RTF.
-- Schröter et al., Interspeech 2023, [arXiv:2305.08227](https://arxiv.org/abs/2305.08227), cho số RTF 0,19 của vòng tract.
-- Valin, [arXiv:1709.08243](https://arxiv.org/abs/1709.08243), baseline hybrid nhỏ (bài 04-06).
-- Nguồn gốc bạn tự mở cho GTCRN, FastEnhancer, μNet và Fast-ULCNet. Không cái nào được link ở đây.
+- Schröter et al., DeepFilterNet2, [arXiv:2205.05474](https://arxiv.org/abs/2205.05474) — đối chiếu hai hàng RTF 0,11 và 0,04 minh họa sự tách rời giữa MAC và RTF.
+- Schröter et al., Interspeech 2023, [arXiv:2305.08227](https://arxiv.org/abs/2305.08227) — số đo RTF 0,19 của bản `tract`.
+- Valin, [arXiv:1709.08243](https://arxiv.org/abs/1709.08243) — mốc đối chiếu kiến trúc lai nhỏ gọn (bài 04-06).
+- Các tài liệu gốc bạn tự tra cứu cho GTCRN, FastEnhancer, μNet và Fast-ULCNet (bài này cố ý không gắn đường dẫn).
 
 ## Video tham khảo
 
-- [RNNoise, Neural Speech Enhancement, and the Browser](https://www.youtube.com/watch?v=nsscrYdrGRE) — W3C, tiếng Anh. **xem trước.** Xem bộ khử đủ nhỏ cho trình duyệt và Raspberry Pi. Ngân sách đó là bài toán streaming siêu nhẹ, không gắn paper vào các tên trong shortlist.
-- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, tiếng Anh. Đồ thị độ phức tạp đối chất lượng là thứ mô hình siêu nhẹ phải sống sót trước khi cái tên trong shortlist có ý nghĩa.
-- [Zoom on Web: getting connected with advanced web technology](https://www.youtube.com/watch?v=nhTxJBgTywc) — Chrome for Developers, tiếng Anh. Đoạn SIMD cho thấy vì sao mô hình rất nhỏ vẫn cần runtime vector hóa nếu hop chỉ vài mili giây.
+- [RNNoise, Neural Speech Enhancement, and the Browser](https://www.youtube.com/watch?v=nsscrYdrGRE) — W3C, tiếng Anh. **Xem trước.** Minh họa một bộ khử nhiễu đủ gọn cho trình duyệt và Raspberry Pi — đúng bài toán ngân sách của nhóm streaming siêu nhẹ.
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, tiếng Anh. Biểu đồ đánh đổi giữa độ phức tạp và chất lượng làm rõ tiêu chuẩn mà các mô hình siêu nhẹ phải đáp ứng.
+- [Zoom on Web: getting connected with advanced web technology](https://www.youtube.com/watch?v=nhTxJBgTywc) — Chrome for Developers, tiếng Anh. Phần nói về SIMD giải thích vì sao ngay cả mô hình rất nhỏ vẫn cần runtime vector hóa khi hop chỉ dài vài mili giây.

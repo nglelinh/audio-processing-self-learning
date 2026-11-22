@@ -11,53 +11,53 @@ lesson_type: required
 draft: false
 ---
 
-Mezon noise suppression là case study sản phẩm, không phải giáo trình thứ hai. Đường công khai là micro trình duyệt, track cục bộ của LiveKit, và `DeepFilterNoiseFilterProcessor` từ gói npm `deepfilternet3-noise-filter` (bản 1.3.0 trong khóa này). Suy luận ở trên thiết bị. Gói tải bản WASM và archive ONNX DeepFilterNet3 từ CDN base bạn truyền trong `assetConfig.cdnUrl`. Bản ≥ 1.2.0, gồm 1.3.0, tự thêm `v2/`, nên file được lấy là `{cdnUrl}/v2/pkg/df_bg.wasm` và `{cdnUrl}/v2/models/DeepFilterNet3_onnx.tar.gz`. Base ví dụ là `https://cdn.mezon.ai/AI/models/datas/noise_suppression/deepfilternet3`. Bạn học đường đó. Trọng số là archive DeepFilterNet3 của Rikorose. Bạn không sửa repo chung [mezonai/mezon-noise-suppression](https://github.com/mezonai/mezon-noise-suppression) như bài tập. Fork cá nhân hoặc harness bên ngoài là workspace. Cây giảng viên tại `/Users/nguyenlelinh/ncc/mezon-noise-suppression` là tùy chọn, không bắt buộc để xong lab.
+Bộ khử nhiễu Mezon (Mezon noise suppression) đóng vai trò tình huống nghiên cứu thực tế (case study), không phải một giáo trình riêng biệt. Luồng công khai gồm: micro trình duyệt, track âm thanh cục bộ của LiveKit, và `DeepFilterNoiseFilterProcessor` từ gói npm `deepfilternet3-noise-filter` (phiên bản 1.3.0 trong khóa học này). Toàn bộ quá trình suy luận chạy trực tiếp trên thiết bị. Gói sẽ tải module WASM và gói nén ONNX DeepFilterNet3 từ đường dẫn gốc CDN mà bạn truyền qua `assetConfig.cdnUrl`. Từ phiên bản ≥ 1.2.0 (gồm 1.3.0), gói tự động thêm tiền tố `v2/`, nên hai tệp được tải là `{cdnUrl}/v2/pkg/df_bg.wasm` và `{cdnUrl}/v2/models/DeepFilterNet3_onnx.tar.gz`, với đường dẫn ví dụ `https://cdn.mezon.ai/AI/models/datas/noise_suppression/deepfilternet3`. Bộ trọng số sử dụng gói DeepFilterNet3 gốc của Rikorose. Khi làm bài tập, bạn không chỉnh sửa trực tiếp kho sản phẩm chung [mezonai/mezon-noise-suppression](https://github.com/mezonai/mezon-noise-suppression); hãy làm việc trên nhánh fork cá nhân hoặc thư mục công cụ đánh giá riêng.
 
 ![Đường publish LiveKit với DeepFilterNoiseFilterProcessor]({{ site.imgurl }}/generated/livekit-trackprocessor.png)
 
-*Hình. Chỉ đường publish công khai: mic, `setProcessor`, `DeepFilterNoiseFilterProcessor`, audio đã mã hóa, LiveKit. Asset CDN nuôi processor. `setSuppressionLevel` và `setEnabled` là nút lúc chạy. Khi asset lỗi, vẫn publish audio chưa xử lý.*
+*Hình. Luồng phát hành công khai: micro → `setProcessor` → `DeepFilterNoiseFilterProcessor` → mã hóa âm thanh → LiveKit. Tài nguyên CDN cấp cho processor; `setSuppressionLevel` và `setEnabled` là hai điều khiển lúc chạy. Khi tải tài nguyên lỗi, hệ thống vẫn phát hành âm thanh gốc chưa xử lý.*
 
-## Bạn làm được gì sau bài này
+## Mục tiêu học tập
 
-Bạn truy được tám bước công khai từ micro tới track đã publish, chỉ gọi API mà khóa này coi là công khai, và ánh xạ từng hộp về chương trước. Bạn cũng viết được phác kiến trúc để advisor chấm mà không mở mã riêng.
+Sau bài học này, bạn sẽ lần theo được đủ 8 bước công khai từ micro tới khi phát hành track, chỉ sử dụng đúng các API công khai của gói, ánh xạ từng khối kiến trúc về các chương trước, và viết được bản phác thảo kiến trúc rõ ràng để giảng viên hướng dẫn đánh giá mà không cần truy cập mã nội bộ.
 
-## Tên công khai được dùng
+## Các tên giao diện công khai
 
-Ở trên bề mặt này:
+Bề mặt API công khai gồm các thành phần sau:
 
-| Tên | Vai trò |
+| Thành phần | Vai trò |
 |-----|---------|
-| `DeepFilterNoiseFilterProcessor` | Processor LiveKit, giữ đồ thị trên thiết bị |
-| `DeepFilterNet3Core` | Lõi thấp hơn cho đồ thị WebAudio không phải LiveKit |
-| `setProcessor` | Gắn processor vào track cục bộ trước khi publish |
-| `setSuppressionLevel(0–100)` | Mức mạnh lúc chạy |
-| `setEnabled` | Bypass, không giả vờ mô hình đã chạy |
-| `assetConfig.cdnUrl` | **Base** CDN. Đừng tự nối `v2/` |
+| `DeepFilterNoiseFilterProcessor` | Processor dành cho LiveKit, duy trì đồ thị xử lý trên thiết bị |
+| `DeepFilterNet3Core` | Lớp lõi mức thấp dùng cho đồ thị Web Audio độc lập ngoài LiveKit |
+| `setProcessor` | Gắn processor vào track âm thanh cục bộ trước khi phát hành |
+| `setSuppressionLevel(0–100)` | Điều chỉnh cường độ khử nhiễu trong lúc chạy |
+| `setEnabled` | Chuyển sang bypass mà không giả vờ mô hình đang hoạt động |
+| `assetConfig.cdnUrl` | **Đường dẫn gốc (base)** của CDN; không tự thêm `v2/` |
 
-Tài liệu LiveKit là chỗ tra signaling: [docs.livekit.io](https://docs.livekit.io/). Processor không giữ token, room, hay SFU. `DeepFilterNet3Core` là lối thoát khi bạn không ở trong TrackProcessor của LiveKit. Nó vẫn là cùng gói sản phẩm, không phải lớp riêng bạn bịa.
+Mọi thông tin về truyền báo hiệu (signaling) của LiveKit có thể tra cứu tại [docs.livekit.io](https://docs.livekit.io/). Processor không quản lý token, phòng họp hay SFU. Lớp `DeepFilterNet3Core` là lựa chọn thay thế khi bạn không dùng `TrackProcessor` của LiveKit — đây vẫn là một phần chính thức của cùng gói npm.
 
-## Tám bước đường publish
+## Tám bước trong luồng phát hành track
 
-Đọc một lần, rồi đóng lại và viết lại trong mini-lab.
+Hãy đọc kỹ một lần rồi đóng lại để tự viết lại trong phần mini-lab:
 
-1. Trang xin micro và nhận `MediaStream`.
-2. Bạn bọc stream đó thành local audio track của LiveKit. Track là đối tượng nhận processor.
-3. Bạn tạo `DeepFilterNoiseFilterProcessor` (hoặc `DeepFilterNoiseFilter(options)`, hàm này trả về processor đó) và truyền `assetConfig.cdnUrl` là base CDN, không có hậu tố `v2/`.
-4. Gói ≥ 1.2.0, gồm 1.3.0, xin `{cdnUrl}/v2/pkg/df_bg.wasm` và `{cdnUrl}/v2/models/DeepFilterNet3_onnx.tar.gz`.
-5. Bạn gọi `setProcessor` với processor đó để mẫu được enhance trước khi mã hóa.
-6. Bạn publish track lên room. SFU nhận audio đã mã hóa, không nhận thông tin CDN của bạn.
-7. Sau đó `setSuppressionLevel` từ 0 đến 100 đổi mức mạnh mà không publish lại.
-8. `setEnabled(false)` bỏ qua mô hình. Nếu WASM hoặc archive không tải được, bạn vẫn publish micro chưa xử lý và hiện lỗi. Nút join chết không phải tính năng khử nhiễu.
+1. Trang web xin quyền micro và nhận về đối tượng `MediaStream`.
+2. Bọc luồng đó thành một track âm thanh cục bộ (local audio track) của LiveKit — đây là đối tượng sẽ tiếp nhận processor.
+3. Khởi tạo `DeepFilterNoiseFilterProcessor` (hoặc qua hàm factory `DeepFilterNoiseFilter(options)`) và truyền vào `assetConfig.cdnUrl` ở dạng đường dẫn gốc không có hậu tố `v2/`.
+4. Gói phiên bản ≥ 1.2.0 (gồm 1.3.0) tự động tải `{cdnUrl}/v2/pkg/df_bg.wasm` và `{cdnUrl}/v2/models/DeepFilterNet3_onnx.tar.gz`.
+5. Gọi `setProcessor` để gắn processor lên track, đảm bảo tín hiệu được khử nhiễu trước bước mã hóa.
+6. Phát hành (publish) track vào phòng họp; SFU chỉ nhận dòng âm thanh đã mã hóa, không nhận thông tin cấu hình CDN.
+7. Trong cuộc gọi, dùng `setSuppressionLevel` (từ 0 đến 100) để thay đổi cường độ khử nhiễu mà không phải phát hành lại track.
+8. Dùng `setEnabled(false)` để chuyển sang bypass; nếu tải WASM hoặc gói mô hình thất bại, hệ thống vẫn phải phát hành tín hiệu micro thô và hiển thị thông báo lỗi — một nút tham gia phòng bị treo không bao giờ là hành vi chấp nhận được.
 
-Đó là cả câu chuyện công khai. Rust `df-core` không nằm trên sơ đồ này. Nó là phần kéo tùy chọn ở bài 09-03, không phải sản phẩm thứ hai bạn phải vẽ mới đậu.
+Toàn bộ kiến trúc công khai chỉ gói gọn trong 8 bước trên. Module Rust `df-core` không nằm trong sơ đồ này; đó là nhánh mở rộng tùy chọn ở bài 09-03, không phải yêu cầu bắt buộc.
 
-## Từng lớp để làm gì
+## Vai trò từng tầng và liên kết kiến thức
 
-Lớp ứng dụng là room LiveKit: vào, mute, rời. Chương 07 giữ ranh giới đó. Lớp processor là `DeepFilterNoiseFilterProcessor` cùng callback audio phải xong trong quantum render (chương 05). Lớp asset là module WASM và tar ONNX trên CDN (chương 06 và 07). Mô hình các asset đó chạy là dòng DeepFilterNet3 từ [Rikorose/DeepFilterNet](https://github.com/Rikorose/DeepFilterNet): tầng gain ERB cộng deep filter trên STFT, nên chương 02 và 04 là điều kiện. Nút là `setEnabled` và `setSuppressionLevel`. Đánh giá là chương 08: SI-SDR khi có tham chiếu sạch, DNSMOS khi không, ghi chú nghe, và RTF p95.
+Tầng ứng dụng đảm nhiệm vòng đời phòng LiveKit (tham gia, tắt tiếng, rời phòng) theo phạm vi Chương 07. Tầng processor là `DeepFilterNoiseFilterProcessor` cùng luồng callback âm thanh phải hoàn thành trong giới hạn render quantum (Chương 05). Tầng tài nguyên gồm module WASM và gói nén ONNX đặt trên CDN (Chương 06 và 07). Kiến trúc mô hình bên trong thuộc dòng DeepFilterNet3 từ [Rikorose/DeepFilterNet](https://github.com/Rikorose/DeepFilterNet), kết hợp tầng hệ số ERB và bộ lọc sâu trên phổ STFT (Chương 02 và 04). Hai điểm điều khiển chính là `setEnabled` và `setSuppressionLevel`, còn việc đánh giá chất lượng tuân theo Chương 08: SI-SDR khi có bản gốc sạch, DNSMOS khi không có, ghi chú nghe thử và RTF p95.
 
-Khử nhiễu và khử echo của trình duyệt vẫn đứng cạnh processor này. Nếu cả hai chạy, bạn không biết cái nào ăn phụ âm. Ghi ràng buộc `noiseSuppression` bạn đã đặt. Đó là mục checklist, không phải lớp riêng.
+Lưu ý rằng bộ khử nhiễu và khử vọng tích hợp sẵn của trình duyệt vẫn tồn tại song song với processor này. Nếu bật đồng thời cả hai bộ khử nhiễu, bạn sẽ không thể xác định bên nào đang làm mất phụ âm. Hãy luôn ghi rõ trạng thái ràng buộc `noiseSuppression` của trình duyệt trong bảng kiểm tra.
 
-## Phác cho advisor
+## Mẫu phác thảo kiến trúc gửi giảng viên hướng dẫn
 
 ```markdown
 ## Mezon NS — architecture sketch
@@ -70,19 +70,19 @@ Khử nhiễu và khử echo của trình duyệt vẫn đứng cạnh processor
 - Stretch (tùy chọn): harness Rust df-core cá nhân, ghi passthrough cho đến khi có backend thật
 ```
 
-| Chương | Câu phác phải trả lời |
+| Chương | Câu hỏi bản phác thảo cần làm rõ |
 |--------|------------------------|
-| 02 | Sample rate và frame/hop, không bịa API buffer ẩn |
-| 03 | AEC/NS của trình duyệt có bật cùng lúc không |
-| 04 | Vì sao mô hình là DeepFilterNet3 và núm mức đánh đổi gì |
-| 05 | Callback trễ quantum thì sao |
-| 06 | WASM và archive ONNX; gói tự thêm `v2/` từ ≥ 1.2.0 |
-| 07 | `setProcessor` và `assetConfig.cdnUrl` |
-| 08 | Metric nào là `n/a` trên ghi thật |
+| 02 | Tần số lấy mẫu và cấu hình khung/hop (không tự suy diễn API bộ đệm ẩn) |
+| 03 | Có đang bật song song AEC/NS của trình duyệt hay không |
+| 04 | Lý do chọn DeepFilterNet3 và sự đánh đổi của thanh mức khử nhiễu |
+| 05 | Cách xử lý khi callback vượt hạn render quantum |
+| 06 | Cấu trúc WASM cùng gói ONNX, và quy tắc tự nối `v2/` từ bản ≥ 1.2.0 |
+| 07 | Quy trình gắn `setProcessor` và cấu hình `assetConfig.cdnUrl` |
+| 08 | Chỉ số nào bắt buộc ghi `n/a` trên bản ghi thực tế |
 
 ## Mini-lab
 
-Viết `publish-path.md` với đúng tám bước đánh số từ micro tới publish. Chỉ dùng tên công khai. Rồi chạy:
+Soạn tệp `publish-path.md` liệt kê đúng 8 bước đánh số từ bước lấy micro đến bước phát hành track, chỉ sử dụng các tên API công khai, sau đó chạy script kiểm tra:
 
 ```python
 import re
@@ -103,33 +103,33 @@ print("steps", len(steps))
 print("missing", missing or "none")
 ```
 
-Đầu ra kỳ vọng:
+**Kết quả kỳ vọng**
 
 ```text
 steps 8
 missing none
 ```
 
-Kiểu hỏng: bước thứ chín gọi lớp riêng; nhét `v2/` vào chính `cdnUrl`; dừng cuộc gọi khi asset lỗi; mô tả Rust `df-core` là bắt buộc; trỏ lab vào `/Users/nguyenlelinh/ncc/mezon-noise-suppression` như thể cây đó là một phần bài.
+**Lỗi thường gặp.** Thêm bước thứ 9 gọi tới một lớp nội bộ không công khai; đưa sẵn `v2/` vào giá trị `cdnUrl`; cho cuộc gọi dừng hẳn khi tải tài nguyên lỗi; mô tả Rust `df-core` như yêu cầu bắt buộc; hoặc trỏ bài lab vào kho sản phẩm chung như một phần bài tập.
 
 ## Bài tập
 
-1. Điền phác advisor bằng lời bạn, một trang, URL asset viết đủ.
-2. Vẽ nhánh CDN bị chặn. Nhánh thành công vẫn publish audio. Audio nào?
-3. Liệt kê ba sự kiện telemetry không tải PCM (ví dụ mã HTTP asset, mili giây init, số lần lật `setEnabled`).
-4. Nói chỗ nào trong thiết kế được dùng `DeepFilterNet3Core`, và chỗ nào bắt buộc `DeepFilterNoiseFilterProcessor`.
-5. Giải thích vì sao fork cá nhân là workspace còn repo GitHub chung thì không.
+1. Viết lại bản phác thảo kiến trúc một trang bằng văn phong của riêng bạn, ghi đầy đủ URL tài nguyên.
+2. Vẽ nhánh xử lý tình huống CDN bị chặn; ở nhánh này, luồng âm thanh nào vẫn được phát hành vào phòng?
+3. Liệt kê 3 sự kiện telemetry hữu ích không chứa dữ liệu PCM (ví dụ mã phản hồi HTTP khi tải tài nguyên, thời gian khởi tạo theo mili giây, số lần bật/tắt `setEnabled`).
+4. Phân biệt rõ trường hợp nào trong thiết kế nên dùng `DeepFilterNet3Core` và trường hợp nào dùng `DeepFilterNoiseFilterProcessor`.
+5. Giải thích vì sao mọi thực nghiệm cần thực hiện trên fork cá nhân thay vì kho GitHub sản phẩm chung.
 
 ### Gợi ý đáp án
 
-1. Gồm cả hai file `v2/` và nói tiền tố là của gói, không phải của bạn.
-2. Khi lỗi, publish mic chưa xử lý và hiện lỗi. Đừng chặn room.
-3. Chỉ bộ đếm và thời gian. Không mẫu, không bản ghi lời trong room.
-4. Đường publish LiveKit dùng processor và `setProcessor`. Trang WebAudio tự viết có thể dùng core. Đừng bịa thêm phương thức.
-5. Bài khóa đọc README và API công khai. Thí nghiệm nằm ở fork hoặc harness của bạn.
+1. Ghi đủ cả hai tệp dưới nhánh `v2/` và nêu rõ tiền tố này do gói tự động bổ sung.
+2. Khi tải tài nguyên thất bại, ứng dụng phát hành trực tiếp tín hiệu micro gốc chưa lọc kèm thông báo lỗi, không chặn thao tác vào phòng.
+3. Chỉ thu thập bộ đếm và thời lượng xử lý; tuyệt đối không gửi mẫu sóng hay bản ghi giọng nói trong cuộc họp.
+4. Luồng phát hành trên LiveKit dùng `DeepFilterNoiseFilterProcessor` với `setProcessor`; ứng dụng Web Audio tự dựng có thể gọi trực tiếp `DeepFilterNet3Core`.
+5. Bài học chỉ dựa trên README và API công khai; các thay đổi thử nghiệm phải tách riêng trong fork cá nhân hoặc thư mục harness độc lập.
 
 ## Video tham khảo
 
-- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, tiếng Anh. **xem trước.** Xem STFT trên thiết bị và hệ số thời gian thực. Đường Mezon công khai là bộ khử này trong trình duyệt, không phải một sơ đồ riêng thứ hai.
-- [Group calling architectures in WebRTC: MCU, SFU & P2P](https://www.youtube.com/watch?v=d2N0d6CKrbk) — Tsahi Levent-Levi, tiếng Anh. SFU chuyển track đã publish. Đó là nửa máy chủ của tour kiến trúc.
-- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, tiếng Anh. Một stack gọi đã ship là chuẩn so cho điều 'trên thiết bị, trước encode' phải sống sót.
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, tiếng Anh. **Xem trước.** Video trình bày kiến trúc STFT trên thiết bị và hệ số thời gian thực — chính là mô hình cốt lõi chạy bên trong đường truyền công khai của Mezon.
+- [Group calling architectures in WebRTC: MCU, SFU & P2P](https://www.youtube.com/watch?v=d2N0d6CKrbk) — Tsahi Levent-Levi, tiếng Anh. Giải thích cách SFU chuyển tiếp các track đã phát hành ở phía máy chủ.
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, tiếng Anh. Minh họa các yêu cầu thực tế mà một hệ thống khử nhiễu “trên thiết bị, trước mã hóa” phải đáp ứng trong sản phẩm gọi thoại.

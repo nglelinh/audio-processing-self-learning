@@ -11,35 +11,35 @@ lesson_type: required
 draft: false
 ---
 
-Tăng cường tiếng nói sống ở miền tần số nhiều hơn miền sóng thô. Bài này xây trực giác Fourier thời gian liên tục (CTFT) để mã STFT về sau không còn là đống tham số ma thuật.
+Các kỹ thuật tăng cường tiếng nói chủ yếu hoạt động trên miền tần số hơn là trên dạng sóng thô. Bài học này xây dựng trực giác về biến đổi Fourier thời gian liên tục (CTFT) để các tham số STFT trong mã nguồn ở những chương sau trở nên minh bạch thay vì là những con số khó hiểu.
 
 ![Một sóng được tách thành vài sinusoid; cộng lại thì ra sóng ban đầu]({{ site.imgurl }}/generated/fourier-intuition.png)
 
-*Figure. Tần số là một tọa độ: mỗi sinusoid là một tone cơ sở, biến đổi đo xem tín hiệu chứa bao nhiêu tone đó.*
+*Hình. Tần số là một hệ tọa độ: mỗi hình sin là một thành phần cơ sở, và phép biến đổi đo lượng đóng góp của từng thành phần đó trong tín hiệu.*
 
 ## Mục tiêu học tập
 
-1. Giải thích tần số như tốc độ dao động và như tọa độ trong một cơ sở tín hiệu.
-2. Nêu CTFT thuận/nghịch và câu chuyện phân tích–tổng hợp.
-3. Dùng tính tuyến tính, dịch thời gian ở mức vận hành.
-4. Nối phổ biên độ/pha với cảm thụ nghe ở mức cao.
-5. Giải thích vì sao tiếng nói và nhiễu thường tách sạch hơn ở miền tần số — và khi trực giác đó thất bại.
+1. Hiểu tần số như tốc độ dao động và như một tọa độ trong hệ cơ sở tín hiệu.
+2. Trình bày cặp biến đổi CTFT thuận/nghịch cùng cơ chế phân tích–tổng hợp.
+3. Vận dụng các tính chất tuyến tính và dịch thời gian trong phân tích kỹ thuật.
+4. Liên hệ phổ biên độ và phổ pha với cảm nhận thính giác ở mức tổng quan.
+5. Giải thích vì sao tiếng nói và nhiễu thường tách biệt rõ hơn ở miền tần số, đồng thời chỉ ra các trường hợp trực giác này không còn đúng.
 
 ## Kế hoạch giảng 60 phút
 
 | Phút | Hoạt động |
 |-----:|-----------|
-| 0–8 | Móc: cùng sóng, tranh thời gian vs tần số; vì sao stack VoIP mang tính phổ |
-| 8–20 | Sinusoid, Euler, trực giác hàm riêng LTI |
-| 20–35 | Cặp CTFT; biên độ/pha; ví dụ tuyến tính & dịch |
-| 35–48 | Formant tiếng nói vs nền nhiễu; huyền thoại pha; con trỏ DeepFilterNet |
-| 48–60 | Bẫy, bài tập, xem trước lấy mẫu |
+| 0–8 | Dẫn nhập: so sánh cùng một dạng sóng ở miền thời gian và miền tần số; lý giải vì sao các hệ thống VoIP ưu tiên xử lý phổ |
+| 8–20 | Tín hiệu hình sin, công thức Euler và trực giác hàm riêng của hệ LTI |
+| 20–35 | Cặp biến đổi CTFT, biên độ và pha, cùng ví dụ về tính tuyến tính và dịch thời gian |
+| 35–48 | Formant tiếng nói so với nền nhiễu, ngộ nhận về pha và định hướng sang DeepFilterNet |
+| 48–60 | Các bẫy thường gặp, bài tập nhỏ và giới thiệu bài lấy mẫu |
 
 ## Giải thích cốt lõi
 
-### Tần số là hệ tọa độ
+### Tần số là một hệ tọa độ
 
-Sinusoid phức \(e^{j\Omega t}\) dao động với \(\Omega\) rad/s (\(f=\Omega/(2\pi)\) Hz). Chúng là **hàm riêng của hệ LTI**: lọc LTI chỉ nhân mỗi mũ phức với \(H(j\Omega)\), không sinh tần số mới. Đó là lý do NS miền tần số hấp dẫn: dưới cộng tính và gần LTI ngắn hạn, có thể làm suy “bin nhiễu” và cho qua “bin tiếng nói”. Thực tế lộn xộn hơn (nhiễu không dừng, lỗi mask, pha), nhưng hình ảnh hàm riêng giải thích kiến trúc hầu hết NS cổ điển và SE neural miền STFT.
+Tín hiệu hàm mũ phức \(e^{j\Omega t}\) dao động với tần số góc \(\Omega\) rad/s (\(f=\Omega/(2\pi)\) Hz). Các hàm này là **hàm riêng của hệ tuyến tính bất biến theo thời gian (LTI)**: một bộ lọc LTI chỉ nhân mỗi hàm mũ phức với đáp ứng tần số \(H(j\Omega)\) mà không sinh ra tần số mới. Đây là lý do khử nhiễu miền tần số rất hiệu quả: dưới giả định nhiễu cộng tính và gần LTI trong thời gian ngắn, ta có thể làm suy hao các bin nhiễu và giữ lại các bin tiếng nói. Dù thực tế phức tạp hơn (nhiễu không dừng, sai số mặt nạ, lệch pha), bức tranh hàm riêng vẫn là nền tảng cho phần lớn bộ khử nhiễu cổ điển lẫn mạng nơ-ron miền STFT.
 
 ### Biến đổi Fourier thời gian liên tục
 
@@ -51,41 +51,44 @@ $$
 x(t)=\frac{1}{2\pi}\int_{-\infty}^{\infty}X(j\Omega)e^{j\Omega t}\,\mathrm{d}\Omega
 $$
 
-**Phân tích** đo “bao nhiêu” mỗi tần số; **tổng hợp** dựng lại sóng. \(X=|X|e^{j\phi}\): biên độ ↔ phân bố năng lượng (formant, rít); pha ↔ cấu trúc thời gian (tấn công, cấu trúc pitch). UI spectrogram vẽ biên độ — dễ gây thói quen sai “pha không quan trọng”. Sau mask mạnh, xử lý pha/phổ phức là lựa chọn thiết kế hạng nhất — deep filtering trên phổ phức của DeepFilterNet một phần vì mask biên độ đơn độc có hạn.
+Phép **phân tích** đo mức đóng góp của từng tần số, còn phép **tổng hợp** tái tạo lại dạng sóng ban đầu. Viết \(X=|X|e^{j\phi}\), trong đó biên độ phản ánh phân bố năng lượng (formant, tiếng rít), còn pha mã hóa cấu trúc thời gian (đoạn khởi âm, cấu trúc cao độ pitch). Vì giao diện phổ đồ (spectrogram) thường chỉ hiển thị biên độ, người mới dễ hình thành thói quen sai lầm rằng "pha không quan trọng". Khi áp dụng mặt nạ khử nhiễu mạnh, việc xử lý pha hoặc phổ phức trở thành yếu tố thiết kế then chốt — cơ chế lọc sâu (deep filtering) trên phổ phức của DeepFilterNet ra đời một phần để khắc phục giới hạn của mặt nạ biên độ đơn thuần.
 
-### Tính chất dùng thật
+### Các tính chất thường dùng trong thực tế
 
-**Tuyến tính:** phổ cộng **tuyến tính**, không cộng theo dB. **Dịch thời gian:** trễ là dốc pha. **Parseval:** xóa vùng phổ lớn *phải* giảm năng lượng sóng. **Điều chế:** dịch phổ — giải thích stack hài của pitch tuần hoàn.
+- **Tuyến tính:** phổ của tổng tín hiệu cộng theo thang **tuyến tính**, không cộng trực tiếp theo dB.
+- **Dịch thời gian:** một độ trễ theo thời gian tương ứng với một độ dốc tuyến tính của pha theo tần số.
+- **Định lý Parseval:** việc loại bỏ một vùng phổ lớn *bắt buộc* làm giảm năng lượng của dạng sóng tương ứng.
+- **Điều chế (modulation):** tương ứng với phép dịch phổ, giải thích cấu trúc các dãy hài của âm có cao độ tuần hoàn.
 
-### Tiếng nói vs nhiễu (vật lý hoạt hình)
+### Tiếng nói và nhiễu (mô hình giản lược)
 
-Tiếng nói hữu thanh: kích thích gần tuần hoàn \(f_0\), hài \(kf_0\), formant. Vô thanh: mây cao tần — cắt cao quá phá độ rõ. Nhiễu dừng: HVAC thấp; quạt phẳng. Babble: cần mô hình thời gian (RNN/TCN…) như SE hiện đại.
+Tiếng nói hữu thanh có kích thích gần tuần hoàn tại tần số cơ bản \(f_0\), kéo theo chuỗi họa âm \(kf_0\) được định hình bởi các đỉnh formant. Âm vô thanh phân bố năng lượng rộng ở tần số cao — nếu cắt tần số cao quá mạnh sẽ làm giảm độ rõ. Nhiễu dừng như hệ thống HVAC tập trung ở tần số thấp hoặc phẳng như tiếng quạt. Với nhiễu babble, phổ chồng lấn trực tiếp với tiếng nói nên cần mô hình hóa ngữ cảnh theo thời gian (RNN, TCN...) như trong các hệ thống tăng cường tiếng nói hiện đại.
 
-### Cầu tới phần còn lại Chương 01
+### Cầu nối sang phần còn lại của Chương 01
 
-Micro cho mẫu. Tích phân liên tục thành DTFT/DFT/FFT trên cửa sổ. Một câu cần giữ: **tần số là hệ số cơ sở; bin STFT là ước lượng cục bộ, đã cửa sổ hóa của các hệ số đó.**
+Micro không cung cấp hàm liên tục mà cung cấp chuỗi mẫu rời rạc. Do đó, tích phân liên tục sẽ chuyển thành DTFT, DFT và FFT trên từng cửa sổ. Điều cốt lõi cần ghi nhớ là: **tần số đóng vai trò hệ số trong một cơ sở tín hiệu, còn mỗi bin STFT là ước lượng cục bộ, có cửa sổ hóa của hệ số đó.**
 
 ## Ví dụ có số
 
-Hai tone \(x(t)=\cos(2\pi\cdot 440\,t)+0.3\cos(2\pi\cdot 880\,t)\). Euler không phải khẩu hiệu:
+Xét tín hiệu gồm hai thành phần tần số \(x(t)=\cos(2\pi\cdot 440\,t)+0.3\cos(2\pi\cdot 880\,t)\). Công thức Euler cho thấy rõ cấu trúc phổ của tín hiệu này:
 
 $$
 \cos\theta=\frac{e^{j\theta}+e^{-j\theta}}{2}.
 $$
 
-Cosine 440 Hz là cặp vạch tại \(\pm 440\,\mathrm{Hz}\), mỗi vạch biên độ phức \(1/2\); cosine 880 Hz là cặp tại \(\pm 880\,\mathrm{Hz}\) với biên độ \(0.15\). LPF 600 Hz cắt họa âm octave và làm tối tembre — NS “low-pass cho hết rít” mắc lỗi tương tự với phụ âm. Trên đường 48 kHz full-band (mặc định của `deepfilternet3-noise-filter`) các phụ âm đó được phép sống trên 8 kHz. Trễ 5 ms tại 1 kHz: dịch pha \(-2\pi f t_0\). Cộng dB sai: không được viết “−20 dB + −20 dB = −40 dB” cho hỗn hợp tuyến tính.
+Thành phần cosine 440 Hz tạo ra một cặp vạch phổ tại \(\pm 440\,\mathrm{Hz}\), mỗi vạch có biên độ phức \(1/2\); thành phần cosine 880 Hz tạo cặp vạch tại \(\pm 880\,\mathrm{Hz}\) với biên độ \(0.15\). Một bộ lọc thông thấp (LPF) cắt tại 600 Hz sẽ loại bỏ họa âm quãng tám 880 Hz và làm tối âm sắc (timbre) — các bộ khử nhiễu kiểu "lọc thông thấp để hết tiếng rít" mắc đúng lỗi này với phụ âm. Trên đường xử lý 48 kHz toàn băng (mặc định của `deepfilternet3-noise-filter`), các phụ âm cao tần vẫn được bảo toàn trên 8 kHz. Một độ trễ 5 ms tại 1 kHz tạo ra độ dịch pha \(-2\pi f t_0\). Ngoài ra, cần tránh sai lầm khi cộng theo thang dB: không thể viết "−20 dB + −20 dB = −40 dB" cho một phép trộn tuyến tính.
 
 ## Bẫy thường gặp
 
-1. Coi spectrogram biên độ là toàn bộ câu chuyện.
-2. Cộng giá trị dB như biên độ tuyến tính.
-3. Nhầm \(\Omega\) (rad/s) với \(f\) (Hz).
-4. “Độ phân giải tần số càng lớn càng tốt” quên cái giá độ trễ.
-5. Kỳ vọng ký hiệu CTFT xuất hiện nguyên văn trong code.
+1. Coi phổ đồ biên độ là toàn bộ thông tin của tín hiệu.
+2. Cộng trực tiếp các giá trị dB như cộng biên độ tuyến tính.
+3. Nhầm lẫn giữa tần số góc \(\Omega\) (rad/s) và tần số \(f\) (Hz).
+4. Cho rằng độ phân giải tần số càng cao càng tốt mà bỏ qua cái giá phải trả về độ trễ.
+5. Kỳ vọng công thức tích phân CTFT xuất hiện nguyên dạng trong mã nguồn thực tế.
 
 ## Mini-lab
 
-**Mục tiêu.** Tổng hợp một giây 200 Hz + 600 Hz + 1000 Hz ở 8 kHz và đọc bin đỉnh của `rfft`. Với \(N=f_s\), chỉ số bin bằng tần số tính bằng Hz.
+**Mục tiêu.** Tổng hợp tín hiệu dài 1 giây gồm ba sóng sin 200 Hz, 600 Hz và 1000 Hz ở tần số lấy mẫu 8 kHz, sau đó đọc chỉ số các bin đỉnh từ `rfft`. Khi chọn \(N=f_s\), chỉ số bin trùng khớp trực tiếp với tần số tính bằng Hz.
 
 ```python
 import numpy as np
@@ -103,33 +106,33 @@ print(order.tolist())
 print(np.round(mag[order], 1).tolist())
 ```
 
-**Expected.** `[200, 600, 1000]` và `[4000.0, 4000.0, 4000.0]`. Mỗi sine biên độ 1, đủ số chu kỳ nguyên, rơi vào một bin dương với độ lớn \(N/2=4000\).
+**Kết quả kỳ vọng.** `[200, 600, 1000]` và `[4000.0, 4000.0, 4000.0]`. Mỗi sóng sin có biên độ 1 và chứa đúng một số nguyên chu kỳ trong cửa sổ nên năng lượng tập trung vào đúng một bin dương với biên độ \(N/2=4000\).
 
-**Failure modes.** Dùng `np.fft.fft` rồi báo chỉ số tần số âm như một đỉnh thứ hai. Chọn \(N\) không chia hết chu kỳ, đỉnh bị nhòe khỏi bin nguyên. Đọc độ lớn 4000 như hệ số \(1/2\) của cosine trong ví dụ — scale `rfft` của sine là \(N/2\).
+**Lỗi thường gặp.** Dùng `np.fft.fft` rồi báo cáo thêm chỉ số tần số âm như một đỉnh riêng biệt; chọn \(N\) không chứa số nguyên chu kỳ khiến đỉnh bị nhòe sang các bin xung quanh; hoặc nhầm lẫn giá trị 4000 với hệ số \(1/2\) của cosine trong ví dụ liên tục (tỷ lệ quy đổi của `rfft` cho sóng sin là \(N/2\)).
 
 ## Bài tập nhỏ
 
-1. Viết \(\sin(\Omega t)\) bằng mũ phức (Euler).
-2. Trễ 2 ms: dịch pha tại 500 Hz và 2 kHz (trước khi wrap).
-3. Phác phổ hoạt hình: nguyên âm hữu thanh, nhiễu trắng, tiếng bàn phím, babble.
-4. Một đoạn: vì sao thích mũ phức khi phân tích LTI?
-5. Một trường hợp miền thời gian có thể thắng spectral subtraction ngây thơ (gợi ý: xung click).
+1. Biểu diễn \(\sin(\Omega t)\) bằng hàm mũ phức theo công thức Euler.
+2. Với độ trễ 2 ms, hãy tính độ dịch pha tại 500 Hz và 2 kHz (trước khi gập pha về \([-\pi, \pi]\)).
+3. Phác họa dạng phổ giản lược cho bốn loại tín hiệu: nguyên âm hữu thanh, nhiễu trắng, tiếng gõ bàn phím và nhiễu babble.
+4. Viết một đoạn ngắn giải thích vì sao hàm mũ phức đặc biệt thuận tiện khi phân tích hệ LTI.
+5. Nêu một tình huống mà xử lý ở miền thời gian có thể hiệu quả hơn trừ phổ cơ bản (gợi ý: xung click).
 
 ### Gợi ý đáp án
 
-1. \(\sin\theta=(e^{j\theta}-e^{-j\theta})/(2j)\). Hai vạch, trái dấu, hệ số \(1/(2j)\).
-2. \(\Delta\phi=-2\pi f t_0\). 500 Hz và 2 ms: \(-2\pi\) radian, đúng một vòng. 2 kHz: \(-8\pi\) radian, bốn vòng. Biên độ không đổi.
-3. Nguyên âm: chồng hài cộng formant. Nhiễu trắng: phẳng. Click: gai trải băng. Babble: một chồng hài thứ hai, lộn xộn hơn.
-4. Lọc LTI nhân \(e^{j\Omega t}\) với \(H(j\Omega)\) và không đẻ tần số mới. Cosine tách thành hai hàm riêng đó.
-5. Click một mẫu đã trải trên mọi bin. Cổng ngắn ở miền thời gian bắt được; tracker nền chậm thì không.
+1. \(\sin\theta=(e^{j\theta}-e^{-j\theta})/(2j)\): gồm hai vạch phổ trái dấu với hệ số \(1/(2j)\).
+2. Áp dụng \(\Delta\phi=-2\pi f t_0\): tại 500 Hz và 2 ms, độ dịch pha là \(-2\pi\) rad (đúng một vòng); tại 2 kHz là \(-8\pi\) rad (bốn vòng), trong khi biên độ không đổi.
+3. Nguyên âm hữu thanh có chuỗi hài xếp theo đường bao formant; nhiễu trắng có phổ phẳng; xung click trải rộng trên toàn băng tần; babble giống như một chuỗi hài thứ hai chồng lấn phức tạp.
+4. Bộ lọc LTI chỉ nhân \(e^{j\Omega t}\) với một hằng số phức \(H(j\Omega)\) và không sinh ra tần số mới; mọi sóng cosine đều có thể tách thành tổng của hai hàm riêng như vậy.
+5. Một xung click kéo dài một mẫu sẽ trải năng lượng đều trên mọi bin tần số. Một cổng triệt xung ngắn ở miền thời gian có thể phát hiện và chặn nó ngay lập tức, trong khi bộ theo dõi nền nhiễu cập nhật chậm ở miền tần số sẽ bỏ lọt.
 
 ## Đọc thêm
 
-- Oppenheim & Schafer, *Discrete-Time Signal Processing* — các chương tổng quan Fourier.
-- Julius O. Smith, *Mathematics of the DFT*, https://ccrma.stanford.edu/~jos/mdft/ — sinusoid như cơ sở, trước khi viết STFT.
-- DeepFilterNet (arXiv:2110.05588) — enhancement chạy trên miền STFT / deep filtering. Bài này chỉ lấy động cơ.
+- Oppenheim & Schafer, *Discrete-Time Signal Processing* — các chương tổng quan về biến đổi Fourier.
+- Julius O. Smith, *Mathematics of the DFT*, https://ccrma.stanford.edu/~jos/mdft/ — góc nhìn xem sóng sin là hệ cơ sở trước khi đi vào STFT.
+- DeepFilterNet (arXiv:2110.05588) — khử nhiễu trên miền STFT kết hợp deep filtering (bài này cung cấp nền tảng động lực cho phương pháp đó).
 
 ## Video tham khảo
 
-- [But what is the Fourier Transform?  A visual introduction.](https://www.youtube.com/watch?v=spUNpyF58BY) — 3Blue1Brown, tiếng Anh. **xem trước.** Xem hình quấn tín hiệu trước tích phân: mỗi tần số là một tọa độ, đúng trực giác bài này viết thành biến đổi.
-- [The more general uncertainty principle, regarding Fourier transforms](https://www.youtube.com/watch?v=MBnnXbOM5S4) — 3Blue1Brown, tiếng Anh. Đoạn sóng âm là đánh đổi thời gian–tần số mà bài cần trước khi chọn độ dài cửa sổ.
+- [But what is the Fourier Transform?  A visual introduction.](https://www.youtube.com/watch?v=spUNpyF58BY) — 3Blue1Brown, tiếng Anh. **Xem trước.** Minh họa trực quan phép quấn tín hiệu trước khi đi vào tích phân: mỗi tần số là một tọa độ, đúng với trực giác của bài học này.
+- [The more general uncertainty principle, regarding Fourier transforms](https://www.youtube.com/watch?v=MBnnXbOM5S4) — 3Blue1Brown, tiếng Anh. Phần phân tích sóng âm minh họa sự đánh đổi giữa thời gian và tần số trước khi chọn độ dài cửa sổ.

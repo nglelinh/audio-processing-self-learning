@@ -11,114 +11,114 @@ lesson_type: required
 draft: false
 ---
 
-Spectrogram là ngôn ngữ chung của kỹ sư tiếng nói. Bài này luyện đọc cấu trúc tiếng nói, loại nhiễu, và artifact của NS trên hình — và tránh thang dB nói dối. Spectrogram không phải “bức ảnh của audio”. Nó là \(|X(\ell,k)|\) của một STFT cụ thể, theo decibel, có sàn. Đổi cửa sổ hoặc thang màu là đổi câu chuyện.
+Phổ đồ (spectrogram) là công cụ giao tiếp chung của kỹ sư xử lý tiếng nói. Bài học này hướng dẫn cách đọc cấu trúc tiếng nói, nhận diện các dạng nhiễu và phát hiện méo âm (artifact) sau khử nhiễu, đồng thời tránh bị đánh lừa bởi thang màu dB. Phổ đồ không phải là "bức ảnh tuyệt đối của âm thanh" mà là biểu diễn \(|X(\ell,k)|\) của một cấu hình STFT cụ thể theo thang decibel có ngưỡng sàn; chỉ cần đổi hàm cửa sổ hoặc dải màu là hình ảnh thu được sẽ kể một câu chuyện hoàn toàn khác.
 
 ## Mục tiêu học tập
 
-1. Đọc các trục spectrogram (thời gian, tần số, màu dB).
-2. Nhận nguyên âm hữu thanh, formant, phụ âm xát, và khoảng lặng.
-3. Nhận sàn nhiễu dừng, burst, babble, và nhạc.
-4. Nhận artifact NS thường gặp (musical noise, over-suppression, warble).
-5. Dùng spectrogram có chừng mực, cùng với nghe và metric.
+1. Đọc chính xác các trục của phổ đồ (thời gian, tần số và thang màu dB).
+2. Nhận diện nguyên âm hữu thanh, formant, phụ âm xát và khoảng lặng.
+3. Nhận diện nền nhiễu dừng, nhiễu bùng nổ (burst), babble và nhạc nền.
+4. Phát hiện các méo âm phổ biến sau khử nhiễu (nhiễu nhạc, khử quá mức, rung biên độ theo hop).
+5. Kết hợp phổ đồ một cách hợp lý cùng đánh giá nghe và các chỉ số định lượng.
 
 ## Kế hoạch giảng 60 phút
 
 | Phút | Hoạt động |
 |-----:|-----------|
-| 0–10 | Giải phẫu một đồ thị spectrogram |
-| 10–28 | Bộ mẫu tiếng nói (mô tả không cần audio) |
-| 28–42 | Bộ mẫu nhiễu và cách đọc hỗn hợp |
-| 42–52 | Đọc artifact trước/sau NS |
-| 52–60 | Bài tập |
+| 0–10 | Cấu tạo và các thành phần của một biểu đồ phổ đồ |
+| 10–28 | Các mẫu đặc trưng của tiếng nói (nhận diện trực quan không cần nghe) |
+| 28–42 | Các mẫu nhiễu và cách đọc tín hiệu hỗn hợp |
+| 42–52 | So sánh méo âm trước và sau khử nhiễu |
+| 52–60 | Bài tập nhỏ |
 
 ![Spectrogram tiếng nói: các vạch hài nằm ngang xếp chồng, rồi một burst nhiễu dọc phủ mọi băng]({{ site.imgurl }}/generated/spectrogram-reading.png)
 
-*Hình. Hài hữu thanh là một chồng gờ ngang; burst nhiễu là một thanh dọc đổ đầy mọi băng cùng lúc.*
+*Hình. Các họa âm hữu thanh hiện lên thành chồng vạch ngang đều đặn; một đợt nhiễu bùng nổ xuất hiện thành dải dọc phủ kín mọi băng tần cùng lúc.*
 
 ## Giải thích cốt lõi
 
-### Trục và thang
+### Các trục và thang hiển thị
 
-- **X:** thời gian (giây) hoặc chỉ số frame.
-- **Y:** Hz (tuyến tính) hoặc Mel/ERB (tri giác).
-- **Màu:** thường \(20\log_{10}|X(\ell,k)|\) kèm sàn.
+- **Trục hoành (X):** thời gian (giây) hoặc chỉ số khung.
+- **Trục tung (Y):** tần số Hz (tuyến tính) hoặc thang cảm thụ (Mel/ERB).
+- **Màu sắc:** thường là \(20\log_{10}|X(\ell,k)|\) kèm ngưỡng sàn.
 
-Luôn ghi: \(f_s\), cửa sổ, hop, kích thước FFT, dải dB (ví dụ −80..0 dB). Thiếu các mục này thì ảnh chụp màn hình không phải số liệu.
+Mỗi ảnh phổ đồ luôn cần ghi rõ metadata: \(f_s\), hàm cửa sổ, bước nhảy hop, kích thước FFT và dải dB (ví dụ −80..0 dB). Thiếu các thông số này, ảnh chụp màn hình không đủ giá trị làm bằng chứng kỹ thuật.
 
 $$
 S(\ell,k)=20\log_{10}\bigl(\max(|X(\ell,k)|,\,\varepsilon)\bigr).
 $$
 
-\(\varepsilon\) là sàn. Không có nó, bin im (đúng 0 sau mask cứng) thành \(-\infty\), thang màu bị kéo quanh một lỗ, phần còn lại của câu thành một vệt be. Sàn khoảng −80 dB so với sine full-scale thì khoảng lặng tối và hài của nguyên âm vẫn thấy. Hai ảnh chỉ so được khi \(\varepsilon\), cửa sổ và hop khớp. Trục Mel không thẳng hàng với bug bin tuyến tính: bin \(k\) ứng với \(k f_s/N\) hertz, và filterbank Mel đã cộng các bin đó lại.
+Trong đó \(\varepsilon\) là ngưỡng sàn. Nếu thiếu \(\varepsilon\), một bin bằng 0 tuyệt đối (sau khi áp mặt nạ cứng) sẽ cho giá trị \(-\infty\), kéo giãn thang màu lệch quanh điểm lỗ đó và khiến toàn bộ câu nói biến thành một mảng màu bệt, mất tương phản. Đặt sàn quanh −80 dB so với sóng sin toàn thang (full-scale) giúp khoảng lặng hiển thị tối rõ trong khi các họa âm nguyên âm vẫn sắc nét. Hai ảnh phổ đồ chỉ có thể so sánh công bằng khi có cùng \(\varepsilon\), hàm cửa sổ và bước nhảy hop. Ngoài ra, trục Mel không khớp trực tiếp với lỗi theo bin tuyến tính: bin \(k\) tương ứng với \(k f_s/N\) Hz, còn dãy lọc Mel đã cộng gộp nhiều bin lại với nhau.
 
-### Quy trình đọc
+### Quy trình đọc phổ đồ chuẩn
 
-Dùng hình như ca đã giải, rồi cùng thứ tự ấy cho mọi ảnh trong ticket.
+Hãy áp dụng quy trình 5 bước sau cho hình minh họa và cho mọi ảnh đính kèm trong phiếu báo lỗi (ticket):
 
-1. **Đóng dấu STFT.** Đọc \(f_s\), cửa sổ, hop, \(N\) và dải dB trên chú thích trước khi diễn giải màu. Các gờ trên hình nằm gần 1.2, 2.4, 3.6, 4.8, 6.0 và 7.2 kHz: cơ bản 1.2 kHz và các hài, trên trục hertz tuyến tính.
-2. **Tìm khoảng lặng hoặc sàn nhiễu.** Vùng tối trước 0.2 s và sau burst là sàn. Sàn đã sáng thì hoặc mic có hiss, hoặc thang màu đang zoom vào 20 dB dưới cùng. Đừng kết luận mô hình “khử thiếu” khi chưa biết cái nào.
-3. **Tìm chồng hài.** Các gờ ngang, cách đều, là tiếng hữu thanh (hoặc nhạc). Khoảng cách là \(f_0\). Trên hình khoảng cách khoảng 1.2 kHz — giọng rất cao hoặc một nốt hát, không phải giọng nói điển hình 100–200 Hz. Hình học giống nhau, khoảng cách chính là cao độ.
-4. **Tìm sự kiện dọc.** Plosive hoặc burst nhiễu thắp nhiều bin trong một hai frame. Thanh cam khoảng 0.85–1.0 s là kiểu đó: năng lượng mọi tần số, không phải một hài mới. Tiếng phím và tiếng ho giống vậy và hẹp hơn.
-5. **Rồi mới so trước và sau NS**, cùng thang. Mất các gờ trên cao là over-suppression hài. Đốm ở vùng tối là musical noise. Sọc sáng/tối khóa đúng hop là COLA hoặc bơm gain, không phải “thêm nhiễu”.
+1. **Kiểm tra thông số STFT.** Đọc kỹ \(f_s\), cửa sổ, hop, \(N\) và dải dB trước khi diễn giải màu sắc. Trên hình minh họa, các vạch ngang nằm gần 1.2, 2.4, 3.6, 4.8, 6.0 và 7.2 kHz — tương ứng tần số cơ bản 1.2 kHz cùng các họa âm trên trục Hz tuyến tính.
+2. **Xác định khoảng lặng hoặc nền nhiễu.** Vùng tối trước mốc 0.2 s và sau đợt burst là nền nhiễu. Nếu nền hiển thị sáng, có thể micro đang có tiếng rít hoặc thang màu đang phóng đại 20 dB dưới cùng — không nên vội kết luận mô hình "khử chưa đủ" khi chưa kiểm tra thang màu.
+3. **Tìm chồng họa âm.** Các vạch ngang cách đều nhau là dấu hiệu của âm hữu thanh (hoặc nhạc), với khoảng cách giữa hai vạch chính là tần số cơ bản \(f_0\). Trong hình minh họa, khoảng cách khoảng 1.2 kHz tương ứng giọng rất cao hoặc một nốt nhạc (giọng nói thông thường nằm quanh 100–200 Hz), nhưng hình học hoàn toàn tương tự.
+4. **Tìm các sự kiện theo phương dọc.** Âm bật (plosive) hoặc đợt nhiễu bùng nổ làm sáng đồng loạt nhiều bin trong một đến hai khung. Dải cam quanh mốc 0.85–1.0 s là ví dụ điển hình: năng lượng trải khắp mọi tần số chứ không phải một họa âm mới; tiếng gõ phím hay tiếng ho có hình dạng tương tự nhưng hẹp hơn.
+5. **So sánh trước và sau khử nhiễu trên cùng một thang đo.** Các vạch hài bậc cao biến mất báo hiệu khử quá mức (over-suppression); các đốm sáng rời rạc trong vùng tối là nhiễu nhạc (musical noise); các sọc sáng/tối đều đặn khớp đúng nhịp hop là dấu hiệu lỗi COLA hoặc dao động độ lợi, không phải "nhiễu mới sinh".
 
-Lỗi pha không hiện trên \(S(\ell,k)\). Phần dư nghe ướt mà spectrogram biên độ sạch là lỗi dùng lại pha (bài 02-04); hình sẽ không thú nhận.
+Cần lưu ý rằng lỗi pha không xuất hiện trên \(S(\ell,k)\). Nếu âm thanh nghe bị méo "ướt" dù phổ đồ biên độ trông rất sạch, nguyên nhân thường là lỗi tái sử dụng pha nhiễu (bài 02-04) — bản thân phổ đồ biên độ sẽ không bộc lộ lỗi này.
 
-### Mốc tiếng nói
+### Dấu hiệu đặc trưng của tiếng nói
 
-| Mẫu | Nhìn thấy |
-|-----|-----------|
-| Nguyên âm hữu thanh | Vạch hài; băng formant tối hơn giữa các vạch |
-| Đổi cao độ | Vạch nghiêng / khoảng cách đổi |
-| Tắc | Burst băng rộng theo phương dọc + khoảng đóng |
-| Xát | Mây nhiễu ở tần số cao |
-| Lặng | Sát sàn (còn nhiễu mic) |
+| Thành phần | Biểu hiện trên phổ đồ |
+|------------|-----------------------|
+| Nguyên âm hữu thanh | Chuỗi vạch họa âm ngang; các dải đậm (formant) nối qua các vạch |
+| Thay đổi cao độ | Vạch họa âm nghiêng lên/xuống, khoảng cách giữa các vạch thay đổi |
+| Âm tắc (plosive) | Vệt bùng nổ băng rộng theo phương dọc đi kèm khoảng đóng ngắn |
+| Phụ âm xát (fricative) | Đám mây năng lượng dạng nhiễu ở dải tần số cao |
+| Khoảng lặng | Gần mức sàn (chỉ còn nhiễu nền của micro) |
 
-### Mốc nhiễu
+### Dấu hiệu đặc trưng của nhiễu
 
-| Nhiễu | Nhìn thấy |
-|-------|-----------|
-| HVAC | Gờ thấp, kéo dài |
-| Hiss quạt | Sàn băng rộng bị nâng |
-| Bàn phím | Kim dọc mỏng |
-| Babble | Giống tiếng nói nhưng cấu trúc tranh chấp lộn xộn |
-| Nhạc | Chồng hài ổn định, không chuyển formant như tiếng nói |
+| Dạng nhiễu | Biểu hiện trên phổ đồ |
+|------------|-----------------------|
+| HVAC | Dải ngang liên tục ở tần số thấp |
+| Tiếng rít quạt | Toàn bộ nền băng rộng bị nâng sáng đều |
+| Bàn phím | Các vạch dọc rất mảnh |
+| Babble | Có cấu trúc hài giống tiếng nói nhưng chồng chéo lộn xộn |
+| Nhạc nền | Chuỗi họa âm ổn định, kéo dài, không dịch chuyển formant như tiếng nói |
 
-### Artifact sau NS
+### Méo âm thường gặp sau khử nhiễu
 
-| Artifact | Nhìn / nghe |
-|----------|-------------|
-| Musical noise | Đốm bin lẻ theo thời gian |
-| Over-suppression | Mất mây xát; tiếng bị bít |
-| Warble hop | Sọc biên độ tuần hoàn đúng chu kỳ hop |
-| Vang dư | Nhòe dọc còn lại sau tiếng nói |
+| Méo âm (artifact) | Biểu hiện thị giác / thính giác |
+|-------------------|---------------------------------|
+| Nhiễu nhạc (musical noise) | Các đốm bin đơn lẻ bật tắt rải rác theo thời gian |
+| Khử quá mức (over-suppression) | Mất đám mây phụ âm xát cao tần; giọng nghe bị bí, nghẹt |
+| Rung biên độ theo hop (warble) | Các sọc biên độ tuần hoàn theo đúng chu kỳ hop |
+| Vang dư | Vệt nhòe kéo dài theo phương ngang/dọc ngay sau âm tiết |
 
-Spectrogram **hỗ trợ** việc nghe và SI-SDR/DNSMOS (chương 08); không thay chúng. Spectrogram đẹp vẫn có thể nghe xấu vì lỗi pha không hiện trên đồ thị biên độ.
+Phổ đồ chỉ đóng vai trò **bổ trợ** cho đánh giá nghe và các chỉ số như SI-SDR/DNSMOS (Chương 08), không thể thay thế chúng. Một phổ đồ trông rất sạch vẫn có thể nghe khó chịu do lỗi pha vô hình trên đồ thị biên độ.
 
 ## Ví dụ có số
 
-Tem tham số: “48 kHz, Hann 20 ms, hop 10 ms, N=1024, dB −70..0”. \(N=1024\) ở 48 kHz khoảng 21.3 ms nếu cửa sổ bằng FFT, *không* phải lưới 960 điểm của DeepFilterNet. Ghi rõ trong ticket, kẻo sửa nhầm bin.
+Nhãn thông số chuẩn cho một ảnh phổ đồ: `"48 kHz, Hann 20 ms, hop 10 ms, N=1024, dB −70..0"`. Lưu ý \(N=1024\) ở 48 kHz tương ứng khoảng 21.3 ms nếu độ dài cửa sổ bằng FFT, *không* phải lưới 960 điểm của DeepFilterNet — cần ghi rõ trong phiếu báo lỗi để tránh kiểm tra nhầm chỉ số bin.
 
-Tần số tâm bin là \(k f_s/N\). Hài 200 Hz với \(f_s=8\,\mathrm{kHz}\), \(N=256\), rơi ở
+Tần số tâm của bin thứ \(k\) là \(k f_s/N\). Một họa âm 200 Hz ở \(f_s=8\,\mathrm{kHz}\) với \(N=256\) rơi vào vị trí:
 
 $$
 k=\frac{200}{8000/256}=6.4,
 $$
 
-nên năng lượng nằm giữa bin 6 và 7. Hài hai và ba nằm giữa 12–13 và gần 19. Mini-lab in các bin đó. Ticket viết “tone ở bin 200” là đang trộn hertz với chỉ số bin.
+do đó năng lượng phân bố giữa bin 6 và bin 7. Họa âm bậc hai (400 Hz) và bậc ba (600 Hz) lần lượt nằm quanh 12–13 và gần 19 (Mini-lab dưới đây sẽ in trực tiếp các bin này). Một báo cáo lỗi ghi "âm đơn ở bin 200" là đang nhầm lẫn giữa tần số Hz và chỉ số bin.
 
-Thanh sáng tần số thấp có thể là lệch DC, không phải “mô hình thất bại”. High-pass trước khi vẽ nếu đang chẩn đoán NS. Babble và mục tiêu đều có hài; mục tiêu thường to hơn, gần hơn. NS một kênh thì chật — spectrogram để chỉnh kỳ vọng.
+Một dải sáng kéo dài sát đáy tần số thấp thường là thành phần lệch DC chứ không phải "mô hình khử nhiễu thất bại"; hãy lọc thông cao trước khi vẽ nếu đang chẩn đoán NS. Với babble, cả giọng đích lẫn nền đều có cấu trúc hài nhưng giọng đích thường mạnh và gần micro hơn — phổ đồ giúp định lượng giới hạn thực tế của NS đơn kênh.
 
 ## Bẫy thường gặp
 
-1. So đồ thị khác dải màu dB.
-2. Dùng đồ Mel để debug bug bin STFT tuyến tính.
-3. Tuyên bố thắng chỉ vì nền im hơn (tiếng nói có thể đã tổn).
-4. Quên artifact pha vô hình trên mag.
-5. Cửa sổ cực dài làm mọi thứ trông “dừng”.
+1. So sánh hai phổ đồ có dải màu dB khác nhau.
+2. Dùng phổ đồ thang Mel để gỡ lỗi chỉ số bin của STFT tuyến tính.
+3. Vội kết luận đạt chất lượng chỉ vì nền trông tối hơn mà không kiểm tra xem tiếng nói có bị suy hao không.
+4. Bỏ qua các méo pha vốn không hiển thị trên phổ biên độ.
+5. Chọn cửa sổ quá dài khiến các hiện tượng biến đổi nhanh trông như "nhiễu dừng".
 
 ## Mini-lab
 
-**Mục tiêu.** Dựng một spectrogram nhỏ từ các frame `rfft` của sine ba hài, và in bin nào sáng.
+**Mục tiêu.** Tính phổ biên độ trên một khung `rfft` của tín hiệu gồm ba họa âm và in danh sách các bin có năng lượng cao nhất.
 
 ```python
 import numpy as np
@@ -138,34 +138,34 @@ for h in (1, 2, 3):
     print(f"harmonic {h} expected k", h * f0 * L / fs)
 ```
 
-**Kỳ vọng.** Tâm kỳ vọng là **6.4, 12.8, 19.2**. Các bin mạnh là láng giềng của các tâm đó (thường 6 và 7 cho 200 Hz, 12 và 13 cho 400 Hz, và 19 cho 600 Hz). Cặp bin ấy là rò của hài lệch lưới qua búp chính Hann, không phải nhiễu.
+**Kết quả kỳ vọng.** Các vị trí tâm lý thuyết là **6.4, 12.8 và 19.2**. Sáu bin mạnh nhất nằm ở lân cận các tâm đó (thường là 6 và 7 cho 200 Hz, 12 và 13 cho 400 Hz, cùng 19 cho 600 Hz). Cặp bin sáng cạnh nhau là hệ quả tự nhiên của họa âm lệch lưới qua búp chính cửa sổ Hann, không phải nhiễu.
 
-**Khi hỏng.** Chỉ `np.argmax` thì ra bin 6 và giấu các hài kia. `fft` thay `rfft` nhân đôi phổ và làm lệch câu chuyện chỉ số. Quên cửa sổ thì sidelobe (bài 02-03) đẩy bin không liên quan vào top sáu. Đọc bin 6 thành 6 Hz thay vì \(6\cdot8000/256=187.5\,\mathrm{Hz}\) là bug ticket quen thuộc.
+**Lỗi thường gặp.** Chỉ dùng `np.argmax` sẽ chỉ thấy bin 6 và bỏ sót các họa âm bậc cao; dùng `fft` thay cho `rfft` làm nhân đôi phổ và lệch cách đọc chỉ số; bỏ qua hàm cửa sổ khiến búp phụ (bài 02-03) đẩy các bin không liên quan vào nhóm mạnh nhất; và đọc nhầm bin 6 thành 6 Hz thay vì \(6\cdot8000/256=187.5\,\mathrm{Hz}\) là lỗi ghi nhận rất hay gặp trong ticket.
 
 ## Bài tập nhỏ
 
-1. Phác spectrogram hoạt hình của “hello” trong nhiễu.
-2. COLA hỏng với hop 10 ms hiện thế nào?
-3. Vì sao phải kẹp sàn log?
-4. Hai cue phân biệt nhiễu nhạc và tiếng nói hữu thanh.
-5. Metadata bắt buộc kèm spectrogram trong ticket bug?
+1. Phác họa dạng phổ đồ giản lược của từ "hello" trong môi trường có nhiễu nền.
+2. Lỗi COLA với bước nhảy hop 10 ms hiển thị như thế nào trên phổ đồ?
+3. Vì sao bắt buộc phải đặt ngưỡng sàn khi chuyển biên độ sang thang logarit?
+4. Nêu hai dấu hiệu phân biệt nhạc nền với tiếng nói hữu thanh trên phổ đồ.
+5. Liệt kê các thông số metadata bắt buộc phải đi kèm phổ đồ khi gửi báo cáo lỗi.
 
 ### Gợi ý đáp án
 
-1. Chồng hài tần số thấp cho nguyên âm, mây tần số cao cho phụ âm xát, burst dọc cho /h/ hoặc âm tắc, nằm trên một sàn ổn định.
-2. Sọc sáng/tối dọc mỗi 10 ms, khóa theo hop, kể cả xuyên nguyên âm đều.
-3. Nếu không, số 0 đúng trở thành \(-\infty\) và thang màu sụp.
-4. Nhạc giữ khoảng cách hài cứng và partial dài, ổn định; tiếng nói di chuyển formant và đổi \(f_0\) theo ngữ điệu.
-5. \(f_s\), cửa sổ, hop, kích thước FFT, và dải dB.
+1. Chuỗi vạch hài ở tần số thấp cho các nguyên âm, đám mây năng lượng cao tần cho phụ âm xát và vệt dọc ngắn cho âm /h/ hoặc âm bật, tất cả nằm trên một nền nhiễu tương đối đều.
+2. Xuất hiện các sọc sáng/tối theo phương dọc lặp lại đều đặn mỗi 10 ms (khớp đúng chu kỳ hop), kể cả xuyên qua những đoạn nguyên âm ổn định.
+3. Nếu không có sàn, giá trị 0 tuyệt đối sẽ cho \(-\infty\), làm sụp đổ thang màu của toàn biểu đồ.
+4. Nhạc nền thường duy trì khoảng cách họa âm cố định và kéo dài ổn định theo thời gian, còn tiếng nói liên tục dịch chuyển dải formant và biến thiên \(f_0\) theo ngữ điệu.
+5. Tần số lấy mẫu \(f_s\), hàm cửa sổ, bước nhảy hop, kích thước FFT và dải hiển thị dB.
 
 ## Đọc thêm
 
-- Oppenheim & Schafer, và ghi chú phổ của Julius O. Smith — biên độ thời gian ngắn thực sự đo cái gì.
-- Chương spectrogram trong giáo trình xử lý tiếng nói / DSP.
-- Ảnh minh họa DNS Challenge và hình trong paper DeepFilterNet; đọc trục trước khi so với STFT tuyến tính 48 kHz.
+- Oppenheim & Schafer và loạt bài về phổ của Julius O. Smith — phân tích bản chất vật lý của biên độ ngắn hạn.
+- Chương về phổ đồ trong các giáo trình xử lý tiếng nói và DSP.
+- Hình minh họa của DNS Challenge và các bài báo DeepFilterNet (luôn đọc kỹ trục tần số trước khi đối chiếu với STFT tuyến tính 48 kHz).
 
 ## Video tham khảo
 
-- [The Spectrogram and the Gabor Transform](https://www.youtube.com/watch?v=EfWnEldTyPA) — Steve Brunton, tiếng Anh. **xem trước.** Xem cửa sổ trượt thành ảnh thời gian–tần số. Đọc trục trước màu; đó là spectrogram bài yêu cầu bạn tin.
-- [Speech Acoustics 5 - vowel formants](https://www.youtube.com/watch?v=glnUFa2fLyE) — Listen Lab, tiếng Anh. Xem các dải đậm, không phải từng họa âm. Formant là cấu trúc tiếng nói mà bộ khử nhiễu không được xóa.
-- [Coding Adventure: Analyzing Audio](https://www.youtube.com/watch?v=08mmKNLQVHU) — Sebastian Lague, tiếng Anh. Đoạn ngắn hạn cho thấy tiếng nói bị cắt frame rồi vẽ spectrogram, kể cả cách một FFT cả file nói dối về thời điểm.
+- [The Spectrogram and the Gabor Transform](https://www.youtube.com/watch?v=EfWnEldTyPA) — Steve Brunton, tiếng Anh. **Xem trước.** Minh họa quá trình trượt cửa sổ trên biến đổi Fourier để tạo ra ảnh thời gian–tần số; luôn kiểm tra trục trước khi đọc màu.
+- [Speech Acoustics 5 - vowel formants](https://www.youtube.com/watch?v=glnUFa2fLyE) — Listen Lab, tiếng Anh. Tập trung vào các dải đậm formant thay vì từng vạch hài rời rạc — đây chính là cấu trúc tiếng nói mà bộ khử nhiễu phải bảo toàn.
+- [Coding Adventure: Analyzing Audio](https://www.youtube.com/watch?v=08mmKNLQVHU) — Sebastian Lague, tiếng Anh. Phần phân tích ngắn hạn minh họa cách cắt khung tiếng nói để vẽ phổ đồ và lý do một phép FFT trên cả tệp làm mất thông tin thời điểm.

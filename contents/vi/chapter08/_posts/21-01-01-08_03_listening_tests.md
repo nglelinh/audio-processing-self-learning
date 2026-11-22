@@ -11,59 +11,59 @@ lesson_type: required
 draft: false
 ---
 
-SI-SDR có thể vẫn cao trong khi giọng hóa kim loại, và DNSMOS có thể trượt đúng miền người dùng đang ở. Bài nghe là cột bắt được cả hai, nếu bạn khống chế độ to, thứ tự, và lưới clip. Không cần lab chứng nhận ITU để học kỷ luật này. Bạn cần protocol viết ra, nhãn bịt, và một bảng có quyền thua. Bài này là thiết kế AB nhỏ (hoặc kiểu MUSHRA nhẹ) cho nhóm kỹ sư đang quyết có đổi `setSuppressionLevel` trên `DeepFilterNoiseFilterProcessor` hay không.
+Chỉ số SI-SDR có thể vẫn cao dù giọng nói nghe bị kim loại, còn DNSMOS có thể chấm lệch ngay trên miền dữ liệu người dùng thực tế. Bài kiểm thử lắng nghe (listening test) là trụ cột giúp phát hiện cả hai sai sót đó, với điều kiện bạn kiểm soát chặt độ lớn âm lượng (loudness), thứ tự phát và danh mục mẫu âm thanh. Bạn không cần một phòng lab đạt chứng nhận ITU để áp dụng kỷ luật này; điều quan trọng là có quy trình văn bản rõ ràng, ẩn nhãn hệ thống và bảng kết quả cho phép phương án mới có thể thua. Bài học này trình bày thiết kế bài kiểm thử mù AB (hoặc thang điểm kiểu MUSHRA thu gọn) dành cho nhóm kỹ sư đang cân nhắc thay đổi `setSuppressionLevel` trên `DeepFilterNoiseFilterProcessor`.
 
 ![Bản đồ đánh giá với cột nghe người]({{ site.imgurl }}/generated/eval-metric-map.png)
 
-*Hình. Bài nghe là cột chậm và đáng giá. Nó phân xử khi SI-SDR và DNSMOS bất đồng, chuyện bình thường trên micro thật.*
+*Hình. Kiểm thử lắng nghe là cột tốn thời gian nhất nhưng có giá trị quyết định, đóng vai trò phân xử khi SI-SDR và DNSMOS cho kết quả trái ngược nhau trên micro thực tế.*
 
-## Bạn làm được gì sau bài này
+## Mục tiêu học tập
 
-Bạn chọn được AB hay thang kiểu MUSHRA nhẹ, chuẩn hóa độ to, xáo thứ tự, viết hướng dẫn cho người chấm bằng tiếng Anh và tiếng Việt, và báo thắng, thua, hòa theo điều kiện. Bạn cũng biết khi nào dogfood một ngày là đủ.
+Sau bài học này, bạn sẽ chọn được hình thức đánh giá phù hợp giữa AB và thang kiểu MUSHRA thu gọn, chuẩn hóa độ lớn âm lượng, xáo trộn thứ tự mẫu, soạn hướng dẫn người nghe song ngữ Anh – Việt, báo cáo kết quả thắng/thua/hòa tách riêng theo từng điều kiện, và phân biệt được khi nào chỉ cần dùng thử nội bộ (dogfood) một ngày là đủ.
 
-## Chọn protocol khớp quyết định
+## Chọn quy trình khớp với quyết định kỹ thuật
 
-Dogfood — dùng khử nhiễu trong cuộc họp thật — bắt crash, CPU tăng, và câu “tôi ghét cái này”. Nó không ước lượng tỉ lệ thích. AB hỏi mỗi người chấm thích A, thích B, hoặc hòa, trên một cặp. Đó là công cụ đúng cho mức 80 với mức 60, hoặc processor bật với bypass bằng `setEnabled(false)`. ABC thêm mỏ neo micro thô. Thang kiểu MUSHRA, gợi từ ITU-R BS.1534, chấm nhiều hệ với mỏ neo và cần tập người chấm nhiều hơn. ITU-T P.808 mô tả test tiếng nói hội thoại thuê đám đông; đọc như chuẩn để tôn trọng, rồi chạy biến thể nhẹ và nói vậy trong báo cáo. Đừng gắn nhãn test hành lang năm người là P.808.
+Dùng thử nội bộ (dogfood) — bật bộ khử nhiễu ngay trong các cuộc họp hàng ngày — rất hiệu quả để bắt lỗi treo ứng dụng, CPU tăng vọt hoặc cảm giác khó chịu rõ rệt, nhưng không giúp ước lượng tỉ lệ ưa chuộng giữa hai cấu hình. Kiểm thử AB yêu cầu người nghe chọn thích mẫu A, thích mẫu B hoặc hòa trên từng cặp âm thanh; đây là công cụ chuẩn xác để so sánh mức khử 80 với mức 60, hoặc so sánh bật processor với chế độ bypass (`setEnabled(false)`). Biến thể ABC bổ sung thêm mẫu neo (anchor) từ tín hiệu micro thô. Thang điểm kiểu MUSHRA (lấy cảm hứng từ chuẩn ITU-R BS.1534) cho phép chấm đồng thời nhiều hệ thống cùng mẫu neo nhưng đòi hỏi số người nghe lớn hơn. Tương tự, chuẩn ITU-T P.808 mô tả quy trình đánh giá giọng nói qua cộng đồng (crowdsourcing): hãy đọc để nắm vững nguyên tắc, rồi ghi nhận trung thực trong báo cáo rằng bạn đang chạy phiên bản thu gọn thay vì gắn mác “P.808” cho một buổi nghe thử 5 người trong văn phòng.
 
-## Khống chế để kết quả nói về khử nhiễu
+## Kiểm soát biến nhiễu để kết quả phản ánh đúng bộ khử nhiễu
 
-Độ to là nhiễu kinh điển. Nếu file đã khử nhỏ hơn, người được bảo chấm “dễ chịu” sẽ chọn nó dù âm xát đã chết. Chuẩn hóa độ to tích hợp về một đích chung và ghi công cụ. Xáo hệ nào là A trên từng clip. Đừng để mức mới luôn nằm bên phải. Hiện “Hệ 1” và “Hệ 2”, không hiện “DF3-80”. Cùng tai nghe khi có thể, và ghi thiết bị khi không. Ưu tiên 5–10 giây có nhiễu khó và một phụ âm, không phải một phút làm người chấm mệt. Đường phát phải giống hệt: cùng trình duyệt, cùng sample rate, không limiter thêm một phía.
+Chênh lệch độ lớn âm lượng là nguồn thiên lệch kinh điển: nếu một tệp nhỏ tiếng hơn, người nghe được yêu cầu chấm độ “dễ chịu” có thể chọn nhầm nó ngay cả khi các âm xát đã bị mất. Vì vậy, cần chuẩn hóa độ lớn âm lượng tích hợp (integrated loudness) về cùng một mức đích và ghi rõ công cụ đã dùng. Xáo trộn ngẫu nhiên vị trí A/B trên từng đoạn âm thanh để mức khử mới không bao giờ cố định ở một bên; hiển thị nhãn ẩn như “Hệ 1” và “Hệ 2” thay vì “DF3-80”. Cố gắng dùng chung một loại tai nghe (hoặc ghi rõ thiết bị nghe nếu khác nhau), ưu tiên các đoạn dài 5–10 giây chứa nhiễu khó cùng phụ âm rõ nét thay vì đoạn dài cả phút gây mệt tai. Đường phát lại phải hoàn toàn đồng nhất: cùng trình duyệt, cùng tần số lấy mẫu, không chèn thêm bộ giới hạn biên độ (limiter) ở riêng một nhánh.
 
-Phải có clip tiếng nói sạch làm đối chứng. Bộ khử chỉ giúp ồn quán mà làm hỏng câu yên thì không ship làm mặc định. Có ít nhất một nhiễu xung (bàn phím) và một nhiễu babble. Một clip quán yêu thích là cách bộ metric overfit.
+Luôn đưa vào các đoạn giọng nói sạch làm mẫu đối chứng. Một cấu hình chỉ làm tốt ở quán cà phê nhưng lại làm méo giọng trong phòng yên tĩnh không đủ điều kiện làm giá trị mặc định. Tập mẫu cũng cần có ít nhất một loại nhiễu xung (gõ bàn phím) và một loại nhiễu đám đông (babble), tránh tối ưu quá khớp vào duy nhất một đoạn thu quán cà phê quen thuộc.
 
-## Lưới, không phải đống file
+## Thiết kế ma trận mẫu thay vì gom tệp rời rạc
 
-| Nhiễu | Độ khó | Thiết bị | Vì sao có mặt |
+| Loại nhiễu | Độ khó | Thiết bị thu | Vai trò trong ma trận |
 |-------|--------|----------|----------------|
-| Ồn quán | Khó | Mic laptop | Nhiễu giống tiếng nói chồng |
-| Bàn phím | Vừa | Laptop | Xung; dễ cắt quá |
-| Quạt hoặc điều hòa | Dễ hơn | Điện thoại | Nhiễu dừng; băng thông khác |
-| Giao thông | Khó | Điện thoại | Ồn trầm |
-| Phòng yên | Đối chứng | Laptop | Phát hiện khử quá tay |
+| Ồn quán cà phê | Khó | Micro laptop | Tạp âm nhiều giọng nói chồng lấn |
+| Gõ bàn phím | Vừa | Laptop | Nhiễu xung; dễ bị cắt nhầm vào phụ âm |
+| Quạt hoặc điều hòa | Dễ hơn | Điện thoại | Nhiễu dừng; kiểm tra băng thông khác |
+| Tiếng giao thông | Khó | Điện thoại | Nhiễu tần số thấp kéo dài |
+| Phòng yên tĩnh | Đối chứng | Laptop | Phát hiện hiện tượng khử quá tay |
 
-Tám đến mười lăm clip và năm đến mười người chấm là test nhóm nhỏ. Ghi $$N$$ trong bảng. Lặp hai clip với nhãn đảo làm kiểm tra chú ý. Nếu người chấm tự mâu thuẫn cả hai, để phiếu đó ra và nói rõ. Dịch tờ hướng dẫn sang tiếng Việt khi người chấm làm việc bằng tiếng Việt. Tiêu chí phải cùng nghĩa: phụ âm rõ, giọng tự nhiên, ít bị nhiễu gây phân tâm, và phạt giọng bít, timbre robot, hoặc mất từ. Bảo họ bỏ qua khác biệt độ to còn sót.
+Một bài kiểm thử nhóm nhỏ thường gồm 8–15 đoạn âm thanh và 5–10 người chấm (luôn ghi rõ số lượng $$N$$ trong bảng). Lặp lại ngẫu nhiên 2 đoạn với nhãn A/B đảo ngược làm bài kiểm tra mức độ tập trung (attention check); nếu người chấm tự mâu thuẫn trên cả hai cặp lặp, loại phiếu đó ra và ghi chú minh bạch. Khi người chấm sử dụng tiếng Việt, hãy dịch tờ hướng dẫn sang tiếng Việt tự nhiên với cùng hệ tiêu chí: ưu tiên phụ âm rõ ràng, giọng nói tự nhiên, ít tạp âm gây xao nhãng; đồng thời chấm trừ các lỗi giọng bị nghẹt, âm sắc robot hoặc mất từ, và dặn người nghe bỏ qua sai khác âm lượng nhỏ nếu còn sót.
 
-## Bạn báo cáo gì
+## Cách trình bày báo cáo kết quả
 
-Với AB, báo số lần ứng viên thắng, baseline thắng, và hòa, tổng và theo điều kiện. Bàn phím thắng mà quán thua là quyết định tách: có thể ship mức khử thấp hơn làm mặc định và ghi nhiễu quán còn lại, hoặc từ chối đổi mặc định. Đừng gộp các hàng đó thành một phần trăm chiến thắng. Kèm một ví dụ bạn có quyền phát ngày demo (bài 09-05), ghi tên điều kiện.
+Với bài kiểm thử AB, hãy báo cáo đầy đủ số lượt ứng viên mới thắng, hệ nền (baseline) thắng và số lượt hòa — cả tổng thể lẫn tách riêng theo từng điều kiện. Trường hợp thắng ở tiếng bàn phím nhưng thua ở quán cà phê đòi hỏi quyết định phân nhánh rõ ràng: có thể phát hành mức khử thấp hơn làm mặc định kèm ghi nhận phần nhiễu quán còn lại, hoặc từ chối thay đổi mặc định; tuyệt đối không gộp tất cả các hàng thành một con số tỉ lệ thắng duy nhất. Nên đính kèm một mẫu minh họa có quyền phát công khai trong buổi demo (bài 09-05) kèm tên điều kiện cụ thể.
 
-Dạng bảng cho người quyết:
+Mẫu bảng tổng hợp phục vụ ra quyết định:
 
 | Điều kiện | Mới thắng | Cũ thắng | Hòa | N |
 |-----------|-----------|----------|-----|---|
 | Bàn phím | 7 | 2 | 1 | 10 |
-| Quán | 4 | 5 | 1 | 10 |
-| Yên | 3 | 2 | 5 | 10 |
+| Quán cà phê | 4 | 5 | 1 | 10 |
+| Phòng yên | 3 | 2 | 5 | 10 |
 
-Hàng yên toàn hòa là thành công nếu ứng viên không được đụng tiếng nói sạch. Hàng yên mà “cũ” thắng nghĩa là mức mới đang ăn giọng.
+Ở hàng phòng yên tĩnh, kết quả chủ yếu là “hòa” được xem là đạt yêu cầu vì bộ khử nhiễu không làm biến dạng giọng sạch; ngược lại, nếu phương án “cũ” thắng áp đảo ở hàng này thì cấu hình mới đang làm hao hụt giọng nói.
 
-## Khi dogfood là cả bài test
+## Khi nào dùng thử nội bộ (dogfood) là đủ
 
-Chỉ dogfood cho thay đổi phải giống mẫu: fallback CDN, một dòng log, cache header. Dùng cho cờ nội bộ không đổi cái người nghe mặc định. Bắt test có cấu trúc khi đổi mức khử mặc định, ship WASM hoặc archive mô hình mới, hoặc trả lời “giọng nghe lạ”. Việc RTF chỉ bỏ nghe khi mẫu ra khớp wav vàng trong dung sai bạn đã ghi. Bản nhanh hơn mà không gần mẫu là một hệ mới.
+Chỉ nên dừng ở bước dùng thử nội bộ đối với những thay đổi không làm biến đổi mẫu âm thanh đầu ra, chẳng hạn sửa cơ chế fallback CDN, thêm dòng log, chỉnh header cache hoặc bật cờ thử nghiệm nội bộ không tác động tới trải nghiệm mặc định. Ngược lại, bắt buộc phải chạy kiểm thử lắng nghe có cấu trúc khi đổi mức khử nhiễu mặc định, phát hành tệp WASM hoặc gói mô hình mới, hay điều tra phản hồi “giọng nghe lạ”. Ngay cả các tối ưu tốc độ RTF cũng chỉ được bỏ qua bước nghe thử nếu đầu ra khớp với tệp WAV chuẩn trong đúng dung sai đã quy định; một bản chạy nhanh hơn nhưng lệch mẫu đầu ra phải được xem là một hệ thống mới.
 
 ## Mini-lab
 
-Viết `ab_protocol.md` cho một lần đổi mức (ví dụ 80 với 60 trên `setSuppressionLevel`). Rồi chạy checker. Lab đậu khi protocol nêu độ to, bịt mắt, đối chứng sạch, và cả hai ngôn ngữ.
+Soạn tệp `ab_protocol.md` mô tả quy trình kiểm thử AB cho một thay đổi mức khử nhiễu (ví dụ so sánh mức 80 và mức 60 trên `setSuppressionLevel`), sau đó chạy script kiểm tra bên dưới. Bài lab đạt yêu cầu khi tài liệu đề cập rõ chuẩn hóa độ lớn âm lượng, ẩn nhãn (nghe mù), lựa chọn hòa, mẫu đối chứng yên tĩnh, các điều kiện nhiễu và hướng dẫn song ngữ.
 
 ```python
 from pathlib import Path
@@ -74,33 +74,35 @@ print("missing", missing or "none")
 print("chars", len(text))
 ```
 
-Đầu ra kỳ vọng:
+**Kết quả kỳ vọng**
 
 ```text
 missing none
 chars <một số nguyên lớn hơn 400>
 ```
 
-Số ký tự là của bạn. Dòng `missing none` là tín hiệu đậu. Kiểu hỏng: tên file không bịt trên UI người chấm; không có lựa hòa, ép thích khi hai clip như nhau; không có đối chứng yên; hướng dẫn chỉ tiếng Anh cho hội đồng nói tiếng Việt; chấm đổi mức trên giọng một người.
+Độ dài ký tự phụ thuộc vào phần viết của bạn; dòng `missing none` xác nhận đạt chuẩn.
 
-Thân protocol tối thiểu thỏa checker sẽ nêu nhiệm vụ cả hai ngôn ngữ, ghi `setSuppressionLevel`, và liệt kê ba điều kiện. Hãy mở rộng bằng đoạn hướng dẫn trong bài này, đừng nhồi từ khóa.
+**Lỗi thường gặp.** Để lộ tên tệp trên giao diện chấm điểm; bỏ lựa chọn “hòa” khiến người nghe buộc phải đoán khi hai mẫu giống hệt nhau; thiếu mẫu đối chứng phòng yên; chỉ viết hướng dẫn tiếng Anh cho nhóm chấm tiếng Việt; hoặc chỉ đánh giá thay đổi mức khử trên giọng của duy nhất một người nói.
+
+Bản quy trình tối thiểu đạt chuẩn cần trình bày nhiệm vụ bằng cả hai ngôn ngữ, ghi rõ `setSuppressionLevel` và liệt kê đủ ba điều kiện nhiễu; hãy viết thành hướng dẫn hoàn chỉnh theo cấu trúc bài học thay vì nhồi từ khóa.
 
 ## Bài tập
 
-1. Viết đoạn hướng dẫn người chấm bằng tiếng Anh và bản tiếng Việt tự nhiên. Giữ cùng các mức phạt.
-2. Liệt kê chín tên file cho lưới 3×3 (babble, bàn phím, yên × laptop, điện thoại, headset).
-3. Bàn phím: mới thắng 7–2–1. Quán: 4–5–1. Yên: 3–2–5. Bạn ship mức mặc định nào, và test lại gì?
-4. Định luật kiểm tra chú ý cho một clip lặp.
-5. Nêu hai thay đổi sản phẩm không cần protocol này, và một thay đổi cần.
+1. Viết đoạn hướng dẫn người chấm bằng tiếng Anh và bản tiếng Việt tự nhiên tương ứng, giữ thống nhất toàn bộ các tiêu chí chấm trừ.
+2. Liệt kê 9 tên tệp cho một ma trận 3×3 (tạp âm đám đông, bàn phím, phòng yên × laptop, điện thoại, tai nghe có micro).
+3. Với kết quả: Bàn phím (mới thắng 7–2–1), Quán cà phê (4–5–1), Phòng yên (3–2–5), bạn sẽ chọn giữ mức mặc định nào và cần kiểm thử lại điều gì?
+4. Xây dựng quy tắc kiểm tra mức độ tập trung (attention check) dựa trên một đoạn âm thanh lặp lại.
+5. Nêu hai thay đổi sản phẩm không cần chạy quy trình nghe thử này, và một thay đổi bắt buộc phải chạy.
 
 ### Gợi ý đáp án
 
-1. Phạt giọng bít, timbre robot, và mất từ. Bỏ qua lệch độ to nhỏ. Tiếng Việt phải nghe như lời dặn đồng nghiệp, không phải dịch word-for-word.
-2. Mã hóa điều kiện và thiết bị trong tên, ví dụ `babble__laptop__01.wav`.
-3. Đừng ship chỉ vì hàng bàn phím. Quán thua và yên hòa nghĩa là giữ mặc định cũ hoặc test lại mức giữa. Nói rõ bạn chọn gì.
-4. Đảo A/B trên bản lặp. Người chấm đổi chính lựa chọn của mình thì trượt kiểm tra.
-5. Fallback CDN mà mẫu không đổi thì dogfood được. Mặc định mới của `setSuppressionLevel` thì không.
+1. Tiêu chí chấm trừ gồm giọng bị nghẹt, âm sắc robot và mất từ; yêu cầu người nghe bỏ qua chênh lệch âm lượng nhỏ. Bản tiếng Việt cần diễn đạt tự nhiên như lời trao đổi với đồng nghiệp, tránh dịch sát từng chữ.
+2. Mã hóa rõ điều kiện và thiết bị ngay trong tên tệp, ví dụ `babble__laptop__01.wav`.
+3. Không phát hành chỉ vì thắng ở điều kiện bàn phím: kết quả thua ở quán cà phê và hòa ở phòng yên cho thấy nên giữ mặc định cũ hoặc kiểm thử thêm một mức trung gian, đồng thời nêu rõ lựa chọn cuối cùng.
+4. Đảo ngược nhãn A/B trên bản lặp lại của cùng một đoạn; nếu người chấm chọn hai phương án trái ngược nhau thì đánh dấu không đạt kiểm tra tập trung.
+5. Sửa cơ chế fallback CDN không làm đổi mẫu âm thanh thì chỉ cần dogfood; thay đổi giá trị mặc định của `setSuppressionLevel` bắt buộc phải chạy kiểm thử lắng nghe.
 
 ## Video tham khảo
 
-- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, tiếng Anh. **xem trước.** Xem đoạn P.808 thuê đám đông: tham chiếu, mốc, và sàng. Đó là kỷ luật nghe của bài, kể cả khi lưới của bạn nhỏ hơn một lab ITU đầy đủ.
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, tiếng Anh. **Xem trước.** Xem phần trình bày về đánh giá P.808 qua cộng đồng (tham chiếu, mẫu neo và sàng lọc người chấm) — nền tảng kỷ luật lắng nghe áp dụng ngay cả ở quy mô nhóm nhỏ.

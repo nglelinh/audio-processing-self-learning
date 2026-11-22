@@ -11,70 +11,70 @@ lesson_type: required
 draft: false
 ---
 
-Ngày demo là năm phút chứng minh đường publish, các metric, và các giới hạn đều có thật. Slide tiêu đề bóng mà không có số RTF và không có bản ghi dự phòng là trượt. Checklist này là sổ chạy hôm trước: lệnh, file, và các lỗi bạn sẽ tiêm có chủ đích.
+Buổi trình diễn cuối khóa (demo day) gói gọn trong 5 phút để chứng minh luồng phát hành âm thanh, bảng số liệu đo đạc và các giới hạn hệ thống đều được kiểm chứng thực tế. Một bộ slide bắt mắt nhưng thiếu chỉ số RTF và không có bản ghi dự phòng được coi là không đạt. Danh mục kiểm tra (checklist) dưới đây đóng vai trò sổ tay vận hành trước ngày demo: bao gồm lệnh kiểm tra, danh sách tệp và các kịch bản tiêm lỗi (fault injection) có chủ đích.
 
 ![RTF so với quantum render của AudioWorklet]({{ site.imgurl }}/generated/rtf-audioworklet.png)
 
-*Hình. RTF là thời gian tường của một quantum chia cho độ dài quantum. Trung bình dưới 1 vẫn có thể tràn nếu p95 hoặc p99 làm tràn callback. Hãy log p95, và để lần tải asset lúc khởi động ra ngoài con số đó.*
+*Hình. RTF là tỉ số giữa thời gian xử lý thực tế của một quantum và thời lượng của quantum đó. Giá trị trung bình dưới 1 vẫn có thể gây tràn hạn nếu phân vị p95 hoặc p99 vượt ngưỡng callback. Luôn ghi log p95 và tách riêng thời gian tải tài nguyên lúc khởi động.*
 
-## Bạn làm được gì sau bài này
+## Mục tiêu học tập
 
-Bạn đi được đường audio, đường asset, và các file metric, tập script năm phút, và tiêm lỗi CDN mà cuộc gọi không chết. Bạn cũng trình một ví dụ nghe với tên điều kiện nhìn thấy được.
+Sau bài học này, bạn sẽ rà soát trọn vẹn đường truyền âm thanh, đường tải tài nguyên và các tệp số liệu, luyện tập kịch bản trình bày 5 phút, thực hiện tiêm lỗi chặn CDN mà cuộc gọi không gián đoạn, đồng thời trình bày mẫu âm thanh so sánh kèm nhãn điều kiện rõ ràng.
 
-## Checklist kỹ thuật
+## Danh mục kiểm tra kỹ thuật
 
-Chép vào `capstone/notes/demo_checklist.md` và đánh dấu. Ô trống là fail cho đến khi bạn ghi `n/a` và lý do.
+Sao chép các hạng mục sau vào tệp `capstone/notes/demo_checklist.md` và đánh dấu hoàn thành; mọi mục bỏ trống đều coi là chưa đạt trừ khi ghi rõ `n/a` kèm lý do.
 
-Đường audio:
+**Đường truyền âm thanh:**
 
-- Quyền micro chạy trên máy bạn sẽ demo.
-- `setEnabled(true)` và `setEnabled(false)` đều để lại track đã publish. Nếu UI phải vào lại phòng, ghi giới hạn đó.
-- `noiseSuppression` của trình duyệt được ghi bật hoặc tắt, để bạn không gán công cho `DeepFilterNoiseFilterProcessor` trong khi suppressor của trình duyệt mới là người làm.
-- Rời room không rò thêm audio context nghe được ở lần vào sau.
+- Quyền truy cập micro hoạt động ổn định trên chính máy dùng để demo.
+- Cả hai trạng thái `setEnabled(true)` và `setEnabled(false)` đều giữ nguyên track đã phát hành (nếu giao diện buộc phải vào lại phòng, cần ghi rõ đó là giới hạn).
+- Trạng thái bật/tắt `noiseSuppression` của trình duyệt được ghi lại tường minh để tránh quy nhầm hiệu quả của trình duyệt cho `DeepFilterNoiseFilterProcessor`.
+- Khi rời phòng họp, không để rò rỉ `AudioContext` gây nhiễu ở lần tham gia kế tiếp.
 
-Tải mô hình:
+**Tải mô hình từ CDN:**
 
-- Lần lạnh lấy `{cdnUrl}/v2/pkg/df_bg.wasm` và `{cdnUrl}/v2/models/DeepFilterNet3_onnx.tar.gz` với gói ≥ 1.2.0, gồm 1.3.0. Trên panel mạng, xác nhận bạn **không** nhét `v2/` vào trong `assetConfig.cdnUrl`.
-- Lần vào thứ hai dùng cache, hoặc bạn ghi là không.
-- Khi CDN bị chặn, cuộc gọi vẫn publish audio chưa xử lý và UI hiện lỗi. Ảnh hoặc một dòng log vào `capstone/notes/`.
+- Ở lần tải lạnh, gói ≥ 1.2.0 (gồm 1.3.0) gọi đúng `{cdnUrl}/v2/pkg/df_bg.wasm` và `{cdnUrl}/v2/models/DeepFilterNet3_onnx.tar.gz`; kiểm tra trên tab Network để xác nhận **không** đưa sẵn `v2/` vào `assetConfig.cdnUrl`.
+- Ở lần tải thứ hai, tài nguyên được phục vụ từ cache (hoặc ghi nhận rõ nếu chưa bật cache).
+- Khi chặn kết nối CDN, cuộc gọi vẫn phát hành tín hiệu gốc chưa xử lý và giao diện hiển thị thông báo lỗi; lưu ảnh chụp hoặc dòng log vào `capstone/notes/`.
 
-Metric, từ `capstone/metrics/suite.md`:
+**Bảng số liệu (`capstone/metrics/suite.md`):**
 
-- Sáu cột: clip id, condition, SI-SDR hoặc `n/a`, DNSMOS hoặc `n/a`, listening note, RTF p95.
-- Ít nhất một hàng thật với SI-SDR `n/a`.
-- RTF p95 ghi tên thiết bị. Nếu bạn chỉ dogfood, ô là `n/a`, không phải 0.2 đoán.
-- Phiên bản: bản `deepfilternet3-noise-filter`, tên archive mô hình, bản DNSMOS hoặc `not run`.
+- Đủ 6 cột: `clip id`, `condition`, `SI-SDR` hoặc `n/a`, `DNSMOS` hoặc `n/a`, `listening note` và `RTF p95`.
+- Có ít nhất một hàng bản ghi thực tế với cột SI-SDR ghi `n/a`.
+- Cột `RTF p95` ghi kèm tên thiết bị đo; nếu chỉ mới dừng ở dùng thử nội bộ (dogfood), ghi `n/a` chứ không ước đoán con số 0,2.
+- Ghi đầy đủ phiên bản: `deepfilternet3-noise-filter`, tên gói nén mô hình, phiên bản DNSMOS (hoặc `not run`).
 
-Vệ sinh demo:
+**Chuẩn bị cho buổi demo:**
 
-- Bản ghi dự phòng phát được nếu mic sống hỏng.
-- Tai nghe để trên bàn.
-- Một clip quán hoặc babble, một clip bàn phím, một clip yên.
+- Có sẵn tệp ghi âm dự phòng phát được ngay nếu micro trực tiếp gặp sự cố.
+- Chuẩn bị sẵn tai nghe trên bàn để tránh vọng loa.
+- Chuẩn bị đủ ba nhóm mẫu: tiếng ồn quán cà phê (babble), tiếng gõ bàn phím và phòng yên tĩnh.
 
-Rust, nếu bạn đã đụng: câu nói đầu khớp `df_core_status.md`. Passthrough nghĩa là bạn nói “noise suppression is not running”.
+**Nhánh Rust (nếu có thực hiện):** Câu giới thiệu đầu tiên khớp với tệp `df_core_status.md`; nếu ở trạng thái `passthrough`, nói rõ “noise suppression is not running”.
 
-## Script năm phút
+## Kịch bản trình bày 5 phút
 
-| Thời gian | Nói gì | File mở được |
+| Mốc thời gian | Nội dung trình bày | Tệp mở kèm |
 |-----------|--------|----------------|
-| 0:00–0:40 | Nhiễu uplink, trên thiết bị, publish LiveKit | `design/sketch.md` |
-| 0:40–1:20 | Tám bước công khai, không lớp riêng | `publish-path.md` |
-| 1:20–2:30 | Phát thô và đã xử lý, gọi tên điều kiện | wav dự phòng |
-| 2:30–3:30 | Một hàng suite cải thiện, một hàng không | `metrics/suite.md` |
-| 3:30–4:20 | Kết quả giả thuyết, kể cả fail nếu đó là sự thật | `design/hypothesis.md` |
+| 0:00–0:40 | Bài toán khử nhiễu uplink trên thiết bị cho LiveKit | `design/sketch.md` |
+| 0:40–1:20 | Tám bước luồng công khai, không gọi lớp nội bộ | `publish-path.md` |
+| 1:20–2:30 | Phát đối chiếu bản thô và bản đã xử lý, nêu rõ điều kiện | Tệp WAV dự phòng |
+| 2:30–3:30 | Phân tích một hàng cải thiện và một hàng không cải thiện | `metrics/suite.md` |
+| 3:30–4:20 | Kết luận giả thuyết, kể cả khi kết quả không đạt kỳ vọng | `design/hypothesis.md` |
 | 4:20–5:00 | Giới hạn: ngôn ngữ, thiết bị, bản DNSMOS, trạng thái Rust | `notes/limits.md` |
 
-Nếu tập vượt năm phút, cắt slide kiến trúc trước khi cắt hàng phản ví dụ. Hàng không cải thiện là bằng chứng bạn hiểu bản đồ.
+Nếu chạy thử bị quá 5 phút, hãy rút gọn phần kiến trúc trước, tuyệt đối không cắt bỏ hàng phản ví dụ — việc chỉ ra trường hợp không cải thiện mới chứng minh bạn thực sự làm chủ hệ thống đánh giá.
 
-## Tiêm lỗi
+## Thực hành tiêm lỗi (fault injection)
 
-Chặn host CDN (offline trong DevTools, hoặc `cdnUrl` sai) rồi vào phòng. Kỳ vọng: room vẫn có audio; processor không giả mô hình đã chạy; ghi chú nói `setEnabled` còn tới được không. Khôi phục mạng và tải lại. Kỳ vọng: WASM và tar.gz tải từ đường `v2/`. Nếu lần tiêm nào làm khác, hành vi đó là giới hạn, không phải bất ngờ để giấu.
+Chủ động chặn tên miền CDN (chuyển chế độ offline trong DevTools hoặc đặt sai `cdnUrl`) rồi tham gia phòng họp. Kết quả kỳ vọng: phòng họp vẫn có âm thanh, processor không giả vờ mô hình đang chạy, và bạn ghi lại xem công tắc `setEnabled` có còn phản hồi hay không. Sau đó khôi phục mạng và tải lại trang: kiểm tra tệp WASM cùng `.tar.gz` tải thành công từ nhánh `v2/`. Nếu hệ thống hành xử khác kỳ vọng, hãy ghi nhận thẳng vào mục giới hạn thay vì giấu đi.
 
-Tiêm RTF, nếu bạn có log: kéo tới quantum tệ nhất, không phải trung bình. Thanh tràn trên hình là kiểu hỏng. p95 bạn chưa tính thì để `n/a`.
+Nếu có dữ liệu log RTF, hãy kiểm tra ở khung quantum chậm nhất thay vì chỉ nhìn trung bình; cột vượt ngưỡng trên biểu đồ chính là dấu hiệu lỗi. Nếu chưa tính được p95 thì để `n/a`.
 
 ## Mini-lab
 
-Đưa file checklist qua checker sau khi bạn đã chép các heading.
+Sau khi hoàn thiện `capstone/notes/demo_checklist.md`, kiểm tra độ đầy đủ bằng script sau:
 
 ```python
 from pathlib import Path
@@ -94,32 +94,34 @@ missing = [n for n in need if n not in text]
 print("missing", missing or "none")
 ```
 
-Đầu ra kỳ vọng:
+**Kết quả kỳ vọng**
 
 ```text
 missing none
 ```
 
-Dùng token `passthrough` kể cả khi dòng của bạn là “Rust: not attempted, so not a passthrough claim.” Checker chỉ cần từ đó để script demo không quên luật phần kéo. Kiểu hỏng: tick RTF mà không có thiết bị; bản ghi dự phòng là câu khác clip sống; gõ `v2/` vào `cdnUrl` trong khi gói cũng thêm, nên request 404; gọi bản Rust passthrough là “NS works”.
+Vẫn giữ từ khóa `passthrough` trong tệp kể cả khi bạn không làm nhánh Rust (ví dụ ghi: “Rust: not attempted, so not a passthrough claim.”) để đảm bảo checklist không bỏ sót quy tắc xác nhận nhánh mở rộng.
+
+**Lỗi thường gặp.** Đánh dấu đạt ở mục RTF mà không ghi tên thiết bị; dùng bản ghi dự phòng khác hoàn toàn với kịch bản demo trực tiếp; chèn sẵn `v2/` vào `cdnUrl` gây lỗi 404; hoặc giới thiệu bản Rust `passthrough` là “NS works”.
 
 ## Bài tập
 
-1. Canh một lần tập. Ghi thời gian tường vào `capstone/notes/rehearsal.txt`. Cắt đến khi còn ≤ 5:00.
-2. Làm chặn CDN. Dán hành vi publish quan sát được dưới checklist.
-3. Đổi phần giới hạn với một bạn. Mỗi người phải tìm một câu nhận quá.
-4. Liệt kê file từ 09-04 bạn sẽ zip hoặc push từ fork. Loại repo sản phẩm.
-5. Chỉ thanh tràn trên hình RTF và nói bạn sẽ báo gì nếu log chỉ có trung bình.
+1. Chạy thử kịch bản demo có bấm giờ, lưu thời lượng vào `capstone/notes/rehearsal.txt` và tinh chỉnh đến khi không vượt quá 5 phút.
+2. Thực hiện bài kiểm tra chặn CDN và dán ghi nhận thực tế ngay bên dưới checklist.
+3. Trao đổi mục giới hạn (`limits.md`) với một đồng nghiệp để mỗi người tìm ra ít nhất một phát biểu dễ bị hiểu là khẳng định quá mức.
+4. Liệt kê danh sách thư mục từ bài 09-04 bạn sẽ nén hoặc đẩy lên fork cá nhân (loại trừ hoàn toàn kho sản phẩm chung).
+5. Quan sát cột vượt ngưỡng trên biểu đồ RTF và nêu cách báo cáo trung thực nếu log của bạn hiện chỉ có giá trị trung bình.
 
 ### Gợi ý đáp án
 
-1. Cắt kiến trúc trước hàng metric xấu.
-2. Dòng trung thực kỳ vọng: “audio đã publish, mô hình chưa tải, UI hiện lỗi” hoặc đúng cái bạn thấy.
-3. Nhận quá điển hình: ngôn ngữ SI-SDR trên clip thật, hoặc DNSMOS không có phiên bản.
-4. `capstone/design`, `audio`, `metrics`, `notes`. Không đường dưới cây Mezon chung.
-5. Báo trung bình và đặt RTF p95 là `n/a`. Đừng bịa phân vị.
+1. Luôn cắt bớt phần giới thiệu kiến trúc trước, giữ lại các hàng phản ví dụ trong bảng số liệu.
+2. Ghi nhận trung thực hành vi thực tế, ví dụ: “Âm thanh gốc vẫn được phát hành, mô hình không tải được, giao diện hiển thị thông báo lỗi”.
+3. Các phát biểu quá mức thường gặp: báo cáo SI-SDR trên tệp ghi âm thực tế hoặc ghi điểm DNSMOS mà không nêu phiên bản checkpoint.
+4. Nộp bốn thư mục `capstone/design`, `audio`, `metrics`, `notes` từ kho cá nhân, không đính kèm tệp nào thuộc kho sản phẩm chung.
+5. Báo cáo giá trị trung bình đo được và ghi `n/a` ở cột RTF p95, tuyệt đối không tự ước đoán phân vị.
 
 ## Video tham khảo
 
-- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, tiếng Anh. **xem trước.** Các đoạn metric và tích hợp là checklist: một số, một ghi chú nghe, và stack bạn thật sự nối vào.
-- [Sonic Boom! Audio Programming on Android and Chrome (Google I/O'19)](https://www.youtube.com/watch?v=EeQr0zfvF04) — Google for Developers, tiếng Anh. Glitch và callback quá hạn là lỗi bạn cố ý tiêm. Xem chúng được đo thế nào, rồi làm bản nhỏ hơn trong lab.
-- [DeepFilterNet Noise Suppression Demo](https://www.youtube.com/watch?v=EO7n96YwnyE) — Hendrik Schröter, tiếng Anh. Giữ một bản ghi dự phòng theo tinh thần demo này: ngày demo cần tiếng nếu callback trực tiếp hỏng.
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, tiếng Anh. **Xem trước.** Các phần về đánh giá và tích hợp tương ứng trực tiếp với cấu trúc checklist: số liệu, kiểm thử lắng nghe và hệ thống gọi thực tế.
+- [Sonic Boom! Audio Programming on Android and Chrome (Google I/O'19)](https://www.youtube.com/watch?v=EeQr0zfvF04) — Google for Developers, tiếng Anh. Minh họa cách đo lỗi giật tiếng (glitch) và trễ hạn callback — cơ sở cho bài tiêm lỗi hiệu năng.
+- [DeepFilterNet Noise Suppression Demo](https://www.youtube.com/watch?v=EO7n96YwnyE) — Hendrik Schröter, tiếng Anh. Tham khảo cách chuẩn bị mẫu âm thanh dự phòng để buổi demo luôn có âm thanh đối chiếu dù micro trực tiếp gặp sự cố.

@@ -11,132 +11,130 @@ lesson_type: required
 draft: false
 ---
 
-Mỗi lựa chọn STFT và mô hình là một thỏa thuận giữa độ trễ, CPU và chất lượng. Phân biệt ngăn quyết định ship sai: **độ trễ thuật toán là audio muộn bao nhiêu, real-time factor (RTF) là CPU có theo kịp không.** Mô hình nhanh vẫn có thể quá muộn.
+Mỗi lựa chọn về STFT và kiến trúc mô hình đều là một sự đánh đổi giữa độ trễ, tải CPU và chất lượng âm thanh. Nguyên tắc cốt lõi để tránh quyết định triển khai sai lầm là: **độ trễ thuật toán cho biết âm thanh bị trễ bao lâu, còn hệ số thời gian thực (RTF) cho biết CPU có xử lý kịp hay không.** Một mô hình chạy rất nhanh vẫn có thể gây độ trễ quá lớn cho cuộc gọi.
 
 ## Mục tiêu học tập
 
-1. Liệt kê các chặng pipeline cộng độ trễ và CPU.
-2. Đổi cửa sổ/hop/kích thước FFT lấy chất lượng và độ trễ, có số.
-3. Giải thích kiểu hỏng chất lượng khi tối ưu độ trễ quá tay.
-4. Lập phiếu đạt/không đạt cho cấu hình đem ship.
-5. Nối các đánh đổi với mục tiêu thiết kế realtime kiểu DeepFilterNet.
+1. Liệt kê các công đoạn trong pipeline đóng góp vào độ trễ và tải CPU.
+2. Định lượng sự đánh đổi giữa kích thước cửa sổ, hop, kích thước FFT với chất lượng và độ trễ.
+3. Giải thích các chế độ suy giảm chất lượng khi tối ưu độ trễ quá mức.
+4. Lập bảng tiêu chí đạt/không đạt (scorecard) cho một cấu hình trước khi triển khai.
+5. Liên hệ các sự đánh đổi này với mục tiêu thiết kế thời gian thực của DeepFilterNet.
 
 ## Kế hoạch giảng 60 phút
 
 | Phút | Hoạt động |
 |-----:|-----------|
-| 0–10 | Sơ đồ pipeline đầu-cuối (mic → NS → encoder) |
-| 10–28 | Thí nghiệm tưởng tượng, có số |
-| 28–42 | Các kiểu hỏng chất lượng và độ trễ |
-| 42–52 | Phiếu cho pipeline kiểu Mezon |
-| 52–60 | Bài tập |
+| 0–10 | Sơ đồ pipeline đầu–cuối (micro → NS → bộ mã hóa) |
+| 10–28 | Phân tích định lượng qua các kịch bản cấu hình có số liệu |
+| 28–42 | Các chế độ hỏng về chất lượng và độ trễ |
+| 42–52 | Xây dựng bảng tiêu chí triển khai cho pipeline kiểu Mezon |
+| 52–60 | Bài tập nhỏ |
 
 ![Các quantum AudioWorklet trên trục thời gian; process() đôi khi vượt một quantum: RTF là thời gian tường trên thời lượng audio, khác với độ trễ thuật toán của cửa sổ STFT]({{ site.imgurl }}/generated/rtf-audioworklet.png)
 
-*Hình. Mỗi vạch là một quantum render; RTF so thời gian tường của process() với thời lượng audio đó, một con số khác với độ trễ thuật toán của cửa sổ STFT.*
+*Hình. Mỗi vạch đại diện cho một quantum render; RTF so sánh thời gian thực tế (wall-clock) của `process()` với thời lượng âm thanh tương ứng — đây là đại lượng tách biệt với độ trễ thuật toán của cửa sổ STFT.*
 
 ## Giải thích cốt lõi
 
-### Hai đồng hồ
+### Hai đồng hồ độc lập
 
-Độ trễ thuật toán là tính chất của đồ thị tín hiệu. Với STFT nhân quả ở bài 02-02,
+Độ trễ thuật toán là thuộc tính cố hữu của đồ thị tín hiệu. Với STFT nhân quả như đã xét ở bài 02-02:
 
 $$
 D_{\mathrm{alg}}\approx T_L=\frac{L}{f_s},
 $$
 
-cộng look-ahead, trễ resample, và buffer gói. Ở 48 kHz, \(L=960\) đóng góp khoảng **20 ms** dù FFT tốn 0.2 ms hay 2 ms thời gian tường. Mẫu muộn vì phải đợi đầy cửa sổ.
+cộng thêm số khung nhìn trước (look-ahead), trễ của bộ lấy mẫu lại và bộ đệm đóng gói. Ở 48 kHz, cửa sổ \(L=960\) luôn đóng góp khoảng **20 ms** bất kể phép FFT chạy mất 0.2 ms hay 2 ms trên CPU — tín hiệu bị trễ đơn giản vì hệ thống phải chờ thu đủ số mẫu lấp đầy cửa sổ.
 
-RTF là tính chất của bản cài:
+Ngược lại, RTF là thuộc tính hiệu năng của bản cài đặt:
 
 $$
 \mathrm{RTF}=\frac{T_{\mathrm{wall}}(D)}{D}.
 $$
 
-\(D\) là thời lượng audio vừa xử lý (một hop, hoặc một quantum). \(\mathrm{RTF}<1\) nghĩa là xong trước khi khối sau đến hạn. Nó không nói bạn đã nhét bao nhiêu look-ahead. Cảnh báo phía kia của hình: RTF trung bình 0.4 vẫn click nếu p99 vượt hop. Hãy log p95/p99.
+Trong đó \(D\) là thời lượng âm thanh vừa xử lý (một hop hoặc một quantum). Điều kiện \(\mathrm{RTF}<1\) chỉ đảm bảo khối hiện tại xử lý xong trước khi khối tiếp theo đến hạn, chứ không phản ánh lượng look-ahead đã đưa vào thuật toán. Cảnh báo thứ hai từ hình minh họa: ngay cả khi RTF trung bình bằng 0.4, âm thanh vẫn bị lách tách nếu phân vị p99 vượt quá thời lượng hop — do đó luôn phải ghi nhận p95 và p99.
 
-Quantum 128 mẫu ở 48 kHz dài \(128/48000\approx 2.67\,\mathrm{ms}\). Đó là lưới trên hình, không phải hop của mô hình. Hop 10 ms trải khoảng bốn quantum; thanh `process()` đỏ là quantum mà FFT và mạng bị overrun. Khởi động lạnh (biên dịch WASM/ONNX) là việc main thread, không phải RTF trạng thái dừng.
+Một quantum 128 mẫu ở 48 kHz kéo dài \(128/48000\approx 2.67\,\mathrm{ms}\). Đây là nhịp lưới của AudioWorklet trong hình, không phải bước nhảy hop của mô hình. Một hop 10 ms trải qua gần bốn quantum; thanh `process()` màu đỏ minh họa quantum nơi phép FFT và mạng nơ-ron bị vượt hạn (overrun). Lưu ý rằng thời gian khởi động lạnh (biên dịch WASM/ONNX) diễn ra trên luồng chính, không tính vào RTF ở trạng thái ổn định.
 
-### Các chặng (điển hình)
+### Các công đoạn điển hình trong pipeline
 
-1. Thu / buffer quantum AudioWorklet
-2. Resample về rate mô hình
-3. Downmix mono
-4. Cắt frame STFT (cửa sổ/hop)
-5. Đổi đặc trưng (ví dụ ERB)
-6. Tăng cường neural hoặc cổ điển
-7. Đặc trưng ngược / ISTFT / OLA
-8. Resample về rate sink
-9. Giao cho encoder WebRTC
+1. Thu âm / đệm theo quantum AudioWorklet
+2. Lấy mẫu lại (resample) về tần số lấy mẫu của mô hình
+3. Gộp kênh (downmix) về mono
+4. Cắt khung STFT (áp cửa sổ và hop)
+5. Trích xuất đặc trưng (ví dụ thang ERB)
+6. Khử nhiễu bằng mạng nơ-ron hoặc thuật toán cổ điển
+7. Biến đổi ngược đặc trưng, tính ISTFT và cộng chồng lấp OLA
+8. Lấy mẫu lại về tần số của đầu ra (sink)
+9. Chuyển sang bộ mã hóa (encoder) WebRTC
 
-Với mỗi chặng, log riêng độ trễ trên dạng sóng và phần đóng góp RTF. Resampler có thể rẻ về RTF mà vẫn thêm group delay; một phiên ONNX có thể đắt về RTF mà không thêm look-ahead ngoài STFT.
+Với từng công đoạn, hãy đo tách biệt phần độ trễ trên dạng sóng và phần đóng góp vào RTF. Một bộ lấy mẫu lại có thể tiêu tốn rất ít RTF nhưng vẫn cộng thêm trễ nhóm (group delay); ngược lại, phiên chạy ONNX có thể chiếm RTF lớn mà không cộng thêm look-ahead ngoài phần STFT.
 
-### Núm và hệ quả
+### Các tham số điều chỉnh và hệ quả
 
-| Tăng núm | Độ trễ | CPU | Xu hướng chất lượng |
-|----------|--------|-----|---------------------|
-| Cửa sổ \(L\) | tăng | tăng (FFT lớn hơn) | chi tiết tần số tốt hơn; thời gian nhòe hơn |
-| Hop \(R\) | bản thân hop không phải \(D_{\mathrm{alg}}\); \(R\) nhỏ thì hops/s tăng | tăng khi \(R\) giảm | mask thường mượt hơn |
-| Cỡ mô hình | gần như không đổi nếu look-ahead cố định | tăng | thường tăng cho đến khi RTF vỡ |
-| Look-ahead | tăng | tăng | chất lượng thường tăng |
-| Tốc độ mẫu | tăng | tăng | băng thông tăng nếu mô hình được train cho rate đó |
+| Khi tăng tham số | Độ trễ | Tải CPU | Xu hướng chất lượng |
+|------------------|--------|---------|---------------------|
+| Độ dài cửa sổ \(L\) | Tăng | Tăng (FFT lớn hơn) | Độ phân giải tần số tốt hơn nhưng nhòe hơn theo thời gian |
+| Bước nhảy hop \(R\) | Bản thân hop không quyết định toàn bộ \(D_{\mathrm{alg}}\); giảm \(R\) làm tăng hop/s | Tăng khi giảm \(R\) | Mặt nạ thường mượt hơn khi giảm \(R\) |
+| Kích thước mô hình | Gần như không đổi nếu giữ nguyên look-ahead | Tăng | Thường cải thiện cho tới khi RTF vượt ngưỡng |
+| Số khung look-ahead | Tăng | Tăng | Chất lượng thường cải thiện |
+| Tần số lấy mẫu | Tăng (nếu giữ số mẫu) | Tăng | Mở rộng băng thông nếu mô hình được huấn luyện cho tần số đó |
 
-**Phải đo.** Cắt \(R\) từ 480 xuống 240 ở 48 kHz làm đôi hops/s (100 → 200) và CPU của STFT; \(D_{\mathrm{alg}}\) vẫn gần \(L/f_s\) trừ khi cửa sổ cũng ngắn lại. Rút cửa sổ làm rộng bin (bài 02-03). Đó là đổi chất lượng, không phải một chiến thắng RTF miễn phí.
+**Nguyên tắc bắt buộc phải đo đạc.** Giảm \(R\) từ 480 xuống 240 ở 48 kHz làm tăng gấp đôi số hop mỗi giây (từ 100 lên 200) và gần gấp đôi chi phí CPU của STFT, trong khi \(D_{\mathrm{alg}}\) vẫn xấp xỉ \(L/f_s\) nếu không rút ngắn cửa sổ. Ngược lại, rút ngắn cửa sổ lại làm rộng búp chính theo tần số (bài 02-03) — đó là sự đánh đổi chất lượng chứ không phải khoản tối ưu RTF miễn phí.
 
-### Số nên giữ
+### Các con số mốc cần ghi nhớ
 
-Ở 48 kHz:
+Ở tần số 48 kHz:
 
-- quantum 128 mẫu ≈ 2.67 ms
-- hop 480 mẫu = 10 ms → 100 quyết định/giây
-- cửa sổ 960 mẫu = thang đệm 20 ms
+- Quantum 128 mẫu ≈ 2.67 ms
+- Hop 480 mẫu = 10 ms → 100 bước xử lý mỗi giây
+- Cửa sổ 960 mẫu = thang đệm 20 ms
 
-Ở 16 kHz, cùng *số mili giây* thì ít mẫu hơn (FFT rẻ hơn) nhưng băng thông hẹp hơn. Cùng *số mẫu* thì khác mili giây: \(L=512\) ở 16 kHz là 32 ms, không phải 20 ms. Thời gian tường 3 ms trên hop 10 ms là \(\mathrm{RTF}=0.3\), thoải mái. Thời gian tường 12 ms trên cùng hop đó là \(\mathrm{RTF}=1.2\), overrun, dù 12 ms vẫn nhỏ hơn cửa sổ 20 ms. Mini-lab in cả hai cặp để hai đồng hồ nằm ở hai biến khác nhau.
+Ở 16 kHz, cùng *thời lượng mili giây* sẽ chứa ít mẫu hơn (FFT nhẹ hơn) nhưng băng thông hẹp hơn; ngược lại, cùng *số lượng mẫu* lại cho thời lượng khác hẳn (\(L=512\) ở 16 kHz là 32 ms chứ không phải 20 ms). Thời gian xử lý thực tế 3 ms trên hop 10 ms tương ứng \(\mathrm{RTF}=0.3\) (an toàn); thời gian 12 ms trên cùng hop đó cho \(\mathrm{RTF}=1.2\) (vượt hạn), dù 12 ms vẫn nhỏ hơn độ dài cửa sổ 20 ms. Phần Mini-lab tách riêng hai đại lượng này thành hai biến độc lập để tránh nhầm lẫn.
 
-### Các kiểu hỏng
+### Các chế độ hỏng thường gặp
 
-**Ngân sách trễ quá ít:** cửa sổ quá ngắn thì hài không tách được, mask gắt.
+- **Ngân sách độ trễ quá chặt:** cửa sổ quá ngắn khiến các họa âm không tách biệt được và mặt nạ trở nên gắt.
+- **Độ trễ quá lớn:** cuộc gọi có cảm giác trễ rõ rệt; nếu đặt look-ahead trước bộ khử vọng AEC, đường tiếng vọng sẽ trông như bị trôi.
+- **Biên độ dự phòng CPU quá nhỏ:** chỉ cần các khung ở phân vị p99 bị vượt hạn (thanh đỏ) đã đủ gây tiếng nổ lách tách dù RTF trung bình rất thấp.
 
-**Trễ quá nhiều:** cuộc gọi thấy muộn, và look-ahead đặt trước AEC trông như đường echo đang trôi.
+### Phiếu tiêu chí triển khai (ví dụ minh họa)
 
-**Headroom CPU quá ít:** một overrun p99 (thanh đỏ) đã thành tiếng nổ, dù RTF trung bình đẹp.
+| Tiêu chí | Mục tiêu minh họa | Đạt? |
+|----------|-------------------|------|
+| Độ trễ thuật toán + look-ahead | ≤ ngân sách sản phẩm (khoảng 20–40 ms) | |
+| p95 RTF trên thiết bị đích | ≤ 0.5 | |
+| Kiểm tra khứ hồi COLA | Sai số dưới ngưỡng cho phép | |
+| DNSMOS / kiểm tra nghe | So sánh với baseline NS của WebRTC | |
+| Không rung biên độ theo hop | Kiểm tra bằng nghe và phổ đồ | |
 
-### Phiếu ship (ví dụ)
+Hãy thay các giá trị minh họa bằng cam kết SLA thực tế của sản phẩm, và tuyệt đối không coi việc đạt "RTF ≤ 0.5" là đã thỏa mãn ngân sách độ trễ thuật toán hoặc ngược lại.
 
-| Tiêu chí | Đích (minh họa) | Đạt? |
-|----------|-----------------|------|
-| Look-ahead thuật toán | ≤ ngân sách sản phẩm (cỡ 20–40 ms) | |
-| p95 RTF trên thiết bị | ≤ 0.5 | |
-| Khứ hồi COLA | sai số dưới ngưỡng | |
-| DNSMOS / nghe | so baseline NS của WebRTC | |
-| Không warble hop | nghe + spectrogram | |
+### Áp dụng vào cấu hình DeepFilterNet
 
-Thay số minh họa bằng SLA của sản phẩm. Đừng đánh dấu “RTF ≤ 0.5” thành đạt độ trễ thuật toán, hoặc ngược lại.
-
-### Kết luận kiểu DeepFilterNet
-
-Thiết lập full-band đã công bố là 48 kHz, STFT 960 điểm (20 ms), overlap 50% (hop 10 ms), cộng look-ahead vài frame ([arXiv:2110.05588](https://arxiv.org/abs/2110.05588)). Coi đó là ràng buộc cứng. Chỗ đánh đổi là vị trí trên đồ thị, resample, và ngân sách thiết bị. `deepfilternet3-noise-filter` 1.3.0 là processor 48 kHz trên hợp đồng đó; nếu p95 RTF trượt, đừng lặng lẽ đổi hop.
+Cấu hình toàn băng công bố của DeepFilterNet dùng tần số 48 kHz, STFT 960 điểm (20 ms), chồng lấp 50% (hop 10 ms) kèm vài khung look-ahead ([arXiv:2110.05588](https://arxiv.org/abs/2110.05588)). Hãy xem đây là các ràng buộc cứng của mô hình; không gian tối ưu nằm ở vị trí đặt trên đồ thị xử lý, khâu lấy mẫu lại và ngân sách phần cứng. Gói `deepfilternet3-noise-filter` 1.3.0 vận hành trên đúng giao ước 48 kHz đó — nếu phân vị p95 của RTF không đạt, không được tự ý thay đổi bước nhảy hop.
 
 ## Ví dụ có số
 
-Config A: 16 kHz, L=20 ms, R=10 ms, mô hình nhỏ, RTF 0.2, MOS ổn.
-Config B: 48 kHz, L=40 ms, R=5 ms, mô hình lớn, RTF 0.9, MOS offline cao hơn, giật trên điện thoại → **đừng ship B**.
+- **Cấu hình A:** 16 kHz, \(L=20\,\mathrm{ms}\), \(R=10\,\mathrm{ms}\), mô hình nhỏ, RTF 0.2, điểm MOS ổn định.
+- **Cấu hình B:** 48 kHz, \(L=40\,\mathrm{ms}\), \(R=5\,\mathrm{ms}\), mô hình lớn, RTF 0.9, điểm MOS ngoại tuyến cao hơn nhưng bị giật trên điện thoại → **không triển khai B**.
 
-Cửa sổ của B đã 40 ms, và RTF trung bình 0.9 không còn chỗ cho quantum thanh đỏ.
+Ở cấu hình B, riêng độ dài cửa sổ đã chiếm 40 ms và RTF trung bình 0.9 không còn đủ biên độ an toàn cho các quantum bị tăng tải đột biến.
 
-Ngân sách thuật toán 40 ms mà đã chi 20 ms cho cửa sổ thì không nuốt thêm vài frame look-ahead 10 ms. Đừng “tiết kiệm” 20 ms bằng cách chỉ báo 3 ms thời gian tường.
+Tương tự, với ngân sách thuật toán 40 ms đã dùng hết 20 ms cho cửa sổ, hệ thống không thể tùy tiện cộng thêm nhiều khung look-ahead 10 ms; càng không thể "tiết kiệm" 20 ms đó bằng cách chỉ báo cáo 3 ms thời gian xử lý thực tế.
 
 ## Bẫy thường gặp
 
-1. Chỉ tối ưu RTF trung bình.
-2. Đổi L/R mà không làm lại tập eval.
-3. So chất lượng ở các độ trễ khác nhau một cách không công bằng.
-4. Quên chi phí resample trong RTF.
-5. Lấy timing của bản debug làm sự thật production.
+1. Chỉ tối ưu RTF trung bình mà bỏ qua các phân vị đuôi.
+2. Thay đổi \(L\) hoặc \(R\) nhưng không chạy lại toàn bộ quy trình đánh giá.
+3. So sánh chất lượng giữa các mô hình có độ trễ khác nhau một cách thiếu công bằng.
+4. Quên tính chi phí lấy mẫu lại (resample) vào tổng RTF.
+5. Dùng số đo hiệu năng của bản biên dịch debug làm căn cứ triển khai thực tế.
 
 ## Mini-lab
 
-**Mục tiêu.** In độ trễ frame thuật toán và RTF như hai con số khác nhau cho một hop 48 kHz, kể cả ca overrun. Không cần thiết bị audio.
+**Mục tiêu.** In tách biệt độ trễ khung thuật toán và hệ số RTF cho một hop ở 48 kHz, bao gồm cả tình huống vượt hạn (overrun), không cần thiết bị âm thanh vật lý.
 
 ```python
 fs, L, R = 48000, 960, 480
@@ -153,34 +151,34 @@ print("RTF if process() takes 3 ms", rtf(3.0, hop_ms))
 print("RTF if process() takes 12 ms", rtf(12.0, hop_ms))
 ```
 
-**Kỳ vọng.** Trễ frame `20.0` ms, hop `10.0` ms, quantum khoảng `2.67` ms. RTF in `0.3` và `1.2`. Ca sau trễ hop dù 12 ms vẫn nhỏ hơn cửa sổ 20 ms.
+**Kết quả kỳ vọng.** Độ trễ khung là `20.0` ms, hop `10.0` ms và quantum khoảng `2.67` ms; RTF in ra lần lượt là `0.3` và `1.2`. Trường hợp sau vượt hạn hop dù 12 ms vẫn nhỏ hơn độ dài cửa sổ 20 ms.
 
-**Khi hỏng.** Chia thời gian tường cho cửa sổ thay vì cho hop thì ra RTF 12/20 = 0.6 và giấu overrun. Coi RTF 0.3 là “độ trễ 3 ms” là trộn hai đồng hồ, và phiếu sẽ đậu trong khi người dùng vẫn nghe thấy trễ hoặc tiếng nổ. p99 bằng 12 ms với trung bình 3 ms chính là cảnh báo của hình: hãy log cả hai.
+**Lỗi thường gặp.** Chia thời gian xử lý thực tế cho độ dài cửa sổ thay vì cho hop sẽ cho ra RTF \(12/20 = 0.6\) và che giấu hoàn toàn lỗi overrun; diễn giải RTF 0.3 thành "độ trễ 3 ms" là đánh đồng hai đồng hồ độc lập, khiến bảng kiểm tra báo đạt trong khi người dùng vẫn nghe thấy độ trễ hoặc tiếng nổ. Tình huống p99 đạt 12 ms trong khi trung bình chỉ 3 ms chính là cảnh báo cốt lõi của hình minh họa: luôn phải ghi log cả hai.
 
 ## Bài tập nhỏ
 
-1. Vẽ pipeline 9 giai; đánh dấu chỗ log timestamp.
-2. Hop 10→5 ms: hop/s và CPU roughly?
-3. Ba metric scorecard cho softphone CSKH.
-4. Vì sao 48 kHz có thể hại mô hình train 16 kHz dù CPU cho phép?
-5. Một artifact chất lượng từ cửa sổ quá ngắn.
+1. Vẽ sơ đồ pipeline 9 công đoạn và đánh dấu các vị trí cần ghi mốc thời gian (timestamp).
+2. Khi giảm hop từ 10 ms xuống 5 ms, số hop mỗi giây và tải CPU thay đổi xấp xỉ như thế nào?
+3. Đề xuất ba chỉ số cho bảng đánh giá (scorecard) của phần mềm tổng đài chăm sóc khách hàng.
+4. Vì sao đưa tín hiệu 48 kHz trực tiếp vào mô hình huấn luyện ở 16 kHz vẫn gây hại dù CPU dư sức xử lý?
+5. Nêu một dạng méo chất lượng điển hình khi chọn cửa sổ phân tích quá ngắn.
 
 ### Gợi ý đáp án
 
-1. Đóng dấu lúc thu, sau resample, vào STFT, ra STFT, và lúc giao encoder; trừ để tách độ trễ khỏi thời gian tường.
-2. hops/s tăng đôi (100 → 200 ở 48 kHz nếu hop từng là 480 mẫu); CPU STFT xấp xỉ tăng đôi. \(D_{\mathrm{alg}}\) không giảm một nửa trừ khi \(L\) đổi.
-3. Ví dụ p95 RTF, độ trễ thuật toán so với ngân sách cuộc gọi, và một lượt nghe/DNSMOS trên tên riêng và chữ số.
-4. Bin và mép ERB của mạng được bố trí cho 16 kHz; audio 48 kHz bị gán nhãn 16 kHz là sai phổ, và băng thừa có thể alias vào nếu quên low-pass.
-5. Hài không tách được và mask gắt, nhấp nháy. Plosive bị nhòe là lỗi ngược lại, do cửa sổ quá dài.
+1. Ghi mốc thời gian tại các điểm: thu mẫu, sau lấy mẫu lại, đầu vào STFT, đầu ra STFT và khi giao cho bộ mã hóa; lấy hiệu giữa các mốc để tách bạch độ trễ tín hiệu với thời gian xử lý thực tế.
+2. Số hop mỗi giây tăng gấp đôi (từ 100 lên 200 ở 48 kHz nếu hop ban đầu là 480 mẫu), kéo theo tải CPU của phần STFT tăng gần gấp đôi; trong khi đó \(D_{\mathrm{alg}}\) không giảm đi một nửa trừ khi thay đổi cả \(L\).
+3. Ví dụ: phân vị p95 của RTF, độ trễ thuật toán so với ngân sách cuộc gọi và điểm nghe/DNSMOS trên tập mẫu chứa tên riêng cùng chữ số.
+4. Các bin tần số và biên dải ERB của mạng được thiết kế cố định cho 16 kHz; gán nhãn dữ liệu 48 kHz thành 16 kHz làm sai lệch toàn bộ trục phổ, đồng thời phần băng tần cao hơn có thể bị aliasing nếu thiếu lọc thông thấp.
+5. Các họa âm không tách bạch được và mặt nạ trở nên gắt, nhấp nháy; ngược lại, chọn cửa sổ quá dài sẽ làm nhòe các âm bật (plosive).
 
 ## Đọc thêm
 
-- Framing realtime DeepFilterNet, [arXiv:2110.05588](https://arxiv.org/abs/2110.05588) và [github.com/Rikorose/DeepFilterNet](https://github.com/Rikorose/DeepFilterNet).
+- Cấu hình định khung thời gian thực của DeepFilterNet: [arXiv:2110.05588](https://arxiv.org/abs/2110.05588) và [github.com/Rikorose/DeepFilterNet](https://github.com/Rikorose/DeepFilterNet).
 - Tổng quan WebRTC APM: [modules/audio_processing](https://webrtc.googlesource.com/src/+/refs/heads/main/modules/audio_processing/).
-- Hướng dẫn hiệu năng AudioWorklet trên MDN — quantum so với hop của bạn.
+- Hướng dẫn tối ưu hiệu năng AudioWorklet trên MDN — mối quan hệ giữa quantum và bước nhảy hop.
 
 ## Video tham khảo
 
-- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, tiếng Anh. **xem trước.** Xem độ trễ được nêu cạnh hai tầng tăng cường. Độ trễ thuật toán là audio muộn bao lâu; tốc độ nhân-cộng là CPU có theo kịp không.
-- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, tiếng Anh. Đoạn độ phức tạp là nửa chất lượng của cùng đánh đổi: mô hình nặng hơn có thể thắng bài test mà vẫn trễ hop.
-- [Sonic Boom! Audio Programming on Android and Chrome (Google I/O'19)](https://www.youtube.com/watch?v=EeQr0zfvF04) — Google for Developers, tiếng Anh. Độ trễ callback đo được là ngân sách pipeline mà hop STFT phải nằm trong đó.
+- [DeepFilterNet: A Low Complexity Speech Enhancement Framework for Full-Band Audio (ICASSP 2022)](https://www.youtube.com/watch?v=it90gBqkY6k) — Hendrik Schröter, tiếng Anh. **Xem trước.** Quan sát thông số độ trễ đặt cạnh kiến trúc hai tầng: độ trễ thuật toán cho biết tín hiệu đến muộn bao lâu, còn số phép tính cho biết CPU có theo kịp nhịp thời gian thực hay không.
+- [Developing Machine Learning Based Speech Enhancement Models for Teams and Skype | Ross Cutler](https://www.youtube.com/watch?v=Gdvhv8SYcTg) — @Scale, tiếng Anh. Phần bàn về độ phức tạp thể hiện nửa còn lại của sự đánh đổi: mô hình nặng hơn có thể thắng điểm đánh giá nhưng vẫn trượt hạn hop.
+- [Sonic Boom! Audio Programming on Android and Chrome (Google I/O'19)](https://www.youtube.com/watch?v=EeQr0zfvF04) — Google for Developers, tiếng Anh. Số đo độ trễ callback thực tế xác định giới hạn ngân sách mà hop STFT bắt buộc phải tuân theo.
