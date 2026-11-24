@@ -13,6 +13,38 @@ draft: false
 
 Hàm cửa sổ cân bằng sự đánh đổi giữa hiện tượng rò phổ (spectral leakage: năng lượng của một thành phần tần số lan sang các bin khác) và độ rộng búp chính (main lobe). Trong bài toán khử nhiễu, chọn sai hàm cửa sổ — hoặc dùng cặp cửa sổ phân tích/tổng hợp không khớp nhau — sẽ sinh ra nhiễu nhạc (musical noise) và tiếng rung giật theo nhịp hop. Hai con số mốc cần nhớ theo dB là: cửa sổ chữ nhật có búp phụ (sidelobe) đầu tiên ở mức khoảng \(-13\,\mathrm{dB}\), trong khi cửa sổ Hann đẩy búp phụ này xuống khoảng \(-31\,\mathrm{dB}\).
 
+
+Bạn tạo một sóng sin hoàn hảo ở tần số 440 Hz trên Python, cắt lấy một đoạn dài 20 ms rồi bấm `np.fft.rfft()`. Thay vì một cột kim sắc lẹm duy nhất tại 440 Hz như kỳ vọng, đồ thị phổ lại hiện ra một "chân váy" năng lượng loang rộng khắp hàng chục bin bên cạnh! Hiện tượng khó chịu ấy gọi là **rò phổ (spectral leakage)** — không phải lỗi của Python, mà là hệ quả toán học tất yếu khi bạn cắt đứt một sóng liên tục bằng **cửa sổ chữ nhật** khiến hai đầu khung bị đứt gãy đột ngột khi nối tuần hoàn trong DFT.
+
+---
+
+## Bản đồ kiến thức nền: Hàm Cửa sổ và Rò phổ đứng trên ba trụ cột nào?
+
+### 1. Nhân trong Miền thời gian ↔ Tích chập trong Miền tần số
+Cắt tín hiệu bằng hàm cửa sổ $$w[n]$$ ($$x_w[n] = x[n]\cdot w[n]$$) tương đương lấy **tích chập phổ thật $$X(f)$$ với phổ cửa sổ $$W(f)$$**. Một sóng sin thuần đáng lẽ là mũi kim Dirac $$\delta(f - f_0)$$ lập tức biến thành bản sao của chính hình dáng $$W(f - f_0)$$ đặt tại $$f_0$$!
+
+### 2. Đánh đổi Búp chính (Main-Lobe Width) vs. Búp phụ (Side-Lobe Level)
+Mọi hàm cửa sổ đều phải chọn điểm cân bằng giữa hai thông số:
+- **Độ rộng búp chính:** quyết định khả năng tách hai tần số nằm sát nhau (cửa sổ chữ nhật hẹp nhất, nhưng búp phụ cực cao tới $$-13\text{ dB}$$).
+- **Chiều cao búp phụ (side-lobe suppression):** quyết định mức năng lượng rò từ một tần số mạnh làm lấp mất tần số yếu bên cạnh (Hann đạt $$-31.5\text{ dB}$$, Hamming đạt $$-42.7\text{ dB}$$, Blackman đạt $$-58\text{ dB}$$!).
+
+### 3. Mất mát búp (Scalloping Loss) và Chọn cửa sổ cho Tiếng nói
+Khi tần số tín hiệu rơi đúng giữa hai bin (lệch $$0.5$$ bin), biên độ đo tại bin gần nhất bị tụt xuống (gọi là *scalloping loss*: $$3.92\text{ dB}$$ ở cửa sổ chữ nhật, nhưng chỉ còn $$1.42\text{ dB}$$ ở cửa sổ Hann!). Trong xử lý tiếng nói và DeepFilterNet, cửa sổ **Hann / Vorbis** là điểm ngọt vì vừa triệt rò phổ tốt, vừa thỏa điều kiện COLA/WOLA hoàn hảo ở chồng lấp 50%.
+
+---
+
+### Khung giải thích: tự tay so sánh mức rò phổ của sóng lệch nửa bin ($$k = 1.5$$) với $$N = 4$$ (nên đọc chậm)
+
+Xét một sóng sin phức có tần số rơi đúng giữa bin 1 và bin 2: $$x[n] = e^{j 2\pi (1.5) n / 4} = e^{j \frac{3\pi}{4} n}$$ lấy mẫu tại $$n = 0, 1, 2, 3$$:
+
+1. **Nếu dùng cửa sổ chữ nhật ($$w_{\text{rect}} = [1, 1, 1, 1]$$):**
+   - Năng lượng không tập trung vào một bin nào mà tràn ra **cả 4 bin**: biên độ tại $$k = 1$$ và $$k = 2$$ là $$|X[1]| = |X[2]| = \frac{1}{\sin(\pi/8)} \approx \mathbf{2.613}$$, nhưng đáng ngại là các bin ở xa $$k = 0$$ và $$k = 3$$ vẫn hứng tới $$|X[0]| = |X[3]| = \frac{1}{\sin(3\pi/8)} \approx \mathbf{1.082}$$!
+   - Tỉ số búp phụ trên búp chính: $$\frac{1.082}{2.613} \approx 0.414$$ (chỉ suy giảm $$-7.7\text{ dB}$$; ở $$N$$ lớn tiến về **$$-13.3\text{ dB}$$**) — hơn $$21\%$$ tổng năng lượng bị rò sang các bin sai!
+2. **Nếu nhân với cửa sổ Hann ($$w_{\text{Hann}} = [0, 0.5, 1.0, 0.5]$$):**
+   - Tỉ số búp phụ ở $$N$$ lớn rớt mạnh từ $$-13.3\text{ dB}$$ xuống **$$-31.5\text{ dB}$$** (biên độ rò giảm gần **8.1 lần**, công suất rò giảm hơn **66 lần**!), và tốc độ tắt búp phụ tăng nhanh từ $$6\text{ dB/quãng tám}$$ lên **$$18\text{ dB/quãng tám}$$** — giữ sạch nền phổ cho mạng khử nhiễu phát hiện chính xác các vạch hài âm yếu của giọng nói!
+
+---
+
 ## Mục tiêu học tập
 
 1. Giải thích cơ chế phát sinh rò phổ khi cắt đoạn bằng cửa sổ chữ nhật.

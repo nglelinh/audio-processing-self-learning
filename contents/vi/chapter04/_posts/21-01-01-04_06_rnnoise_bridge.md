@@ -11,7 +11,11 @@ lesson_type: required
 draft: false
 ---
 
+Năm 2017, giữa làn sóng mạng học sâu hàng chục triệu tham số đòi hỏi GPU đắt tiền, kỹ sư âm thanh Jean-Marc Valin (đồng tác giả codec Opus) đặt ra một câu hỏi táo bạo: *nếu ta để DSP cổ điển làm phần việc mà toán học đã giải rất tốt — chia băng tần cảm thụ và lọc lược cao độ — rồi chỉ giao cho một mạng nơ-ron tí hon đúng việc duy nhất mà DSP luôn chật vật (ước lượng độ lợi từng băng theo ngữ cảnh), thì kết quả sẽ nhẹ đến mức nào?* Câu trả lời là **RNNoise**: chỉ 87.503 trọng số, nằm gọn trong bộ nhớ đệm L2 và chạy trên CPU laptop với vỏn vẹn 1,3% tải một nhân!
+
 **RNNoise** (Jean-Marc Valin, arXiv:1709.08243; [xiph/rnnoise](https://github.com/xiph/rnnoise)) kết hợp tầng tiền xử lý theo băng Bark, một bộ lọc lược cao độ (pitch comb filter) và một mạng GRU nhỏ dự đoán 22 hệ số độ lợi. Dù không đạt mức điểm Voicebank+Demand như DeepFilterNet3 (PESQ 3,17 trong arXiv:2305.08227), RNNoise minh họa trọn vẹn cùng một triết lý kiến trúc — ước lượng đường bao thô kết hợp tầng xử lý họa âm — với các con số đủ nhỏ để bạn kiểm chứng trực tiếp bằng tay.
+
+**Mạch bài học:** Triết lý lai DSP + Học sâu của Valin → Bản đồ kiến thức nền (Thang Bark & cửa sổ Vorbis, Bộ lọc lược cao độ, Hàm mất mát nén mũ & làm mượt độ lợi) → 22 băng Bark & 42 đặc trưng đầu vào → Kiến trúc GRU 215 đơn vị & ngân sách 40 Mflop/s → Khung giải thích tính tay trọn vẹn độ lợi $$g_b$$, hệ số lược $$\alpha_b$$, hàm mất mát và 3 bước làm mượt → So sánh DF3, Mini-lab và Bài tập.
 
 ![Đường ERB của DeepFilterNet, dùng để đối chiếu 22 băng Bark và gain GRU của RNNoise]({{ site.imgurl }}/generated/deepfilternet-erb.png)
 
@@ -20,6 +24,20 @@ draft: false
 ## Mục tiêu học tập
 
 Sau bài học này, bạn sẽ tính được độ lợi băng tần của RNNoise từ mặt nạ IRM, liệt kê đúng 42 đặc trưng đầu vào cùng kiến trúc GRU 215 đơn vị trong bài báo, đối chiếu pipeline này với 32 băng ERB và bộ lọc phức 5 tap của DeepFilterNet, đồng thời rút ra các thực hành kỹ thuật hệ thống (giao diện khung, làm mượt độ lợi, tối ưu trọng số vừa bộ nhớ đệm) có thể áp dụng cho AudioWorklet ngay cả khi triển khai DF3.
+
+## Bản đồ kiến thức nền: Kiến trúc lai DSP + Học sâu của RNNoise gồm những trụ cột nào?
+
+### 1. Biểu diễn theo băng cảm thụ (Bark-scale Bands) và cửa sổ Princen–Bradley
+- **Là gì:** Thay vì dự đoán mặt nạ cho cả 481 bin DFT ở 48 kHz, RNNoise gom phổ thành **22 băng Bark** bằng các bộ lọc tam giác chồng lấp, trên khung 20 ms dùng cửa sổ Vorbis thỏa mãn điều kiện tái tạo hoàn hảo $$w^2(n) + w^2(n + N/2) = 1$$.
+- **Nghiên cứu gì:** Nén không gian đầu ra gấp hơn 20 lần (từ 481 xuống 22) mà vẫn giữ nguyên độ phân giải mà tai người thực sự phân biệt được, giúp mạng nơ-ron không lãng phí tham số vào các bin tần số cao dày đặc.
+
+### 2. Bộ lọc lược cao độ (Pitch Comb Filter) cho cấu trúc họa âm
+- **Là gì:** Khi giọng nói phát âm hữu thanh (như các nguyên âm), năng lượng tập trung ở các đỉnh họa âm cách đều nhau đúng tần số cơ bản $$f_0 = 1/T$$, còn nhiễu nằm xen kẽ giữa các đỉnh đó. Cộng tín hiệu với phiên bản trễ đúng chu kỳ cao độ $$T$$ — tức $$X(k) + \alpha_b P(k)$$ — sẽ khuếch đại họa âm và triệt tiêu nhiễu nằm ở khe giữa.
+- **Nghiên cứu gì:** Thực hiện cùng nhiệm vụ khôi phục cấu trúc tinh như bộ lọc phức 5 tap (deep filtering) của DeepFilterNet, nhưng bằng DSP thuần túy tốn rất ít flop.
+
+### 3. Hàm mất mát nén mũ ($$\gamma = 1/2$$) và bộ giữ mức chống nhiễu nhạc
+- **Là gì:** Sai số huấn luyện được tính trên căn bậc hai của độ lợi $$(g_b^{1/2} - \hat{g}_b^{1/2})^2$$, và khi suy luận độ lợi đầu ra được làm mượt bằng bộ lọc một cực $$\tilde{g}_b = \max(\lambda \tilde{g}_b^{(\mathrm{prev})}, \hat{g}_b)$$.
+- **Nghiên cứu gì:** Tránh hai cực đoan phổ biến trong khử nhiễu: khử quá tay làm mất phụ âm nhẹ (khi dùng log-loss) và độ lợi bật/tắt đột ngột giữa các khung gây tiếng "nhiễu nhạc" (musical noise).
 
 ## Kế hoạch 60 phút
 
@@ -80,6 +98,24 @@ $$
 $$
 
 trong đó $$\lambda=0{,}6$$ ở hop 10 ms tương đương thời gian tắt (reverberation time) khoảng **135 ms**. Giảm $$\lambda$$ làm âm thanh nghe khô hơn, còn $$\lambda=1$$ khiến độ lợi không bao giờ hạ xuống. Bộ giữ mức một cực này chính là kỹ thuật chống nhiễu nhạc kế thừa từ tư duy ngưỡng sàn phổ ở Chương 03.
+
+## Khung giải thích: Tính tay trọn vẹn một băng Bark của RNNoise (nên đọc chậm)
+
+Giả sử tại một băng tần hữu thanh (ví dụ băng 300–500 Hz), năng lượng tiếng nói sạch là $$E_s(b) = 16$$ và năng lượng nhiễu không tương quan là $$E_n(b) = 9$$, nên năng lượng tín hiệu hỗn hợp là $$E_x(b) = 16 + 9 = 25$$. Tương quan cao độ đo được ở băng này là $$p_b = 0{,}6$$.
+
+1. **Tính độ lợi mục tiêu $$g_b$$:**
+   $$ g_b = \sqrt{\frac{E_s(b)}{E_x(b)}} = \sqrt{\frac{16}{25}} = 0{,}8. $$
+2. **Tính hệ số pha trộn bộ lọc lược $$\alpha_b$$:** Vì $$p_b = 0{,}6 < g_b = 0{,}8$$, ta thay thẳng vào công thức:
+   $$ \alpha_b = \sqrt{\frac{0{,}6^2(1 - 0{,}8^2)}{(1 - 0{,}6^2)\cdot 0{,}8^2}} = \sqrt{\frac{0{,}36 \times 0{,}36}{0{,}64 \times 0{,}64}} = \frac{0{,}36}{0{,}64} = 0{,}5625. $$
+   Kiểm tra nhanh trường hợp cực đoan: nếu tín hiệu có rất nhiều nhiễu ($$g_b = 0{,}5 < p_b = 0{,}6$$), điều kiện biên lập tức kẹp $$\alpha_b = 1$$ để bộ lọc lược lọc mạnh nhất giữa các họa âm; còn nếu tín hiệu sạch hoàn toàn ($$g_b = 1$$), $$\alpha_b = 0$$ để không làm méo giọng sạch!
+3. **Tính hàm mất mát với $$\gamma = 1/2$$:** Nếu mạng dự đoán $$\hat{g}_b = 0{,}5$$ thay vì $$g_b = 0{,}8$$:
+   $$ L(0{,}8,\,0{,}5) = \left(\sqrt{0{,}8} - \sqrt{0{,}5}\right)^2 \approx (0{,}8944 - 0{,}7071)^2 \approx 0{,}0351. $$
+   So sánh với vùng độ lợi nhỏ (ví dụ $$g_b = 0{,}3$$ và $$\hat{g}_b = 0{,}0$$, cùng sai số tuyệt đối $$0{,}3$$): $$(\sqrt{0{,}3} - 0)^2 = 0{,}3000$$ — phạt nặng gấp **8,5 lần**! Nhờ căn bậc hai, hàm mất mát rất nhạy với việc khử sạch âm nhỏ xuống 0.
+4. **Theo dõi 3 hop làm mượt độ lợi ($$\lambda = 0{,}6$$):** Giả sử hop trước đang ở $$\tilde{g}_b^{(0)} = 0{,}9$$ và tiếng nói đột ngột ngừng nên mạng dự đoán $$\hat{g}_b = 0{,}3$$ ở các hop kế tiếp:
+   - Hop 1: $$\tilde{g}_b^{(1)} = \max(0{,}6 \times 0{,}9,\; 0{,}3) = 0{,}54$$.
+   - Hop 2: $$\tilde{g}_b^{(2)} = \max(0{,}6 \times 0{,}54,\; 0{,}3) = 0{,}324$$.
+   - Hop 3: $$\tilde{g}_b^{(3)} = \max(0{,}6 \times 0{,}324,\; 0{,}3) = \max(0{,}1944,\; 0{,}3) = 0{,}30$$.
+   Độ lợi hạ êm trong 30 ms thay vì tụt thẳng đứng từ $$0{,}9 \to 0{,}3$$ trong một hop, tránh hẳn tiếng "khựng" cơ học.
 
 ### So sánh độ phức tạp với DeepFilterNet
 

@@ -17,6 +17,23 @@ Demo day is a five-minute proof that the publish path, the metrics, and the limi
 
 *Figure. RTF is wall time of a quantum divided by the quantum’s duration. A mean below 1 can still overrun if p95 or p99 spills the callback. Log p95, and keep cold-start asset download out of that number.*
 
+Demo day has a cruel habit of exposing every shortcut you took at 2 a.m.: the demo laptop isn’t connected to the office Wi-Fi, the projector’s HDMI audio device forces 44.1 kHz, or a browser tab runs without `COOP`/`COEP` headers and silently fails to allocate `SharedArrayBuffer`. Great audio engineers don’t pray on demo day—they run a **ruthless, quantified pre-flight checklist** 24 hours in advance.
+
+This lecture turns your capstone from "works on my machine" into a rock-solid live demonstration, covering soak testing, latency verification, blind A/B listening setup, fallback drills, and crisp technical storytelling.
+
+---
+
+## Background Knowledge Map: Four Verification Gates Before Demo Day
+
+Before putting headphones on a reviewer or stakeholder, verify four independent gates:
+
+1. **Functional & Parity Gate:** Offline-vs-streaming equivalence passes (`< 1e-5`), bypass toggle is click-free, and clean speech stays transparent.
+2. **Soak & Stability Gate:** A continuous **5-minute soak test** (30,000 frames at 10 ms hop) completes with 0 underruns, flat RAM usage (no memory leak across device restarts), and $$\mathrm{RTF}_{p99} \le 0.50$$.
+3. **Failure-Mode & Fallback Gate:** Explicitly simulate a 404 model URL, a missing `SIMD128` flag, and a mid-call microphone unplug—confirming the app degrades gracefully without crashing or muting the user.
+4. **Perceptual & Presentation Gate:** Loudness-normalized (`-24 LUFS`) before/after clips ready locally (zero dependency on live venue Wi-Fi!), backed by a clear 1-page metric scorecard.
+
+---
+
 ## What you should be able to do
 
 You should be able to walk the audio path, the asset path, and the metric files, rehearse a five-minute script, and inject a CDN failure without ending the call. You should also show one listening example with the condition name visible.
@@ -101,6 +118,30 @@ missing none
 ```
 
 Use the token `passthrough` even if your line is “Rust: not attempted, so not a passthrough claim.” The checker only requires the word so the demo script cannot forget the stretch rule. Failure modes: ticking RTF with no device; a backup recording that is a different sentence than the live clip; `v2/` typed into `cdnUrl` and also added by the package, so the request 404s; calling a passthrough Rust build “NS works.”
+
+---
+
+### Worked Numerical Example: Pre-Flight Soak & Demo Readiness Audit
+
+Calculate the exact numbers behind a 5-minute pre-flight soak test at $$f_s = 48{,}000	ext{ Hz}$$, hop $$H = 480$$ (10 ms):
+
+| Pre-Flight Check | Exact Test Quantity | Pass Criteria | Actual Demo-Ready Target |
+| :--- | :--- | :--- | :--- |
+| **Total Frames Processed** | $$300	ext{ s} 	imes 100 = \mathbf{30{,}000	ext{ frames}}$$ | 0 crashes, 0 NaNs | 30,000 / 30,000 clean |
+| **Underrun Tolerance** | $$	ext{underruns} / 30{,}000$$ | $$0.000\%$$ (0 clicks) | 0 underruns |
+| **Memory Leak Check (5 restarts)** | $$\mathrm{RAM}_{	ext{after }5} - \mathrm{RAM}_{	ext{after }1}$$ | $$\le +0.5	ext{ MB}$$ | $$0.0	ext{ MB}$$ drift |
+| **Blind A/B Demo Clips** | 5 diverse clips (fan, café, typing, clean, echo) | All normalized to $$-24	ext{ LUFS}$$ | Local `.wav` backup ready |
+
+### Deep-Dive Explanation: Four Rules for an Unforgettable Audio Engineering Demo (Read Slowly)
+
+1. **Always play loudness-matched before/after audio within the first 60 seconds:** Nothing convinces an audience faster than hearing noisy café chatter vanish into crystal-clear speech—just make sure both clips are matched to the exact same LUFS!
+2. **Show your live telemetry overlay during the demo:** Displaying real-time `RTF`, `p99 ms`, `underruns: 0`, and a live bypass toggle proves your system is genuinely running in real time, not playing a pre-baked file.
+3. **Lead with one honest failure mode you discovered and fixed:** Explaining how you caught a 44.1 kHz resampling bug or a 1-frame streaming state mismatch shows genuine engineering maturity.
+4. **Have an offline local server (`localhost`) ready:** Venue Wi-Fi fails constantly; serving your WASM/ONNX assets locally guarantees your demo runs smoothly even in airplane mode.
+
+**Quick check.** During a 5-minute soak test at 10 ms hop (30,000 frames), if your telemetry records **30 underruns**, what is your underrun rate percentage—and roughly how often (every how many seconds) would a listener hear a glitch?
+
+---
 
 ## Exercises
 

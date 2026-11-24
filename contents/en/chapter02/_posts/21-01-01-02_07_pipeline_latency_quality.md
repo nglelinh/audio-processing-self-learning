@@ -11,7 +11,33 @@ lesson_type: required
 draft: false
 ---
 
-Every STFT and model choice trades latency, CPU, and quality. The distinction that prevents bad ship decisions: **algorithmic latency is how late the audio is, and real-time factor is whether the CPU keeps up.** A fast model can still be too late.
+One of the costliest mistakes in audio product reviews is conflating two completely different clocks: **“Our model runs in 3 ms, so latency is 3 ms!”** Wrong! If your causal STFT waits 20 ms to fill a 960-sample analysis window and takes 2 frames (20 ms) of look-ahead, your caller is already **40 ms late**—even if your GPU finishes the forward pass in 0.1 ms!
+
+This capstone lesson of Chapter 02 separates **algorithmic latency** (how late the audio is) from **Real-Time Factor** (whether the CPU keeps up), maps all 9 stages of a production speech pipeline, and gives you a concrete go/no-go shipping scorecard.
+
+![AudioWorklet quanta on a timeline, with process() sometimes overrunning a quantum: RTF is wall time over audio duration, and a good average can still miss a deadline]({{ site.imgurl }}/generated/rtf-audioworklet.png)
+
+*Figure. Each tick is a render quantum; RTF compares process() wall time to that audio duration, which is a different number from the STFT window’s algorithmic delay.*
+
+**Lesson roadmap:** Background Knowledge Map (algorithmic delay vs. RTF, the 9-stage audio pipeline, three failure regimes) → Parameter-knob tradeoff table & 48 kHz vs. 16 kHz numerics → Shipping scorecard & DeepFilterNet contract → Worked examples: Config A vs. Config B sweep and splitting a 40 ms budget → Deep-Dive Explanation (Read Slowly): 3 steps preventing the “two-clock confusion” in design reviews → Pitfalls, Mini-lab, Exercises & Videos.
+
+---
+
+## Background Knowledge Map: Systems Engineering of Real-Time Audio Pipelines
+
+### 1. Two Independent Clocks — Delay $$D_{\mathrm{alg}}$$ vs. Throughput $$\mathrm{RTF}$$
+- **Algorithmic latency $$D_{\mathrm{alg}}$$** is dictated by the signal graph (window buffering $$L/f_s$$ + model look-ahead + resampler group delay). Buying a faster CPU **never** reduces $$D_{\mathrm{alg}}$$!
+- **Real-Time Factor $$\mathrm{RTF} = T_{\mathrm{wall}} / T_{\mathrm{hop}}$$** is dictated by compute speed vs. hop cadence. Making the CPU faster lowers RTF, never $$D_{\mathrm{alg}}$$.
+
+### 2. The 9-Stage End-to-End Voice Path
+Between microphone capture and the WebRTC encoder sit 9 distinct stages: quantum buffering, input resampling, mono downmix, STFT framing, feature extraction (ERB), enhancement, ISTFT/OLA, output resampling, and encoder handoff. Every stage contributes to *either* delay, CPU, or both—and must be timestamped separately.
+
+### 3. Three Ways a Pipeline Fails in Production
+- **Too little latency budget** (tiny $$L$$): unresolved pitch harmonics and harsh masks.
+- **Too much latency** (huge $$L$$ or look-ahead): awkward conversational cross-talk and broken Acoustic Echo Cancellation (AEC).
+- **Too little CPU headroom** (high p99 RTF): audible crackles and dropouts whenever a single callback overruns.
+
+---
 
 ## Learning objectives
 
@@ -31,10 +57,6 @@ Every STFT and model choice trades latency, CPU, and quality. The distinction th
 | 42–52 | Scorecard for Mezon-like shipping |
 | 52–60 | Exercises |
 
-![AudioWorklet quanta on a timeline, with process() sometimes overrunning a quantum: RTF is wall time over audio duration, and a good average can still miss a deadline]({{ site.imgurl }}/generated/rtf-audioworklet.png)
-
-*Figure. Each tick is a render quantum; RTF compares process() wall time to that audio duration, which is a different number from the STFT window’s algorithmic delay.*
-
 ## Core explanations
 
 ### Two clocks
@@ -45,7 +67,7 @@ $$
 D_{\mathrm{alg}}\approx T_L=\frac{L}{f_s},
 $$
 
-plus look-ahead, resampling delay, and packet buffer. At 48 kHz, \(L=960\) contributes about **20 ms** whether the FFT takes 0.2 ms or 2 ms of wall time. The samples are late because you waited to fill the window.
+plus look-ahead, resampling delay, and packet buffer. At 48 kHz, $$L=960$$ contributes about **20 ms** whether the FFT takes 0.2 ms or 2 ms of wall time. The samples are late because you waited to fill the window.
 
 Real-time factor is a property of the implementation:
 
@@ -53,9 +75,9 @@ $$
 \mathrm{RTF}=\frac{T_{\mathrm{wall}}(D)}{D}.
 $$
 
-\(D\) is the audio duration you just processed (one hop, or one quantum). \(\mathrm{RTF}<1\) means you finished before the next block was due. It does not say how much look-ahead you already inserted. The figure’s other warning: a mean RTF of 0.4 still clicks if p99 exceeds the hop. Log p95/p99.
+$$D$$ is the audio duration you just processed (one hop, or one quantum). $$\mathrm{RTF}<1$$ means you finished before the next block was due. It does not say how much look-ahead you already inserted. The figure’s other warning: a mean RTF of 0.4 still clicks if p99 exceeds the hop. Log p95/p99.
 
-A 128-sample quantum at 48 kHz lasts \(128/48000\approx 2.67\,\mathrm{ms}\). That is the grid in the figure, not the model hop. A 10 ms hop spans about four quanta; the red `process()` bar is the quantum where the FFT and the network overrun. Cold start (WASM/ONNX compile) is main-thread work, not steady-state RTF.
+A 128-sample quantum at 48 kHz lasts $$128/48000\approx 2.67\,\mathrm{ms}$$. That is the grid in the figure, not the model hop. A 10 ms hop spans about four quanta; the red `process()` bar is the quantum where the FFT and the network overrun. Cold start (WASM/ONNX compile) is main-thread work, not steady-state RTF.
 
 ### Pipeline stages (typical)
 
@@ -75,13 +97,13 @@ For each stage, log waveform delay and RTF separately. A resampler can be cheap 
 
 | Knob ↑ | Latency | CPU | Quality tendency |
 |--------|---------|-----|------------------|
-| Window \(L\) | ↑ | ↑ (larger FFT) | better freq detail; blurrier time |
-| Hop \(R\) | hop itself is not \(D_{\mathrm{alg}}\); smaller \(R\) raises hops/s | ↑ as \(R\)↓ | smoother masks often |
+| Window $$L$$ | ↑ | ↑ (larger FFT) | better freq detail; blurrier time |
+| Hop $$R$$ | hop itself is not $$D_{\mathrm{alg}}$$; smaller $$R$$ raises hops/s | ↑ as $$R$$↓ | smoother masks often |
 | Model size | ≈ (if lookahead fixed) | ↑ | often ↑ until RTF fails |
 | Look-ahead | ↑ | ↑ | often ↑ quality |
 | Sample rate | ↑ | ↑ | ↑ bandwidth if model trained for it |
 
-**Measure.** Cutting \(R\) from 480 to 240 at 48 kHz doubles hops/s (100 → 200) and STFT CPU; \(D_{\mathrm{alg}}\) stays near \(L/f_s\) unless the window shrinks too. Shortening the window widens bins (lesson 02-03). It is a quality change, not a free RTF win.
+**Measure.** Cutting $$R$$ from 480 to 240 at 48 kHz doubles hops/s (100 → 200) and STFT CPU; $$D_{\mathrm{alg}}$$ stays near $$L/f_s$$ unless the window shrinks too. Shortening the window widens bins (lesson 02-03). It is a quality change, not a free RTF win.
 
 ### Numerics to keep
 
@@ -91,7 +113,7 @@ At 48 kHz:
 - 480-sample hop = 10 ms → 100 decisions/s
 - 960-sample window = 20 ms buffering scale
 
-At 16 kHz, the same *milliseconds* use fewer samples (cheaper FFTs) but less bandwidth. The same *sample counts* are different milliseconds: \(L=512\) at 16 kHz is 32 ms, not 20 ms. A wall time of 3 ms on a 10 ms hop is \(\mathrm{RTF}=0.3\), comfortable. A wall time of 12 ms on that same hop is \(\mathrm{RTF}=1.2\), an overrun, even though 12 ms is less than a 20 ms window. The mini-lab prints both pairs so the two clocks stay in different variables.
+At 16 kHz, the same *milliseconds* use fewer samples (cheaper FFTs) but less bandwidth. The same *sample counts* are different milliseconds: $$L=512$$ at 16 kHz is 32 ms, not 20 ms. A wall time of 3 ms on a 10 ms hop is $$\mathrm{RTF}=0.3$$, comfortable. A wall time of 12 ms on that same hop is $$\mathrm{RTF}=1.2$$, an overrun, even though 12 ms is less than a 20 ms window. The mini-lab prints both pairs so the two clocks stay in different variables.
 
 ### Failure modes
 
@@ -129,6 +151,27 @@ B’s window is already 40 ms, and mean RTF 0.9 leaves no room for a red-bar qua
 ### Budget split
 
 A 40 ms algorithmic budget that already spends 20 ms on the window cannot also absorb several 10 ms look-ahead frames. Do not “save” the 20 ms by reporting only the 3 ms of wall time.
+
+---
+
+### Deep-Dive Explanation: Keeping the Two Clocks Separate in Design Reviews (Read Slowly)
+
+#### Step 1: Compute $$D_{\mathrm{alg}}$$ purely from the signal graph
+Sum every structural delay: $$T_{\text{win}} = L/f_s$$ (20 ms for DeepFilterNet 960 @ 48 kHz) + $$l_{\text{look-ahead}} \cdot T_{\text{hop}}$$ (e.g., 20 ms for 2 frames) + resampler group delay (0 ms if already at 48 kHz). Notice that wall-clock CPU time does **not** even appear in this sum!
+
+#### Step 2: Compute $$\mathrm{RTF}$$ purely from wall-clock profiling against $$T_{\mathrm{hop}}$$
+Always divide `wall_ms` by `hop_ms` ($$10\,\mathrm{ms}$$), **never** by `frame_ms` ($$20\,\mathrm{ms}$$)! Dividing $$12\,\mathrm{ms}$$ of wall time by the $$20\,\mathrm{ms}$$ window gives a fake RTF of $$0.60$$, hiding a catastrophic $$1.20$$ overrun on the $$10\,\mathrm{ms}$$ hop!
+
+#### Step 3: Require BOTH clocks to pass before shipping
+A shippable configuration satisfies $$D_{\mathrm{alg}} \le \text{call budget}$$ **AND** $$\mathrm{RTF}_{p95} \le 0.5$$ **AND** bit-clean COLA reconstruction **AND** better listening quality than baseline WebRTC NS.
+
+Summary of the dual-clock shipping gate:
+
+$$
+\text{Clock 1: } D_{\mathrm{alg}} = \frac{L}{f_s} + l_{\mathrm{LA}}\frac{R}{f_s} + D_{\mathrm{resamp}} \le B_{\mathrm{call}}
+\quad\land\quad
+\text{Clock 2: } \mathrm{RTF}_{p95} = \frac{T_{\mathrm{wall}, p95}}{R/f_s} \le 0.5.
+$$
 
 ## Common pitfalls
 
@@ -172,7 +215,7 @@ print("RTF if process() takes 12 ms", rtf(12.0, hop_ms))
 ### Answer hints
 
 1. Stamp capture, after resample, STFT in, STFT out, and encoder handoff; subtract to separate delay from wall time.
-2. hops/s doubles (100 → 200 at 48 kHz if the hop was 480 samples); STFT CPU roughly doubles. \(D_{\mathrm{alg}}\) does not halve unless \(L\) changes.
+2. hops/s doubles (100 → 200 at 48 kHz if the hop was 480 samples); STFT CPU roughly doubles. $$D_{\mathrm{alg}}$$ does not halve unless $$L$$ changes.
 3. For example p95 RTF, algorithmic delay against the call budget, and a listening/DNSMOS check on names and digits.
 4. The network’s bins and ERB edges are laid out for 16 kHz; 48 kHz audio labeled as 16 kHz is the wrong spectrum, and extra bandwidth may alias in if you forgot the low-pass.
 5. Unresolved harmonics and harsh, flickery masks; plosives smeared is the opposite fault, from a window that is too long.

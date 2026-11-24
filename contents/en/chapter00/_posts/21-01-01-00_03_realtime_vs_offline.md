@@ -11,11 +11,33 @@ lesson_type: required
 draft: false
 ---
 
-Shipping noise suppression is less about peak MOS on a leaderboard and more about surviving the audio thread. This lesson defines latency and RTF precisely, explains causal / streaming constraints, and lists failure modes you will debug in Mezon-like integrations.
+A neural speech enhancer can win a benchmark by 2 dB, run smoothly in a Jupyter notebook on a 10-second WAV file, and still shatter into robotic clicks the instant you put it on a live WebRTC call. Why? Because **shipping noise suppression is less about peak leaderboard MOS and more about surviving the audio thread**.
+
+On a live audio thread, time is a hard wall: the OS hands you a tiny block of samples every few milliseconds, and if your code is even 1 millisecond late, the speaker plays silence or garbage. This lesson defines latency and RTF rigorously, explains causal streaming state, and walks through the exact failure modes you will debug in Mezon-like integrations.
 
 ![The same suppressor drawn as an offline batch job and as a causal streaming block]({{ site.imgurl }}/generated/realtime-vs-offline.png)
 
 *Figure. Offline look-ahead and a streaming hop are different delays: the picture is the split you have to budget, not a second algorithm.*
+
+**Lesson roadmap:** Background Knowledge Map (three latency layers, RTF vs. tail latency, causal stateful filtering) → Causal vs. offline comparison & streaming failure modes → Worked examples: 10 ms hop RTF spike (mean 0.312 hiding a 1.50 underrun!), 128-sample WebAudio quantum mismatch, and a ship/no-ship model audit → Deep-Dive Explanation (Read Slowly): 3 steps explaining why mean RTF lies on real-time audio threads → Pitfalls, Mini-lab, Exercises & Videos.
+
+---
+
+## Background Knowledge Map: Real-Time Signal Processing and Streaming Systems
+
+### 1. Three Distinct Layers of Latency
+“Latency” is not a single number—it is the sum of three independent clocks:
+- **Buffering latency:** waiting for enough fresh samples to fill an analysis window or hop.
+- **Algorithmic latency:** built-in delay from future look-ahead frames, filter group delay, or overlap-add synthesis.
+- **System latency:** OS audio callback quanta (e.g., 128 samples in browser AudioWorklet), JS/Wasm marshalling, and network jitter.
+
+### 2. Real-Time Factor (RTF) vs. Tail Latency (p95 / p99)
+The **Real-Time Factor** $$\mathrm{RTF} = T_{\mathrm{proc}} / T_{\mathrm{audio}}$$ measures compute load relative to wall-clock audio time. While offline batch jobs only care about average throughput, a streaming audio thread is a **hard real-time deadline**: one single slow frame (caused by garbage collection, OS preemption, or CPU thermal throttling) causes an **underrun** even when the average RTF looks comfortable.
+
+### 3. Stateful Causal Processing
+Offline models can run bidirectional RNNs or full-utterance attention over the entire recording. A causal streaming suppressor processes one hop at a time and must carry **persistent state** across callbacks: overlap-add tail buffers, running noise-floor trackers, and recurrent/convolutional hidden states. Dropping or resetting that state creates audible clicks and pumping.
+
+---
 
 ## Learning objectives
 
@@ -51,13 +73,13 @@ $$
 \mathrm{RTF} = \frac{T_{\mathrm{proc}}}{T_{\mathrm{audio}}}
 $$
 
-If you process 20 ms of audio in 5 ms wall-clock, \(\mathrm{RTF}=0.25\). Streaming systems need **headroom**: mean RTF of 0.9 still fails when a GC pause or thermal throttle spikes a frame to RTF 2.0.
+If you process 20 ms of audio in 5 ms wall-clock, $$\mathrm{RTF}=0.25$$. Streaming systems need **headroom**: mean RTF of 0.9 still fails when a GC pause or thermal throttle spikes a frame to RTF 2.0.
 
-**Worked example.** Hop \(R = 480\) samples at \(f_s = 48\,\mathrm{kHz}\) → \(T_{\mathrm{audio}} = 10\,\mathrm{ms}\). Budget RTF \(\le 0.5\) ⇒ \(T_{\mathrm{proc}} \le 5\,\mathrm{ms}\) for that hop’s STFT + model + ISTFT path (amortized).
+**Worked example.** Hop $$R = 480$$ samples at $$f_s = 48\,\mathrm{kHz}$$ → $$T_{\mathrm{audio}} = 10\,\mathrm{ms}$$. Budget RTF $$\le 0.5$$ ⇒ $$T_{\mathrm{proc}} \le 5\,\mathrm{ms}$$ for that hop’s STFT + model + ISTFT path (amortized).
 
-**A healthy mean can still glitch.** Suppose 100 hops of 10 ms: 99 of them finish in 3 ms and one finishes in 15 ms. The mean processing time is \((99\times 3+15)/100=3.12\,\mathrm{ms}\), so mean RTF is \(0.312\). The slow hop has RTF \(15/10=1.5\) and misses the callback. Quote p95 or p99 next to the mean, or the average will green-wash an underrun.
+**A healthy mean can still glitch.** Suppose 100 hops of 10 ms: 99 of them finish in 3 ms and one finishes in 15 ms. The mean processing time is $$(99\times 3+15)/100=3.12\,\mathrm{ms}$$, so mean RTF is $$0.312$$. The slow hop has RTF $$15/10=1.5$$ and misses the callback. Quote p95 or p99 next to the mean, or the average will green-wash an underrun.
 
-**Quanta are not hops.** A browser render quantum of 128 samples at 48 kHz lasts \(128/48000\approx 2.67\,\mathrm{ms}\). A 480-sample hop is \(480/128=3.75\) quanta. The processor has to accumulate partial quanta in a ring buffer; it cannot assume the audio callback and the STFT hop are the same object. DeepFilterNet3 (arXiv:2305.08227) is the real-time member of that family; an offline checkpoint with hundreds of milliseconds of look-ahead does not become causal because you wrapped it in `DeepFilterNoiseFilterProcessor`.
+**Quanta are not hops.** A browser render quantum of 128 samples at 48 kHz lasts $$128/48000\approx 2.67\,\mathrm{ms}$$. A 480-sample hop is $$480/128=3.75$$ quanta. The processor has to accumulate partial quanta in a ring buffer; it cannot assume the audio callback and the STFT hop are the same object. DeepFilterNet3 (arXiv:2305.08227) is the real-time member of that family; an offline checkpoint with hundreds of milliseconds of look-ahead does not become causal because you wrapped it in `DeepFilterNoiseFilterProcessor`.
 
 ### Causal vs offline
 
@@ -72,13 +94,13 @@ DeepFilterNet2/3 literature emphasizes **real-time / causal** design choices (se
 
 ### Frames, hops, and delay
 
-For window length \(L\) samples and hop \(R\) samples:
+For window length $$L$$ samples and hop $$R$$ samples:
 
 $$
 T_{\mathrm{hop}} = \frac{R}{f_s},\qquad T_{\mathrm{win}} = \frac{L}{f_s}
 $$
 
-Overlap-add (OLA) reconstruction typically introduces delay on the order of the window / hop structure (exact constant depends on implementation). Reducing \(L\) lowers delay but hurts frequency resolution — Chapter 02 develops this tradeoff.
+Overlap-add (OLA) reconstruction typically introduces delay on the order of the window / hop structure (exact constant depends on implementation). Reducing $$L$$ lowers delay but hurts frequency resolution — Chapter 02 develops this tradeoff.
 
 ### Streaming state
 
@@ -102,10 +124,33 @@ Cold-starting state each callback produces clicks and “pumping.” Dumping sta
 
 Published offline model: look-ahead 300 ms, RTF 0.15 on GPU, RTF 1.2 on target CPU laptop for 48 kHz mono.
 
-- Call path budget: \(\le 40\,\mathrm{ms}\) algorithmic look-ahead → **fail** (300 ms).
+- Call path budget: $$\le 40\,\mathrm{ms}$$ algorithmic look-ahead → **fail** (300 ms).
 - Even if you chop look-ahead, RTF 1.2 on CPU → **fail** without downsampling, quantization, or a smaller student model.
 
-A DeepFilterNet-class streaming model with small hop and RTF \(\sim 0.2\)–\(0.5\) on target is in the plausible shipping region — validate on *your* device, not the paper’s.
+A DeepFilterNet-class streaming model with small hop and RTF $$\sim 0.2$$–$$0.5$$ on target is in the plausible shipping region — validate on *your* device, not the paper’s.
+
+---
+
+### Deep-Dive Explanation: Why Streaming Audio Threads Punish Averages (Read Slowly)
+
+#### Step 1: Decouple the OS callback quantum from your DSP hop
+The browser AudioWorklet fires every $$128$$ samples ($$2.67\,\mathrm{ms}$$ at 48 kHz), while your STFT hop might be $$480$$ samples ($$10\,\mathrm{ms}$$). Because $$480 / 128 = 3.75$$ is not an integer, your DSP loop runs **irregularly**: three callbacks do almost nothing (just copying into a ring buffer), and the fourth callback triggers the entire STFT + neural forward pass + ISTFT!
+
+#### Step 2: Budget for the bursty callback, not the amortized mean
+That fourth callback must still finish before the audio buffer drains (plus whatever ring-buffer slack you intentionally paid for in latency). That is why a $$0.312$$ mean RTF with a single $$15\,\mathrm{ms}$$ spike produces an unmistakable click: audio hardware never waits for slow frames.
+
+#### Step 3: Preserve every byte of state across hops
+Between hop $$\ell$$ and hop $$\ell+1$$, three memories must stay intact: the input ring buffer, the overlap-add synthesis tail, and the model’s hidden state (GRU/TCN buffers). Any glitch that resets state mid-sentence introduces an artificial transient that sounds like a broken connection.
+
+Summary of the streaming deadline rule:
+
+$$
+\text{Quanta } (128\text{ smp})
+\;\xrightarrow{\text{Ring buffer}}\;
+\text{Hop } (480\text{ smp})
+\;\xrightarrow{\text{Stateful NS}}\;
+\text{Ship iff } \text{Look-ahead} \le B_{\mathrm{lat}} \text{ and } \mathrm{RTF}_{p99} < 1.
+$$
 
 ## Common pitfalls
 
@@ -137,14 +182,14 @@ print(f"quantum_ms={quantum_ms:.2f} quanta_per_hop={hop/128:.2f}")
 
 ## Mini exercises
 
-1. Hop 256 samples at 16 kHz: hop ms? Max \(T_{\mathrm{proc}}\) for RTF 0.25?
+1. Hop 256 samples at 16 kHz: hop ms? Max $$T_{\mathrm{proc}}$$ for RTF 0.25?
 2. List three state tensors/buffers a streaming STFT-NS system must keep between hops.
 3. Explain why mean RTF 0.4 can still glitch in Chrome under load.
 4. Propose a go/no-go checklist of 5 measurements before enabling NS by default in a call product.
 
 ### Answer hints
 
-1. \(256/16000=16\,\mathrm{ms}\). RTF \(0.25\) allows \(4\,\mathrm{ms}\) of processing.
+1. $$256/16000=16\,\mathrm{ms}$$. RTF $$0.25$$ allows $$4\,\mathrm{ms}$$ of processing.
 2. OLA overlap buffer, analysis window state, and the neural or noise-tracker recurrence. Sample-rate and channel count belong in that list too.
 3. The mean hides a GC pause, a thermal spike, or one hop that exceeds 16 ms. p99 is the number the callback feels.
 4. A usable five: causal look-ahead in ms, p95 RTF on the target CPU, underrun count over a 10-minute call, stereo downmix policy, and a listening check at the product sample rate.

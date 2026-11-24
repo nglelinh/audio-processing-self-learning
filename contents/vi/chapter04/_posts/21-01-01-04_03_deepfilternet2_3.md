@@ -17,6 +17,37 @@ DeepFilterNet2 và DeepFilterNet3 giữ nguyên kiến trúc hai tầng gồm đ
 
 *Hình. Khung kiến trúc cốt lõi được giữ nguyên qua các thế hệ: 32 độ lợi ERB cho đường bao phổ, theo sau bởi bộ lọc phức 5 tap trên các bin thấp của STFT. Các thay đổi công bố giữa các phiên bản nằm ở hàm mất mát và dữ liệu (STFT đa phân giải, DNS4, post-filter), giảm bộ đệm thời gian trong mạng và bổ sung cổng SNR để tắt tầng xử lý khi không cần thiết.*
 
+Một kiến trúc học sâu hiếm khi dừng lại ở phiên bản đầu tiên. Sau bài báo ICASSP 2022 chứng minh ý tưởng ERB + Deep Filter hoạt động tốt, nhóm tác giả của DeepFilterNet đối mặt với câu hỏi khắc nghiệt hơn của kỹ thuật triển khai thực tế: *làm sao để mô hình chạy nhanh gấp nhiều lần trên CPU phổ thông, không bị méo khi gặp khoảng lặng hoàn toàn, và nghe tự nhiên hơn trên dữ liệu thực tế?* Câu trả lời mang tên **DeepFilterNet2** (2022) và **DeepFilterNet3** (Interspeech 2023) — hai bản nâng cấp giữ nguyên bộ xương hai tầng sáng giá, nhưng tinh chỉnh sắc sảo từng khớp nối từ tầng tính toán nhóm, bộ hậu lọc cho tới cổng điều khiển theo SNR.
+
+## Bản đồ kiến thức nền: Ba trụ cột tiến hóa từ DeepFilterNet1 sang 2 và 3
+
+### 1. Tối ưu hóa tính toán thời gian thực (Grouped Linear / GRU & giảm bộ đệm)
+Các lớp tuyến tính dày đặc và GRU kích thước lớn là nút thắt cổ chai lớn nhất trên CPU đơn luồng. DeepFilterNet2 tái cấu trúc các lớp tuyến tính và GRU theo dạng **nhóm (grouped)** kết hợp rút gọn kích thước trạng thái/bộ đệm thời gian, giúp kéo hệ số thời gian thực (RTF) xuống mức công bố chỉ khoảng $$0{,}04$$ trên CPU hiện đại — nghĩa là chỉ dùng $$4\%$$ thời gian của một nhân CPU để xử lý luồng $$48\text{ kHz}$$!
+
+### 2. Hàm mất mát đa phân giải và Bộ hậu lọc (Post-Filter)
+Huấn luyện chỉ trên một độ phân giải STFT duy nhất ($$20\text{ ms}$$) đôi khi để lại hiện tượng nhòe nhẹ ở các âm bật nhanh (*transients*) hoặc nhiễu nền li ti ở độ lợi trung bình. DeepFilterNet2 bổ sung **hàm mất mát STFT đa phân giải** (đánh giá đồng thời ở nhiều kích thước cửa sổ khác nhau) và một **bộ hậu lọc (post-filter)** phi tuyến nhẹ nhằm nén thêm phần nhiễu dư ở những bin có độ lợi trung bình mà gần như giữ nguyên những bin tiếng nói rõ.
+
+### 3. Cổng điều khiển theo SNR cục bộ (Local SNR Gating) trong DeepFilterNet3
+Khi không có ai nói (SNR cục bộ cực âm) hoặc khi môi trường hoàn toàn yên tĩnh (SNR cục bộ cực dương), việc chạy hết công suất cả tầng lọc sâu vừa dư thừa vừa có nguy cơ tạo nhiễu giả nhẹ. DeepFilterNet3 giới thiệu cơ chế ước lượng **SNR cục bộ (LSNR)** để điều phối: khi tín hiệu sạch rõ ràng hoặc thuần nhiễu, mô hình điều chỉnh mượt mà cường độ can thiệp, giúp giọng nói tự nhiên hơn và nâng chất lượng nhận thức (PESQ/DNSMOS) trên tập chuẩn Voicebank+Demand.
+
+### Khung giải thích: Cầm tay kiểm tra ngân sách CPU ở $$\mathrm{RTF} = 0{,}04$$ và cách hoạt động của Bộ hậu lọc (nên đọc chậm)
+
+**Phần A — Con số $$\mathrm{RTF} = 0{,}04$$ và độ trễ $$40\text{ ms}$$ có nghĩa là gì trên thực tế?**
+- Cấu hình khung chuẩn: cửa sổ $$20\text{ ms}$$, bước nhảy hop $$H = 10\text{ ms}$$, nhìn trước $$2\text{ khung} = 20\text{ ms}$$.
+- Tổng độ trễ thuật toán: $$L_{\text{alg}} = 20 + 20 = 40\text{ ms}$$.
+- Với $$\mathrm{RTF} = 0{,}04$$, thời gian CPU cần để xử lý trọn vẹn 1 khung hop $$10\text{ ms}$$ là:
+  $$T_{\text{proc}} = \mathrm{RTF} \times H = 0{,}04 \times 10\text{ ms} = 0{,}40\text{ ms}.$$
+  Như vậy, sau khi tốn $$0{,}40\text{ ms}$$ để suy luận, CPU còn dư tới $$9{,}60\text{ ms}$$ ($$96\%$$ quỹ thời gian) trong mỗi nhịp hop để chạy AEC, giải mã codec Opus và giao diện ứng dụng!
+
+**Phần B — Minh họa trực giác công thức Bộ hậu lọc (Post-Filter) trên độ lợi ERB:**
+Một dạng hậu lọc kinh điển (kiểu Valin/Schröter) điều chỉnh độ lợi dự đoán $$G \in [0, 1]$$ thành $$G_{\text{pf}} = G \cdot \sin\!\left(\frac{\pi}{2} G\right)$$. Hãy tính thử ở hai bin đại diện:
+1. **Bin tiếng nói rõ ($$G = 0{,}95$$):**
+   $$\sin\!\left(\frac{\pi}{2} \times 0{,}95\right) = \sin(85{,}5^\circ) \approx 0{,}997 \implies G_{\text{pf}} \approx 0{,}95 \times 0{,}997 = 0{,}947.$$
+   Tiếng nói sạch gần như không hề bị suy hao (chênh lệch dưới $$0{,}03\text{ dB}$$)!
+2. **Bin nhiễu nền còn lấp lửng ($$G = 0{,}60$$):**
+   $$\sin\!\left(\frac{\pi}{2} \times 0{,}60\right) = \sin(54^\circ) \approx 0{,}809 \implies G_{\text{pf}} \approx 0{,}60 \times 0{,}809 = 0{,}485.$$
+   Biên độ nhiễu dư bị kéo thêm $$-1{,}85\text{ dB}$$ xuống sâu hơn, làm nền âm thanh sạch và tĩnh hẳn mà không đụng chạm tới độ dày của giọng nói chính.
+
 ## Mục tiêu học tập
 
 Sau bài học này, bạn sẽ nắm được các cải tiến của DeepFilterNet2 so với bản ICASSP 2022 (bộ đệm thời gian thực, hàm mất mát đa phân giải, post-filter và RTF công bố), vai trò của cổng SNR cục bộ cùng kết quả bảng Voicebank+Demand của DeepFilterNet3 trong bài báo Interspeech 2023, và hiểu rõ vị trí của gói `deepfilternet3-noise-filter` trong hệ sinh thái này.

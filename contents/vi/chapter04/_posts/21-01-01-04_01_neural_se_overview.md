@@ -17,6 +17,44 @@ Tăng cường tiếng nói bằng mạng nơ-ron thay thế các công thức �
 
 *Hình. Kiến trúc hai tầng trọng tâm của khóa học: tầng đầu sử dụng băng thông chữ nhật tương đương (equivalent rectangular bandwidth, ERB) để ước lượng đường bao phổ thô, sau đó một bộ lọc sâu (deep filter) phức ngắn khôi phục cấu trúc họa âm. Các bài sau sẽ đi sâu vào từng khối; bài này tập trung dựng bản đồ tổng thể.*
 
+Sau ba chương đi từ biến đổi Fourier đến trừ phổ, Wiener và Kalman, ta nhận ra một giới hạn chung của trường phái cổ điển: chúng đều phải đặt ra các giả định thống kê đơn giản (nhiễu dừng, phân bố Gauss, pha nhiễu giữ nguyên) để viết được công thức đóng. Nhưng thế giới thực lại đầy rẫy tiếng gõ phím cơ, tiếng chó sủa, tiếng xe cộ biến đổi từng phần trăm giây — những thứ không vừa với bất kỳ phương trình giải tích gọn gàng nào. **Tăng cường tiếng nói bằng mạng nơ-ron (Neural Speech Enhancement)** lật ngược cách tiếp cận: thay vì tự viết công thức độ lợi, ta cho mạng nơ-ron nghe hàng nghìn giờ cặp âm thanh *nhiễu – sạch* để nó tự học cấu trúc họa âm phức tạp của giọng người và tách nhiễu ngay cả trong những tình huống phi dừng khắc nghiệt nhất.
+
+## Bản đồ kiến thức nền: Ba hệ hình học sâu cho âm thanh và bài toán pha
+
+### 1. Masking, Mapping và Generative — ba cách đặt đầu ra của mạng
+- **Masking (Tạo mặt nạ):** mạng dự đoán một tỷ lệ (thực như IRM hoặc phức như CRM) rồi nhân với tín hiệu đầu vào $$Y$$. Vì mặt nạ bị chặn trong phạm vi nhỏ và tận dụng sẵn cấu trúc của $$Y$$, mô hình học nhanh, nhẹ và ít bị "bịa" giọng lạ.
+- **Mapping (Ánh xạ trực tiếp):** mạng dự đoán thẳng phổ sạch $$\hat{S}$$ hoặc dạng sóng sạch $$\hat{s}[t]$$. Linh hoạt hơn nhưng dễ bị mờ chi tiết tần số cao khi SNR thấp.
+- **Generative (Mô hình sinh — Diffusion / Flow / Codec):** sinh lại giọng nói sạch có điều kiện trên bản ghi nhiễu. Nghe rất tự nhiên ngay cả ở SNR cực âm, nhưng thường nặng, độ trễ cao và có nguy cơ "ảo giác" phát âm sai từ nếu không kiểm soát chặt.
+
+### 2. Tại sao hàm mất mát (Loss) quan trọng không kém kiến trúc mạng?
+Nếu huấn luyện mạng chỉ bằng sai số bình phương (MSE) trên biên độ STFT thô, các bin năng lượng lớn ở tần số thấp sẽ thống trị toàn bộ gradient, khiến mạng bỏ mặc các phụ âm xát yếu ở tần số cao (như "s", "x", "th"). Vì vậy, các hệ thống hiện đại như DeepFilterNet dùng **hàm mất mát phổ nén (compressed spectral loss)** với lũy thừa $$c \approx 0{,}3\text{–}0{,}6$$ ($$\vert S \vert^c$$) kết hợp cả thành phần biên độ lẫn thành phần phức để cân bằng giữa năng lượng lớn và chi tiết thính giác tinh tế — khác hẳn với chỉ số đánh giá SI-SDR thường dùng khi báo cáo kết quả.
+
+### 3. Mặt nạ thực (IRM) bất lực trước sai số pha — lý do mặt nạ phức (CRM) ra đời
+Ở SNR cao, pha nhiễu $$\angle Y$$ gần với pha sạch $$\angle S$$. Nhưng khi nhiễu mạnh bằng hoặc lớn hơn tiếng nói ($$\text{SNR} \le 0\text{ dB}$$), vector nhiễu $$N$$ kéo lệch góc pha của $$Y = S + N$$ đi hàng chục độ. Một mặt nạ thực chỉ có thể kéo dài hoặc rút ngắn vector $$Y$$ dọc theo đúng hướng sai đó, không bao giờ xoay nó trở về đúng góc của $$S$$ được!
+
+### Khung giải thích: Cầm tay so sánh Mặt nạ thực (IRM) và Mặt nạ phức (CRM) trên một bin STFT nhiễu (nên đọc chậm)
+
+Xét đúng một ô thời gian–tần số STFT nơi tiếng nói sạch và nhiễu là hai số phức:
+- Tiếng nói sạch: $$S = 3 + 4j$$ (biên độ $$\vert S \vert = \sqrt{3^2 + 4^2} = 5$$, pha $$\approx 53{,}1^\circ$$).
+- Nhiễu tại ô đó: $$N = 1 - 4j$$ (biên độ $$\vert N \vert = \sqrt{17} \approx 4{,}12$$, SNR cục bộ khoảng $$+1{,}7\text{ dB}$$).
+- Quan sát micro thu được:
+  $$Y = S + N = (3 + 1) + (4 - 4)j = 4 + 0j \qquad (\vert Y \vert = 4,\; \angle Y = 0^\circ).$$
+
+Hãy thử khôi phục $$S$$ bằng hai loại mặt nạ lý tưởng (oracle):
+1. **Mặt nạ biên độ thực tốt nhất (Oracle Real Mask):**
+   Để khớp đúng biên độ $$\vert S \vert = 5$$ từ $$\vert Y \vert = 4$$, hệ số thực duy nhất là $$M_{\text{real}} = \frac{5}{4} = 1{,}25$$.
+   - Kết quả khôi phục: $$\hat{S}_{\text{real}} = 1{,}25 \times (4 + 0j) = 5 + 0j$$.
+   - Sai số phức còn lại:
+     $$\vert S - \hat{S}_{\text{real}} \vert = \vert (3 + 4j) - (5 + 0j) \vert = \vert -2 + 4j \vert = \sqrt{4 + 16} = \sqrt{20} \approx 4{,}47!$$
+   Dù đã biết trước biên độ sạch một cách hoàn hảo, sai số vẫn lên tới $$4{,}47$$ (gần bằng cả biên độ tiếng nói $$5$$!) chỉ vì mặt nạ thực không thể xoay góc pha từ $$0^\circ$$ lên $$53{,}1^\circ$$.
+
+2. **Mặt nạ tỷ số phức (Oracle Complex Ratio Mask — CRM):**
+   $$M_{\text{CRM}} = \frac{S}{Y} = \frac{3 + 4j}{4} = 0{,}75 + 1{,}00j.$$
+   - Kết quả khôi phục:
+     $$\hat{S}_{\text{CRM}} = (0{,}75 + 1{,}00j) \times 4 = 3 + 4j = S \implies \vert S - \hat{S}_{\text{CRM}} \vert = 0.$$
+
+Phép nhân số phức đơn giản này là cốt lõi của cả kỷ nguyên tăng cường tiếng nói hiện đại: muốn khử nhiễu sâu ở SNR thấp mà giọng vẫn trong, mạng nơ-ron phải can thiệp được vào **cả biên độ lẫn pha** — và DeepFilterNet ở bài 04-02 sẽ còn tiến thêm một bước bằng cách dùng bộ lọc phức *đa khung*.
+
 ## Mục tiêu học tập
 
 Sau bài học này, bạn sẽ phân biệt được masking, mapping và generative; tách bạch hàm mất mát phổ nén mà DeepFilterNet dùng khi huấn luyện với chỉ số SI-SDR dùng để báo cáo đánh giá; đồng thời phân biệt rõ độ trễ thuật toán với hệ số thời gian thực (real-time factor, RTF).

@@ -13,6 +13,40 @@ draft: false
 
 Phổ đồ (spectrogram) là công cụ giao tiếp chung của kỹ sư xử lý tiếng nói. Bài học này hướng dẫn cách đọc cấu trúc tiếng nói, nhận diện các dạng nhiễu và phát hiện méo âm (artifact) sau khử nhiễu, đồng thời tránh bị đánh lừa bởi thang màu dB. Phổ đồ không phải là "bức ảnh tuyệt đối của âm thanh" mà là biểu diễn \(|X(\ell,k)|\) của một cấu hình STFT cụ thể theo thang decibel có ngưỡng sàn; chỉ cần đổi hàm cửa sổ hoặc dải màu là hình ảnh thu được sẽ kể một câu chuyện hoàn toàn khác.
 
+
+Một kỹ sư âm thanh lão luyện không chỉ nghe tệp âm thanh bằng tai — họ **"đọc" âm thanh bằng mắt** qua **Spectrogram** (ảnh phổ thời gian–tần số hiển thị theo thang màu log-dB). Chỉ cần liếc 3 giây vào spectrogram, họ có thể chỉ ra ngay: đoạn nào là nguyên âm có thanh (các vạch ngang song song đều đặn), đoạn nào là phụ âm xát /s/, /sh/ (đám mây sáng ở vùng 4–10 kHz), tiếng gõ phím (vạch đứng sắc lẹm chạy từ đáy lên nóc), tiếng ù điện 50/100 Hz (đường kẻ ngang bất động suốt cả bài), hay dấu vết "nhiễu nhạc" do bộ khử nhiễu cắt quá tay!
+
+---
+
+## Bản đồ kiến thức nền: Đọc Spectrogram Tiếng nói đứng trên ba trụ cột âm học nào?
+
+### 1. Mô hình Nguồn – Bộ lọc (Source–Filter Model) của Giọng nói
+Giọng nói con người sinh ra từ hai bộ phận: **Dây thanh (Source)** rung tuần hoàn với tần số cơ bản $$F_0$$ (nam ~85–180 Hz, nữ ~165–255 Hz) tạo ra chuỗi **hài âm (harmonics)** $$F_0, 2F_0, 3F_0, \dots$$; sau đó **Khoang miệng – mũi (Filter)** cộng hưởng khuếch đại một vài dải tần cố định gọi là **Formant ($$F_1, F_2, F_3$$)** — chính vị trí formant quyết định tai ta nghe ra chữ "a", "i" hay "u"!
+
+### 2. Spectrogram Dải hẹp (Narrowband) vs. Dải rộng (Wideband)
+- **Dải hẹp** (cửa sổ dài $$20\text{–}40\text{ ms}$$, $$\Delta f$$ nhỏ): nhìn tách bạch từng **vạch hài âm ngang** song song.
+- **Dải rộng** (cửa sổ ngắn $$4\text{–}8\text{ ms}$$, $$\Delta f$$ lớn): các vạch hài âm hòa vào nhau, làm nổi bật các dải cộng hưởng **Formant** và từng nhịp rung dọc của dây thanh!
+
+### 3. Thang Log-dB và Thang Tần số Cảm thụ (Mel / ERB)
+Vì năng lượng phụ âm cao tần yếu hơn nguyên âm trầm tới 30–50 dB, spectrogram luôn vẽ biên độ theo thang $$20\log_{10}(|X| + \epsilon)$$ (dB). Đồng thời, vì tai người phân biệt tần số mịn ở vùng trầm nhưng thô dần ở vùng cao, các hệ thống hiện đại nhóm trục tần số theo thang **Mel** (cho ASR) hoặc **ERB (Equivalent Rectangular Bandwidth — dùng trong DeepFilterNet)**!
+
+---
+
+### Khung giải thích: tự tay đọc tần số cơ bản $$F_0$$ và chọn cửa sổ tách hài âm (nên đọc chậm)
+
+Giả sử bạn thu âm một giọng nam đọc nguyên âm /a/ với tần số cơ bản $$F_0 = 125\text{ Hz}$$ ở $$f_s = 48\,000\text{ Hz}$$:
+
+1. **Vị trí các vạch hài âm ngang trên spectrogram:**
+   $$
+   f_1 = 125\text{ Hz},\quad f_2 = 250\text{ Hz},\quad f_3 = 375\text{ Hz},\quad f_4 = 500\text{ Hz},\ \dots,\ f_8 = 1\,000\text{ Hz}.
+   $$
+   Đếm thấy đúng **8 vạch ngang** trong dải $$0\text{–}1\,000\text{ Hz}$$ → chia ngược $$1\,000 / 8 = \mathbf{125\text{ Hz}}$$, đọc ngay ra cao độ giọng nói chỉ bằng mắt!
+2. **Kiểm tra điều kiện tách hài âm giữa hai cửa sổ:** Muốn thấy rãnh tối giữa hai vạch cách nhau $$125\text{ Hz}$$, độ phân giải tần số $$\Delta f = \frac{f_s}{N}$$ cần nhỏ hơn $$\frac{F_0}{2} \approx 62.5\text{ Hz}$$ (với cửa sổ Hann cần thậm chí mịn hơn do búp chính rộng gấp đôi):
+   - *Cửa sổ dài $$T = 20\text{ ms}$$ ($$N = 960$$):* $$\Delta f = \frac{48\,000}{960} = \mathbf{50\text{ Hz}} < 125\text{ Hz}$$ → các vạch hài âm tách rời sắc nét (spectrogram **dải hẹp**)!
+   - *Cửa sổ ngắn $$T = 5\text{ ms}$$ ($$N = 240$$):* $$\Delta f = \frac{48\,000}{240} = \mathbf{200\text{ Hz}} > 125\text{ Hz}$$ → hai hài âm liền kề dính hẳn vào nhau thành dải ngang dày (spectrogram **dải rộng**), đổi lại bạn nhìn thấy rõ từng tiếng gõ phím ngắn chỉ 5 ms!
+
+---
+
 ## Mục tiêu học tập
 
 1. Đọc chính xác các trục của phổ đồ (thời gian, tần số và thang màu dB).

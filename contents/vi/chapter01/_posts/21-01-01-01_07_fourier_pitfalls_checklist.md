@@ -17,6 +17,43 @@ Khi bộ khử nhiễu cho ra âm thanh lỗi, phản xạ phổ biến của nh
 
 *Hình. Bẫy phổ biến nhất trong bài học này là sai trục tần số: Nyquist luôn ở \(f_s/2\), và một bin lệch đi một chỉ số đã tương ứng với giá trị Hz khác chứ không phải sai số làm tròn.*
 
+
+Một trong những lỗi âm thanh khó chịu nhất khi lập trình DSP không phải là chương trình bị crash, mà là chương trình *vẫn chạy êm ru và phát ra tiếng* — nhưng tiếng bị méo nhẹ, âm lượng sai đúng 6 dB, hoặc xuất hiện tiếng "tách tách" mơ hồ ở rìa mỗi khung! Thủ phạm hầu như luôn nằm trong một nhóm nhỏ các **bẫy Fourier kinh điển**: nhầm tích chập vòng với tích chập tuyến tính, quên hệ số 2 của phổ một phía `rfft`, hay quên chuẩn hóa năng lượng cửa sổ.
+
+---
+
+## Bản đồ kiến thức nền: Ba nhóm bẫy Fourier kinh điển mà kỹ sư âm thanh hay vấp phải là gì?
+
+### 1. Tích chập vòng (Circular) vs. Tích chập tuyến tính (Linear Convolution)
+Định lý tích chập của DFT nói rằng nhân hai phổ cỡ $$N$$ tương đương **tích chập vòng modulo $$N$$** trong miền thời gian! Nếu tín hiệu dài $$L$$ và bộ lọc dài $$M$$, kết quả tích chập tuyến tính thực sự dài $$L + M - 1$$ mẫu. Nếu bạn dùng FFT cỡ $$N < L + M - 1$$ mà không đệm đủ số 0, phần đuôi thừa sẽ **quấn ngược vòng lên đầu khung** gây chồng lấp miền thời gian (time-domain aliasing)!
+
+### 2. Quy ước chuẩn hóa và Phổ một phía (`rfft` vs. `fft`)
+Giữa NumPy, PyTorch, SciPy và RustFFT, quy ước chia $$1/N$$ có thể đặt ở IFFT, chia $$1/\sqrt{N}$$ cho cả hai chiều, hoặc không chia ở đâu cả! Ngoài ra, khi dùng `rfft` cho tín hiệu thực để tính phổ công suất (PSD), mỗi bin trung gian $$1 \le k < N/2$$ đại diện cho cả tần số dương $$+f_k$$ lẫn âm $$-f_k$$ nên năng lượng phải nhân **hệ số 2** (trừ bin DC $$k=0$$ và Nyquist $$k=N/2$$).
+
+### 3. Đứt gãy pha (Phase Discontinuity) và Méo ranh giới khung
+Thay đổi biên độ hoặc pha đột ngột giữa hai khung liên tiếp mà không dùng cửa sổ mượt và kỹ thuật chồng lấp (Overlap-Add / Overlap-Save) sẽ tạo ra bước nhảy biên độ ở ranh giới mỗi 10 ms — tai người lập tức nghe thành tiếng rè 100 Hz cực kỳ khó chịu!
+
+---
+
+### Khung giải thích: tự tay bắt tại trận lỗi "Tích chập vòng quấn ngược" với dãy 3 mẫu (nên đọc chậm)
+
+Xét tín hiệu $$x = [1, 1, 1]$$ (độ dài $$L = 3$$) lọc qua bộ lọc $$h = [1, 1, 1]$$ (độ dài $$M = 3$$):
+
+1. **Kết quả tích chập tuyến tính ĐÚNG** (độ dài phải là $$L + M - 1 = 3 + 3 - 1 = \mathbf{5\text{ mẫu}}$$):
+   $$
+   y_{\text{linear}} = [1,\ 2,\ 3,\ 2,\ 1].
+   $$
+2. **Sai lầm khi dùng FFT cỡ $$N = 4$$ (quên đệm đủ lên $$N \ge 5$$):**
+   - Đệm thành $$x_4 = [1, 1, 1, 0]$$ và $$h_4 = [1, 1, 1, 0]$$, rồi tính $$\text{IFFT}_4(\text{FFT}_4(x_4) \cdot \text{FFT}_4(h_4))$$.
+   - Phần tử thứ 5 (chỉ số $$n = 4$$, giá trị $$1$$) không có chỗ chứa trong mảng 4 phần tử nên bị **quấn modulo 4** về chỉ số $$4 \bmod 4 = \mathbf{0}$$ và cộng đè lên $$y[0] = 1$$!
+   - Kết quả sai thu được là:
+     $$
+     y_{\text{circular}, 4} = [1 + 1,\ 2,\ 3,\ 2] = [\mathbf{2},\ 2,\ 3,\ 2] \neq [1,\ 2,\ 3,\ 2,\ 1]!
+     $$
+3. **Cách sửa duy nhất đúng:** Luôn đệm số 0 cho cả $$x$$ và $$h$$ tới kích thước $$N_{\text{FFT}} \ge L + M - 1$$ (ở đây là $$N = 5$$, hoặc lũy thừa 2 gần nhất $$N = 8$$) thì tích chập vòng mới trùng khít 100% với tích chập tuyến tính!
+
+---
+
 ## Mục tiêu học tập
 
 1. Chẩn đoán các lỗi biến đổi Fourier và DFT phổ biến trong pipeline âm thanh.

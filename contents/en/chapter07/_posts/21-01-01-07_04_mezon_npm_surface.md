@@ -17,6 +17,23 @@ The npm package `deepfilternet3-noise-filter` **1.3.0** is a vehicle for DeepFil
 
 *Figure. The npm surface is a TrackProcessor plus a Web Audio core, not a second noise-suppression algorithm.*
 
+Anyone can publish an npm package that wraps a 30-line `AudioWorklet` snippet and calls it a noise-suppression SDK. Yet the difference between a classroom wrapper and a production package like the **Mezon NS npm surface** lies in everything *around* the model: capability probing, clean TypeScript contracts, zero-glitch runtime toggling, structured telemetry (RTF, underrun counts, active tier), and automatic graceful degradation when a user joins from an older browser or low-end device.
+
+This lecture dissects how to design a clean, resilient **public npm SDK surface**—separating the reusable DSP/ML engineering techniques inside from the thin integration glue facing application developers.
+
+---
+
+## Background Knowledge Map: Designing a Production Audio SDK Surface
+
+Four software-architecture principles turn a working prototype into a dependable npm package:
+
+1. **Thin Public Facade, Swappable Internal Backends:** Application code should import one clean interface (`createNoiseSuppressor(config)`) without caring whether the internal engine runs WASM SIMD128, scalar WASM fallback, or native browser NS.
+2. **Runtime Capability Probing:** At startup, probe `AudioWorklet`, `WebAssembly.SIMD`, `SharedArrayBuffer` (`crossOriginIsolated`), and hardware concurrency—automatically selecting the fastest safe tier instead of crashing on unsupported browsers.
+3. **First-Class Observability (Telemetry Hooks):** Real-time audio failures are invisible in HTTP server logs. Exposing a lightweight periodic stats callback (`rtfMean`, `rtfP99`, `underruns`, `activeModel`, `bypassed`) lets product teams spot device regressions across millions of sessions.
+4. **Strict Asset Path & Bundler Compatibility:** Modern web apps use Vite, Webpack, Next.js, and Electron—all of which handle `new URL('./worklet.js', import.meta.url)` differently. Allowing explicit `assetBaseUrl` configuration avoids painful bundler breakage.
+
+---
+
 ## Learning objectives
 
 You will map each public call onto a course idea, choose configure versus fork with a maintenance argument, and name extension work that needs zero edits inside the product tree.
@@ -176,6 +193,32 @@ setProcessor -> LiveKit LocalAudioTrack
 2. Blaming the model for a double-prefix CDN 404.
 3. Redistributing weights without reading the upstream license.
 4. Course commits inside the product tree.
+
+---
+
+### Worked Numerical Example: Capability-Tier Decision Matrix for an npm Audio SDK
+
+Trace how a well-designed SDK automatically selects the right execution tier at call join based on 3 runtime probes:
+
+| Browser Environment | `AudioWorklet`? | `WASM SIMD128`? | `crossOriginIsolated`? | Selected Execution Tier | Expected $$\mathrm{RTF}_{p99}$$ |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| Modern Chrome / Edge (COOP+COEP) | Yes | Yes | Yes | **Tier 1:** Worker + SAB + SIMD128 | $$0.22$$ (Best!) |
+| Modern Safari / Standard Page | Yes | Yes | No | **Tier 2:** Inline Worklet + SIMD128 | $$0.35$$ (Fast, 0 SAB needed) |
+| Legacy Browser (No SIMD) | Yes | No | No | **Tier 3:** Ultra-light RNNoise scalar | $$0.48$$ (Safe fallback) |
+| Restricted WebView / Error | No | — | — | **Tier 4:** Native WebRTC NS passthrough | $$0.00$$ (Zero-crash fallback) |
+
+Notice the product engineering math: if 85% of users hit Tier 1–2, 12% hit Tier 3, and 3% hit Tier 4, **100.0% of users join the call with working audio**—zero broken microphones!
+
+### Deep-Dive Explanation: Four Rules for Shipping a Clean Audio npm Package (Read Slowly)
+
+1. **Never hardcode relative asset paths without an override:** Expose `baseUrl` / `modelUrl` options so consumers hosting assets on their own CDN or Electron `file://` bundle never get 404s.
+2. **Keep the main entry bundle tiny (< 20 KB gzipped):** Lazy-load `.wasm` and `.onnx` binaries on demand so apps that only occasionally start voice calls don’t pay a startup tax on every page load.
+3. **Version your TypeScript types and error codes semantically:** Return typed error enums (`ModelLoadTimeout`, `UnsupportedBrowser`, `AudioContextSuspended`) instead of raw opaque strings so UI layers can show helpful banners.
+4. **Include a built-in self-test / synthetic sine-wave smoke test:** Letting integrators verify worklet registration and non-silent output in CI catches broken bundler configs before users ever see them.
+
+**Quick check.** Why should an audio npm SDK expose an explicit `baseUrl` option for `.wasm` and `.onnx` files rather than relying solely on bundler-inlined relative paths?
+
+---
 
 ## Exercises
 

@@ -17,6 +17,23 @@ A correct ONNX graph still fails in a product when **packaging** is wrong: a hug
 
 *Figure. Packaging decides which bytes the WASM compile in the browser is allowed to see.*
 
+A model file named `final_v3_fixed.onnx` sitting in a Slack thread is not a product artifact—it is an incident waiting to happen. The moment you ship real-time speech enhancement to millions of browser tabs or mobile installs, **packaging** becomes as important as model architecture: How fast does the bundle download on 4G? How do you guarantee the client loaded the exact weights matching the DSP front-end’s hop size and FFT window? And how do you roll back a bad release in 60 seconds without breaking cached clients?
+
+This lecture turns raw `.onnx` and `.wasm` binaries into disciplined, versioned product artifacts with explicit **manifests**, **SHA-256 integrity checks**, **compression**, and **rollback safety**.
+
+---
+
+## Background Knowledge Map: Four Engineering Pillars of ML Artifact Packaging
+
+Shipping ML weights reliably to edge devices requires four software-supply-chain practices:
+
+1. **Co-Versioning Model + DSP Contract:** A speech model’s weights are meaningless without its exact preprocessing parameters (`sample_rate`, `n_fft`, `hop_size`, `window_type`, `norm_stats`). Bundling a JSON manifest alongside the weights prevents silent train/serve skew.
+2. **Transport Compression (Brotli / Gzip) vs. Quantization:** Random-looking `FP32` mantissa bits barely compress under Gzip, whereas `INT8` weights compress well—pairing INT8 quantization with Brotli cuts transfer size by **5–6×**!
+3. **Content-Addressed Integrity (SHA-256):** Naming artifacts by content hash (e.g., `ns-v2.1-9f3a8c.onnx`) eliminates stale-cache mismatches and lets clients verify integrity before instantiating the inference session.
+4. **Lazy Loading & Feature-Tiered Bundles:** Ship a tiny JS/TS bootstrap (~15 KB) in the main app bundle, and fetch the heavy WASM + model weights asynchronously only when the user actually joins an audio call.
+
+---
+
 ## Learning objectives
 
 You will separate the npm tarball from the CDN artifacts, apply the path rule for package ≤ 1.1.2 versus ≥ 1.2.0 (including 1.3.0, which still auto-prefixes `v2/`), refuse a `cdnUrl` that already contains `v2`, and list the license and cache checks that belong in a ship gate.
@@ -115,6 +132,31 @@ double-prefix risk
 - Shipping a debug WASM.
 - Query-string cache busters on every page load (`?t=Date.now()`), which defeat the CDN.
 - Mixing ≤ 1.1.2 clients and ≥ 1.2.0 clients in one folder without both layouts present.
+
+---
+
+### Worked Numerical Example: Calculating Cold-Start Download Time on a 10 Mbps Mobile Link
+
+Suppose a 1.2M-parameter streaming denoiser is packaged three ways and downloaded over a realistic **10 Mbps** ($$1.25	ext{ MB/s}$$) mobile connection:
+
+| Artifact Variant | Raw Size | Brotli Wire Size | Download Time @ 10 Mbps | Fits Call-Join Budget (< 1 s)? |
+| :--- | :--- | :--- | :--- | :--- |
+| **FP32 ONNX (uncompressed)** | $$4.80	ext{ MB}$$ | $$4.35	ext{ MB}$$ | $$3.48	ext{ s}$$ | **No** (delays call join!) |
+| **FP16 ONNX + Brotli** | $$2.40	ext{ MB}$$ | $$2.05	ext{ MB}$$ | $$1.64	ext{ s}$$ | Marginal |
+| **INT8 ONNX + Brotli** | $$1.20	ext{ MB}$$ | $$0.85	ext{ MB}$$ | **$$0.68	ext{ s}$$** | **Yes!** |
+
+Add a `0.45 MB` Brotli-compressed WASM SIMD runtime, and the entire INT8 package downloads in $$(0.85 + 0.45) / 1.25 = \mathbf{1.04	ext{ s}}$$ on first visit—and **0 ms network wait** on every subsequent call once cached!
+
+### Deep-Dive Explanation: Four Rules for Bulletproof Model Packaging (Read Slowly)
+
+1. **Never overwrite a live model URL in place:** Always publish immutable versioned URLs (`v2.1.0/...`) so an in-flight call never downloads half of v2.0 and half of v2.1.
+2. **Validate the manifest schema before calling `InferenceSession.create`:** Verify `sample_rate`, `hop_size`, and `sha256` at load time so corrupted downloads fall back cleanly to passthrough audio instead of crashing the call.
+3. **Separate runtime upgrades from weight upgrades:** Keeping the WASM engine and the `.onnx` weight blob independently versioned lets ML engineers ship improved weights without rebuilding the C++/Rust runtime.
+4. **Budget for both download *and* WASM compilation/warmup:** Calling `WebAssembly.instantiateStreaming` overlaps network download with compilation, shaving hundreds of milliseconds off startup.
+
+**Quick check.** Why do `FP32` neural network weight files compress poorly under Gzip/Brotli compared to text or JSON, and why does `INT8` quantization shrink the wire transfer so dramatically?
+
+---
 
 ## Exercises
 

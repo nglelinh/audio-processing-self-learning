@@ -17,6 +17,47 @@ draft: false
 
 *Hình. Tầng 1 dự đoán độ lợi thực trên 32 băng ERB (băng thông chữ nhật tương đương) rồi trải lên toàn bộ lưới STFT. Tầng 2 dự đoán bộ lọc phức 5 tap và chỉ áp dụng cho vùng tần số thấp, nơi tập trung phần lớn năng lượng tuần hoàn của tiếng nói; các bin cao hơn giữ nguyên độ lợi ERB.*
 
+Nếu bạn muốn chạy tăng cường tiếng nói toàn băng $$48\text{ kHz}$$ theo thời gian thực ngay trên một nhân CPU laptop hay bên trong trình duyệt, bài toán khó nhất không phải là "làm sao đạt điểm chất lượng cao nhất", mà là **phân bổ ngân sách phép tính vào đúng chỗ tai người cần nhất**. Áp một mạng nơ-ron phức dày đặc lên toàn bộ $$481$$ bin tần số vừa tốn kém vừa lãng phí — bởi trên $$5\text{ kHz}$$, giọng người chủ yếu là nhiễu xát không tuần hoàn (như chữ "s", "f"), nơi tai người chỉ quan tâm đến đường bao năng lượng thô chứ không phân biệt nổi từng họa âm chi tiết. **DeepFilterNet** (Schröter và cộng sự, ICASSP 2022) tỏa sáng chính nhờ một thiết kế hai tầng bám sát sinh lý học thính giác: rẻ và thô cho toàn băng, sâu và phức cho vùng họa âm tần số thấp.
+
+## Bản đồ kiến thức nền: Thang thính giác ERB và bộ lọc phức đa khung (Deep Filtering)
+
+### 1. Thang ERB (Equivalent Rectangular Bandwidth) — nén 481 bin về 32 băng thính giác
+Ốc tai người không phân chia tần số đều nhau theo tuyến tính (Hz), mà có độ phân giải mịn ở tần số thấp và thô dần theo kiểu logarit ở tần số cao. Thang **ERB** mô hình hóa chính xác độ rộng bộ lọc thính giác đó: thay vì dự đoán $$481$$ độ lợi riêng lẻ, tầng 1 của DeepFilterNet chỉ dự đoán đúng **32 độ lợi thực** trên 32 băng ERB, sau đó nội suy ngược lên toàn bộ 481 bin. Chỉ riêng bước này đã dọn sạch phần lớn nhiễu băng rộng với chi phí tính toán cực nhỏ.
+
+### 2. Deep Filtering — tổng quát hóa CRM từ 1 khung sang $$N$$ khung ($$N = 5$$)
+Mặt nạ phức CRM (bài 04-01) chỉ nhân mỗi ô $$Y(t, k)$$ với **1** hệ số phức $$M(t, k)$$. Khi tiếng nói có cấu trúc tuần hoàn mạnh (các họa âm của nguyên âm kéo dài nhiều chục mili-giây), thông tin ở các khung lân cận $$t-2, t-1, t, t+1, t+2$$ chứa manh mối cực mạnh để tái tạo lại cả biên độ lẫn pha bị nhiễu che khuất. **Deep Filtering** (Mack & Habets, 2020) thay phép nhân đơn bằng một bộ lọc FIR phức bậc $$N$$ chạy dọc trục thời gian ngay trên từng bin tần số thấp:
+$$\hat{S}(t, k) = \sum_{i=0}^{N-1} C_i(t, k)\, Y(t - i + l,\; k),$$
+với $$l$$ là số khung nhìn trước (*look-ahead*, bằng $$2$$ khung trong cấu hình chuẩn).
+
+### 3. Tính nhân quả và nguồn gốc chính xác của độ trễ thuật toán 40 ms
+Trong xử lý thời gian thực, độ trễ thuật toán không phải là thời gian chạy CPU (RTF), mà là thời gian chờ tối thiểu do cấu trúc cửa sổ và nhìn trước quy định. Với STFT cửa sổ $$20\text{ ms}$$ ($$960$$ mẫu ở $$48\text{ kHz}$$), bước nhảy hop $$10\text{ ms}$$ ($$480$$ mẫu), và $$2$$ khung nhìn trước ($$2 \times 10\text{ ms} = 20\text{ ms}$$), tổng độ trễ thuật toán tối thiểu đúng bằng $$20 + 20 = 40\text{ ms}$$ — hoàn toàn nằm gọn trong ngân sách $$150\text{ ms}$$ của VoIP.
+
+### Khung giải thích: Cầm tay đếm số tham số đầu ra và tính thử 1 bước Deep Filter phức 2 tap (nên đọc chậm)
+
+**Phần A — Vì sao tách 2 tầng tiết kiệm gấp gần 5 lần đầu ra?**
+Với STFT $$48\text{ kHz}$$, $$N_{\text{FFT}} = 960 \implies 481$$ bin tần số (mỗi bin rộng $$50\text{ Hz}$$):
+- **Cách làm ngây thơ (5-tap phức trên cả 481 bin):**
+  $$481\text{ bin} \times 5\text{ tap} \times 2\text{ (thực/ảo)} = 4\,810\text{ hệ số mỗi khung}.$$
+- **Thiết kế 2 tầng của DeepFilterNet (32 ERB + 5-tap phức chỉ cho 96 bin thấp, tức $$0\text{–}4{,}8\text{ kHz}$$):**
+  - Tầng 1 (ERB gain): $$32$$ hệ số thực.
+  - Tầng 2 (Deep Filter dưới $$4{,}8\text{ kHz}$$): $$96 \times 5 \times 2 = 960$$ hệ số.
+  - Tổng đầu ra mỗi khung: $$32 + 960 = 992\text{ hệ số}$$ — gọn hơn **$$4{,}85$$ lần** so với cách làm toàn băng!
+
+**Phần B — Tự tay tính 1 bước Deep Filter phức 2 tap trên một bin tần số thấp $$k$$:**
+Giả sử tại bin $$k$$ ta có hai khung đầu vào liên tiếp:
+$$Y(t-1, k) = 1 + j, \qquad Y(t, k) = 2 - j,$$
+và mạng nơ-ron dự đoán 2 hệ số lọc phức cho khung $$t$$ là:
+$$c_{-1} = 0{,}5j, \qquad c_0 = 0{,}5 + 0{,}5j.$$
+Áp dụng công thức tổng lọc sâu $$\hat{S}(t, k) = c_{-1} Y(t-1, k) + c_0 Y(t, k)$$:
+1. Số hạng khung trước:
+   $$c_{-1} Y(t-1, k) = 0{,}5j(1 + j) = 0{,}5j + 0{,}5j^2 = -0{,}5 + 0{,}5j.$$
+2. Số hạng khung hiện tại:
+   $$c_0 Y(t, k) = (0{,}5 + 0{,}5j)(2 - j) = 1{,}0 - 0{,}5j + 1{,}0j - 0{,}5j^2 = 1{,}5 + 0{,}5j.$$
+3. Cộng hai số hạng phức:
+   $$\hat{S}(t, k) = (-0{,}5 + 1{,}5) + (0{,}5 + 0{,}5)j = 1{,}0 + 1{,}0j.$$
+
+Chỉ với hai phép nhân phức và một phép cộng, bộ lọc sâu đã vừa tổng hợp năng lượng từ khung trước, vừa xoay góc pha của bin hiện tại về đúng pha sạch mà mặt nạ thực không bao giờ làm được.
+
 ## Mục tiêu học tập
 
 Sau bài học này, bạn sẽ tính được trực tiếp một bước áp độ lợi ERB và một tổng lọc sâu đa khung trên bin phức; giải thích được vì sao bộ lọc 5 tap dưới ngưỡng khoảng 5 kHz nhẹ hơn nhiều so với CRM trên toàn bộ các bin ở 48 kHz; nêu đúng cấu hình STFT công bố (cửa sổ 20 ms, hop 10 ms) cùng độ trễ thuật toán 40 ms (gồm 2 khung nhìn trước); và chạy được công cụ CLI `deepFilter` hoặc kịch bản NumPy thay thế.

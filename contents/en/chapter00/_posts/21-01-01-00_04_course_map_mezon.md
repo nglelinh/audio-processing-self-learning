@@ -11,11 +11,30 @@ lesson_type: required
 draft: false
 ---
 
-This lesson is the map and the contract: how chapters build from Fourier foundations to a Mezon-aligned capstone, what the public product surface is, and how to study without confusing “wrapper usage” with “technique mastery.”
+Installing an npm package and wiring `await filter.process(audioFrame)` into a voice call takes ten minutes. Debugging why that exact call develops a metallic 100 Hz warble on MacBooks, or why your p95 latency spikes after twenty minutes in a Chrome tab, takes real signal-processing literacy.
+
+This lesson is your **map and contract** for the entire course: how Chapters 00 through 10 build systematically from Fourier mathematics to a Mezon-aligned real-time capstone, what the public product surface exposes, and how to diagnose production audio bugs by tracing them back to the exact mathematical layer where they originate.
 
 ![A LiveKit track processor drawn as the public slot where a noise filter can sit]({{ site.imgurl }}/generated/livekit-trackprocessor.png)
 
 *Figure. The drawing is only the public integration slot: a TrackProcessor on a media track. It does not reveal private Mezon internals.*
+
+**Lesson roadmap:** Background Knowledge Map (three-layer architecture of a voice NS product, techniques vs. wrappers, systematic bug triage) → Full 11-chapter map & recommended study tracks → Public Mezon product surface → Worked example: diagnosing a 10 ms (100 Hz) robotic warble back to the right chapter → Deep-Dive Explanation (Read Slowly): 3-step engineering triage loop for audio pipelines → Pitfalls, Mini-lab, Exercises & Videos.
+
+---
+
+## Background Knowledge Map: The Three-Layer Stack Behind Every Real-Time Noise Suppressor
+
+### 1. Layer 1 — Discrete Signal & STFT Foundations (Chapters 01–02)
+Before any machine learning runs, raw microphone PCM is resampled to a fixed clock (e.g., 48 kHz), sliced into overlapping windows, transformed by an FFT, and later reassembled via Overlap-Add (OLA). Most “mysterious model bugs” (clicks, pitch shifts, metallic modulation) actually happen right here—in wrong hop sizes, broken COLA window sums, or un-filtered resampling.
+
+### 2. Layer 2 — Classical Priors & Neural Enhancement (Chapters 03–04)
+Classical estimators (spectral subtraction, Wiener filtering, Kalman tracking, AEC/beamforming) establish the statistical priors that modern neural suppressors like **DeepFilterNet** still inherit: separating broadband envelope gains (ERB bands) from fine complex harmonic filtering.
+
+### 3. Layer 3 — Real-Time Runtime, Product Integration, and Evaluation (Chapters 05–09)
+Turning a trained checkpoint into a shippable feature requires ring buffers, AudioWorklet/WASM or ONNX/Rust execution, LiveKit/WebRTC TrackProcessor integration, and rigorous evaluation (SI-SDR, DNSMOS, and listening tests) so you know quality truly improved.
+
+---
 
 ## Learning objectives
 
@@ -114,7 +133,30 @@ Possible chapter triage:
 3. **05** — underruns causing repeated frames.
 4. **04** — over-aggressive periodic masking (model) — *last*, after pipeline hygiene.
 
-This triage habit is the point of the course map. A 10 ms warble is \(100\,\mathrm{Hz}\) because \(1/0.010=100\). That number points at hop-rate amplitude modulation (Ch. 02) before it points at a bad checkpoint (Ch. 04). The mini-lab turns the same arithmetic into a pass/fail on p95 processing time.
+This triage habit is the point of the course map. A 10 ms warble is $$100\,\mathrm{Hz}$$ because $$1/0.010=100$$. That number points at hop-rate amplitude modulation (Ch. 02) before it points at a bad checkpoint (Ch. 04). The mini-lab turns the same arithmetic into a pass/fail on p95 processing time.
+
+---
+
+### Deep-Dive Explanation: How Experienced Audio Engineers Triage a Broken Pipeline (Read Slowly)
+
+#### Step 1: Turn every audible symptom into a frequency or time period
+Never stop at “it sounds robotic.” Measure the period of the artifact: a periodic buzz every $$10\,\mathrm{ms}$$ is a $$1/0.010 = 100\,\mathrm{Hz}$$ modulation—which immediately matches a $$480$$-sample hop at $$48\,\mathrm{kHz}$$. A pitch drop of $$3\times$$ immediately screams “48 kHz PCM fed into a 16 kHz consumer.”
+
+#### Step 2: Bypass the neural model first (Identity / Pass-through test)
+Replace the neural network with an identity gain ($$G(\ell, k) \equiv 1$$) and run STFT $$\to$$ ISTFT on a clean sine wave. If the 100 Hz warble is *still there*, the bug is 100% in framing, COLA windowing, or ring-buffer underruns (Chapters 01, 02, 05)—not in the model weights!
+
+#### Step 3: Gate changes with objective + listening checks
+Once pass-through reconstruction is bit-clean ($$\text{error} < 10^{-6}$$), re-enable the suppressor and verify both tail compute ($$\text{p95 } T_{\mathrm{proc}} < T_{\mathrm{hop}}$$) and perceptual metrics (Ch. 08) before merging.
+
+Summary of the audio debugging loop:
+
+$$
+\text{Audible symptom}
+\;\xrightarrow{f = 1/T}\;
+\text{Bypass model (STFT}\to\text{ISTFT)}
+\;\xrightarrow{\text{Isolate layer}}\;
+\text{Fix Ch. 01/02/05 before Ch. 04}.
+$$
 
 ## Common pitfalls
 

@@ -17,6 +17,23 @@ After the capstone, pick one path and a thirty-day practice that produces files,
 
 *Figure. Whatever path you pick, the map still applies. A classical filter, a paper reproduction, and a LiveKit policy are all graded by which column they actually move.*
 
+Real-time noise suppression is only the front door into modern audio AI. Once you can frame 48 kHz audio cleanly, manage causal streaming state, quantize models to INT8, and evaluate perceptual quality honestly, you already possess **80% of the systems toolkit** needed for every adjacent frontier in speech and audio—from **streaming Automatic Speech Recognition (ASR)** and **low-latency Text-to-Speech (TTS)** to **neural audio codecs** and **multimodal voice agents**!
+
+This roadmap maps four high-impact next paths and shows exactly which skills transfer directly and what new mathematical tools each frontier adds.
+
+---
+
+## Background Knowledge Map: Four Adjacent Frontiers Beyond Noise Suppression
+
+Every major area of modern audio AI builds straight on the streaming DSP + ML foundation you now hold:
+
+1. **Streaming ASR (CTC, RNN-T, Chunked Conformer / Whisper):** Maps log-Mel spectrograms to text tokens in real time. Adds sequence-alignment losses (CTC / Transducer), beam search, and chunked attention caching (typical latency 160–640 ms).
+2. **Neural Audio Codecs (EnCodec, SoundStream, DAC, Mimi):** Compresses 24–48 kHz audio down to **1.5–6 kbps** using **Residual Vector Quantization (RVQ)**—turning continuous audio waveforms into discrete tokens that multimodal LLMs can read and generate natively!
+3. **Streaming TTS & Voice Conversion (VITS, Flow Matching, Codec LMs):** Generates natural speech from text with sub-200 ms time-to-first-audio (TTFA), combining semantic tokens, acoustic flow matching, and streaming neural vocoders.
+4. **Full-Duplex Spatial Audio & AEC (Neural Acoustic Echo Cancellation, Beamforming):** Extends single-mic NS to multi-microphone arrays (spatial filtering / MVDR beamforming) and joint AEC + NS + dereverberation for smart speakers and AR/VR headsets.
+
+---
+
 ## What you should be able to do
 
 You should be able to choose classical DSP, neural speech enhancement, or productization, write a thirty-day calendar with a file you will commit each week, and name one adjacent topic with a concrete weekend command or measurement. You should also turn the capstone `capstone/` tree into a portfolio piece that does not depend on the shared product repo.
@@ -96,6 +113,38 @@ command ok
 ```
 
 Failure modes: three paths in one month; a weekend topic with no artifact; an RTF goal with no device; a plan that starts by forking nothing and editing the shared product tree.
+
+---
+
+### Worked Numerical Example: Computing the Exact Bitrate of a Neural Audio Codec (RVQ)
+
+One of the hottest technologies in 2024–2026 audio AI is **Residual Vector Quantization (RVQ)** inside neural codecs (like EnCodec, DAC, or Moshi’s Mimi). Compute its exact bitrate by hand!
+
+Suppose a neural encoder downsamples 24 kHz audio by a stride of $$320$$ samples per frame:
+1. **Token frame rate:**
+   $$f_{	ext{tok}} = rac{24{,}000}{320} = 75	ext{ frames/second}.$$
+2. **Bits per codebook:** Each RVQ codebook has $$V = 1{,}024 = 2^{10}$$ entries $$\implies \log_2(1{,}024) = \mathbf{10	ext{ bits}}$$ per token.
+3. **Total bitrate across $$Q$$ residual codebooks:**
+   $$	ext{Bitrate} = Q 	imes 10	ext{ bits} 	imes 75	ext{ Hz} = 750\,Q	ext{ bits/s}.$$
+
+| Codebooks $$Q$$ | Bitrate (kbps) | Compression Ratio vs. 24 kHz 16-bit PCM (384 kbps) | Typical Use Case |
+| :--- | :--- | :--- | :--- |
+| $$Q = 2$$ | $$1.5	ext{ kbps}$$ | **$$256	imes$$** | Ultra-low-bitrate speech / voice LLM |
+| $$Q = 4$$ | $$3.0	ext{ kbps}$$ | **$$128	imes$$** | Clean conversational voice |
+| $$Q = 8$$ | $$6.0	ext{ kbps}$$ | **$$64	imes$$** | High-fidelity speech & music |
+
+Compare that with raw uncompressed 24 kHz 16-bit PCM ($$24{,}000 	imes 16 = 384	ext{ kbps}$$): **64× to 256× compression** into discrete tokens ready for a Transformer!
+
+### Deep-Dive Explanation: How to Pick Your Next Audio Specialization Strategically (Read Slowly)
+
+1. **If you loved Chapters 5–7 (WASM, Rust, WebRTC, low latency):** Go deeper into **Native Rust DSP, Neural AEC, or Multi-Mic Beamforming**—the industry has a massive shortage of engineers who understand both PyTorch and lock-free real-time C++/Rust.
+2. **If you loved Chapters 3–4 (Spectrograms, Neural Nets, Deep Filtering):** Explore **Neural Audio Codecs (RVQ)** and **Flow-Matching Speech Restoration**—the bridge between classic DSP and multimodal voice LLMs.
+3. **If you loved Chapter 8 (Evaluation, Metrics, Listening Tests):** Specialize in **Voice AI Evaluation & Speech Quality Modeling**—building automated benchmarks for full-duplex voice agents.
+4. **Always build one small runnable artifact per new frontier:** Reading 10 papers on streaming ASR teaches less than wiring one working microphone-to-transcript demo and measuring its real p99 latency.
+
+**Quick check.** Using the RVQ formula above (75 frames/s, 10 bits per codebook), what bitrate in kbps do you get if you use $$Q = 16$$ codebooks—and what is the compression ratio relative to 384 kbps PCM?
+
+---
 
 ## Exercises
 

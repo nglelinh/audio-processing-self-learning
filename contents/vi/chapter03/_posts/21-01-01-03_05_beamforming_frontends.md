@@ -13,6 +13,40 @@ draft: false
 
 Khi thiết bị có **từ hai micro trở lên**, hình học mảng thu mang lại một lợi thế mà khử nhiễu đơn kênh không có: khả năng chọn lọc theo hướng không gian. Beamforming, bộ triệt búp phụ tổng quát (Generalized Sidelobe Canceller, GSC) và phân tích vector độc lập (Independent Vector Analysis, IVA) là các tầng tiền xử lý đa kênh cổ điển có thể cung cấp đầu vào sạch hơn cho bộ khử nhiễu mạng nơ-ron đơn kênh. Bài học này trình bày trực giác kỹ thuật về delay-and-sum, MVDR giản lược, ma trận chặn của GSC, IVA theo hướng tách nguồn mù, cùng các mô hình lai như GSC+DeepFilterNet2 hay IVA+GTCRN trong bối cảnh SNR thấp, drone hoặc thiết bị hai micro (ở mức định hướng khảo sát).
 
+Tại sao con người lại có **hai** cái tai thay vì một? Không phải để nghe to gấp đôi, mà để biến *hình học không gian* thành một bộ lọc vật lý: một âm thanh phát ra từ bên phải sẽ chạm vào tai phải sớm hơn tai trái khoảng vài trăm micro-giây. Khi một chiếc laptop, điện thoại hay loa thông minh sở hữu từ hai micro trở lên, ta có thể làm điều tương tự bằng toán học: tạo ra một "đèn pin âm học" chiếu thẳng vào miệng người nói và đẩy tiếng quạt hay tiếng người nói chuyện bên cạnh vào vùng tối — kỹ thuật gọi là **tạo búp sóng (beamforming)**.
+
+## Bản đồ kiến thức nền: Mảng micro, hình học sóng phẳng và lọc không gian
+
+### 1. Độ trễ thời gian đến (TDOA) và Vector lái hướng (Steering Vector)
+Với hai micro đặt cách nhau khoảng cách $$d$$ trong không khí (tốc độ âm thanh $$c \approx 343\text{ m/s}$$), một sóng phẳng đến từ góc lệch $$\theta$$ so với phương trực diện phải đi thêm quãng đường $$\Delta r = d \sin\theta$$ để tới micro thứ hai, tạo ra độ trễ $$\Delta\tau = \frac{d \sin\theta}{c}$$. Trên miền tần số $$f$$, độ trễ thời gian biến thành phép xoay pha $$e^{-j 2\pi f \Delta\tau}$$. Xếp pha của tất cả $$M$$ micro thành một cột ta thu được **vector lái hướng** $$\mathbf{a}(\theta, f)$$.
+
+### 2. Từ Delay-and-Sum đến MVDR và cấu trúc GSC
+- **Delay-and-Sum (DSB):** đơn giản bù lại đúng độ trễ của hướng mục tiêu $$\theta_s$$ rồi cộng trung bình các micro. Tín hiệu mục tiêu cộng đồng pha nên giữ nguyên biên độ, còn nhiễu từ hướng khác lệch pha nên tự triệt tiêu một phần.
+- **MVDR (Minimum Variance Distortionless Response):** tối ưu vector trọng số phức $$\mathbf{w}(f)$$ để cực tiểu hóa tổng công suất nhiễu đầu ra $$\mathbf{w}^H \mathbf{R}_{vv} \mathbf{w}$$ với ràng buộc giữ nguyên hướng mục tiêu $$\mathbf{w}^H \mathbf{a}(\theta_s, f) = 1$$.
+- **GSC (Generalized Sidelobe Canceller):** viết lại bài toán tối ưu có ràng buộc MVDR thành hai nhánh song song dễ chạy thời gian thực: nhánh trên cố định hướng vào người nói, nhánh dưới dùng *ma trận chặn (blocking matrix)* xóa người nói để chỉ lấy nhiễu tham chiếu rồi trừ dần khỏi nhánh trên.
+
+### 3. Tách nguồn mù đa kênh (IVA) và giới hạn vật lý của mảng nhỏ
+Khi không biết trước hướng người nói, **IVA (Independent Vector Analysis)** khai thác giả định các nguồn âm độc lập thống kê nhau và liên kết các tần số của cùng một nguồn để tránh hoán vị tần số (*permutation problem*). Tuy nhiên, vật lý sóng đặt ra một giới hạn cứng: khi bước sóng âm thanh $$\lambda = c/f$$ lớn hơn nhiều so với khoảng cách micro $$d$$ (ở tần số trầm), lệch pha giữa hai micro quá bé nên beamforming đơn thuần suy giảm mạnh — đó là lý do các hệ thống hiện đại ghép tiền xử lý không gian với hậu lọc mạng nơ-ron đơn kênh.
+
+### Khung giải thích: Cầm tay tính độ trễ TDOA và kiểm tra "điểm mù tần số trầm" của mảng 2 micro laptop (nên đọc chậm)
+
+Xét một chiếc laptop có 2 micro đặt cách nhau $$d = 4\text{ cm} = 0{,}04\text{ m}$$, tốc độ âm thanh $$c = 343\text{ m/s}$$, tần số lấy mẫu $$f_s = 48\,000\text{ Hz}$$.
+- Người nói ngồi chính diện trước màn hình: $$\theta_s = 0^\circ \implies \Delta\tau_s = 0$$.
+- Một nguồn nhiễu (quạt hoặc người nói chuyện) nằm lệch góc $$\theta_n = 30^\circ$$:
+  - Quãng đường chênh lệch: $$\Delta r = d \sin 30^\circ = 0{,}04 \times 0{,}5 = 0{,}02\text{ m}$$.
+  - Độ trễ thời gian đến (TDOA): $$\Delta\tau_n = \frac{0{,}02}{343} \approx 58{,}3\,\mu\text{s}$$ (tương đương $$58{,}3 \times 10^{-6} \times 48\,000 \approx 2{,}8$$ mẫu!).
+
+Ta dùng bộ Delay-and-Sum hướng thẳng $$0^\circ$$: $$y(t) = \frac{1}{2}[x_1(t) + x_2(t)]$$. Biên độ đáp ứng theo tần số cho nguồn có độ trễ $$\Delta\tau$$ là:
+$$\vert H(f) \vert = \left\vert \frac{1 + e^{-j 2\pi f \Delta\tau}}{2} \right\vert = \vert \cos(\pi f \Delta\tau) \vert.$$
+
+Hãy thay số trực tiếp ở 2 tần số để thấy sức mạnh và điểm yếu của mảng 2 micro:
+1. **Tại tần số cao $$f = 8\,575\text{ Hz}$$:**
+   $$\pi f \Delta\tau_n = \pi \times 8\,575 \times \frac{0{,}02}{343} = \frac{\pi}{2}\text{ rad} \implies \vert H(8\,575\text{ Hz}) \vert = \left\vert \cos\!\left(\frac{\pi}{2}\right) \right\vert = 0.$$
+   Sóng nhiễu đến hai micro ngược pha nhau hoàn toàn ($$180^\circ$$) và **tự triệt tiêu $$100\%$$** trong khi tiếng nói chính diện ($$\Delta\tau_s = 0$$) vẫn giữ nguyên độ lợi $$1{,}0$$!
+2. **Tại tần số trầm $$f = 500\text{ Hz}$$ (vùng năng lượng chính của giọng nói và tiếng ù):**
+   $$\pi f \Delta\tau_n \approx \pi \times 500 \times 58{,}3 \times 10^{-6} \approx 0{,}0916\text{ rad} \implies \vert H(500\text{ Hz}) \vert = \cos(0{,}0916) \approx 0{,}996 \quad (-0{,}04\text{ dB}).$$
+   Nhiễu $$500\text{ Hz}$$ gần như đi qua nguyên vẹn vì bước sóng $$\lambda = 343/500 = 68{,}6\text{ cm}$$ quá dài so với khoảng cách micro $$4\text{ cm}$$. Con số $$0{,}996$$ này giải thích trọn vẹn vì sao mảng 2 micro trên laptop không bao giờ thay thế được tầng khử nhiễu đơn kênh (như DeepFilterNet) ở dải tần thấp!
+
 ## Mục tiêu học tập
 
 Sau bài học này, bạn sẽ giải thích được mục tiêu của delay-and-sum và MVDR bằng ngôn ngữ trực quan, phác thảo cấu trúc GSC (beamformer cố định + ma trận chặn + bộ hủy nhiễu thích nghi), tóm tắt vai trò tách nguồn mù đa kênh của IVA, và xác định khi nào kết hợp tầng tiền xử lý không gian với DeepFilterNet đơn kênh hiệu quả hơn chạy NS đơn kênh thuần túy.

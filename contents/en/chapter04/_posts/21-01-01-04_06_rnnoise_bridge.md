@@ -17,6 +17,23 @@ draft: false
 
 *Figure. DeepFilterNet’s picture: 32 ERB gains, then a 5-tap complex filter on the low STFT bins. RNNoise is the contrast, not a redraw of this figure: 22 Bark-scale bands, a GRU that predicts those band gains, and a pitch comb between harmonics. Both are hybrid. The bands, the second stage, and the net size differ.*
 
+In 2017, Jean-Marc Valin—co-creator of the Opus audio codec—published **RNNoise**, a tiny C library that stunned the speech community: in under **100 kilobytes of weights** and running effortlessly on a Raspberry Pi, it stripped away fan hum, street traffic, and keyboard clatter in real time. RNNoise didn’t win by throwing billions of parameters at raw audio; it won by pairing **classical psychoacoustics (Bark/Opus critical bands + pitch comb filtering)** with **three compact GRU layers**.
+
+This lecture uses RNNoise as a conceptual bridge between traditional signal processing and modern neural speech enhancement (such as DeepFilterNet), showing *exactly* why domain-informed feature compression unlocks extreme efficiency—and where band-level gain masks hit their ceiling.
+
+---
+
+## Background Knowledge Map: The Hybrid DSP + Neural Philosophy of RNNoise
+
+Four classical DSP and ML ideas fuse together inside RNNoise:
+
+1. **Perceptual Critical Bands (Bark / Opus Scale):** Human hearing resolves fine frequency differences below 1 kHz but groups high frequencies into wide logarithmic bands. Collapsing 481 linear STFT bins (at 48 kHz) into **22 Bark bands** slashes input/output dimensionality by over **21×**!
+2. **Pitch Comb Filtering for Voiced Speech:** Band-level gains cannot suppress noise *between* the harmonic peaks of a vowel. RNNoise computes a classical pitch correlation and applies a lightweight comb filter to preserve harmonic structure while attenuating inter-harmonic noise.
+3. **Recurrent Gain Estimation (3 GRUs):** Three small GRU layers track temporal continuity (distinguishing steady air-conditioner noise from transient consonants) and output 22 band gains $$g_b \in [0, 1]$$ plus a Voice Activity Detection (VAD) probability.
+4. **Bridge to Modern Deep Filtering (DeepFilterNet):** Where RNNoise stops at real-valued band gains (leaving phase noisy at low SNR), modern successors keep the exact same hybrid ERB-band idea for the coarse envelope and add a lightweight complex **deep filter** only on the lower frequency bins where speech harmonics live!
+
+---
+
 ## Learning objectives
 
 You will compute RNNoise’s band gain from the ideal ratio mask, list the 42 features and the 215-unit GRU stack from the paper, contrast that pipeline with DeepFilterNet’s 32 ERB bands and 5 complex taps, and name the systems lessons (frame API, smoothing, cache-sized weights) that transfer to an AudioWorklet even when the product ships DF3.
@@ -118,6 +135,31 @@ PY
 **Expected**. `42 175006 17.5 0.54`. The smoothed gain stays at $$0.6\times 0.9=0.54$$ because the new estimate 0.3 would have dropped the band too fast. The paper’s “175,000” is the same quantity rounded ($$2\times 87503=175006$$).
 
 **Failure modes**. Forgetting the derivatives and reporting 22 features. Using a 20 ms hop and getting 8.8 Mflop/s. Setting $$\lambda=0$$ and calling the result “smoothed.” Cloning RNNoise into the product and claiming DF3 parity.
+
+---
+
+### Worked Numerical Example: Quantifying RNNoise’s 21× Dimensionality Compression
+
+Compare a naive full-band 48 kHz STFT mask network against RNNoise’s Bark-band front-end (frame size $$N = 960$$, hop $$H = 480 = 10	ext{ ms}$$):
+
+- **Full-band linear STFT:** Number of unique frequency bins is $$rac{N}{2} + 1 = rac{960}{2} + 1 = 481$$ bins. A single dense projection from 481 bins to a hidden layer of width 128 requires:
+  $$481 	imes 128 = 61{,}568	ext{ weights/MACs per frame}.$$
+- **RNNoise Bark-band front-end:** Compresses 481 bins into **22 Bark band energies** (plus pitch features $$\implies$$ 42 total features). Projecting 42 features to a hidden layer of width 24–96 requires only:
+  $$42 	imes 96 = 4{,}032	ext{ weights/MACs per frame}$$
+  —a **15.3× reduction** in the very first layer alone, and a **$$481 / 22 pprox 21.9	imes$$** compression of the output gain head!
+
+Look at how a Bark band gain works on one band (say Band 5 covering bins $$k=12\dots 16$$): if the GRU predicts gain $$g_5 = 0.25$$ ($$-12.0	ext{ dB}$$), all 5 complex STFT bins in that band are scaled by $$0.25$$, suppressing noise energy by $$g_5^2 = 0.0625$$ (16× power reduction) while preserving original phase.
+
+### Deep-Dive Explanation: What RNNoise Teaches—and Where It Stops (Read Slowly)
+
+1. **Let physics handle what physics already solved:** FFTs, perceptual frequency warping, and pitch tracking are exact, zero-parameter operations; offloading them to DSP frees the neural network’s tiny capacity to focus purely on separating speech from non-stationary noise.
+2. **Real-valued band gains cannot fix phase distortion:** At high SNR ($$> 10	ext{ dB}$$), noisy phase barely matters. At low SNR ($$0	ext{ dB}$$ or below), keeping noisy phase introduces audible roughness—motivating complex-valued masks and deep filtering.
+3. **Multi-task VAD stabilizes noise estimation:** Training the network to jointly predict speech presence (VAD) and band gains prevents the denoiser from aggressively chopping off quiet word endings.
+4. **Use RNNoise as your engineering baseline:** Before shipping a 5 MB model, measure whether a 100 KB RNNoise-style hybrid already meets your product’s quality bar on your target hardware.
+
+**Quick check.** If RNNoise predicts a band gain of $$g_b = 0.10$$ for a noise-only band, by how many decibels ($$20\log_{10} g_b$$) is the noise amplitude attenuated in that band?
+
+---
 
 ## Exercises
 

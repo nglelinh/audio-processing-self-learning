@@ -11,7 +11,11 @@ lesson_type: required
 draft: false
 ---
 
+Bạn vừa huấn luyện xong một mô hình khử nhiễu giọng nói đẹp như mơ trong PyTorch trên máy chủ GPU. Nhưng người dùng của bạn không mở Jupyter Notebook để gọi điện — họ mở một tab Chrome trên chiếc laptop mỏng nhẹ! Bạn không thể nhét cả thư viện PyTorch nặng hàng trăm megabyte vào trình duyệt, cũng không thể bắt `AudioWorklet` chạy Python. Để băng qua vực thẳm giữa phòng thí nghiệm và sản phẩm thực tế, ta cần một bản thiết kế đồ thị độc lập ngôn ngữ (**ONNX**) cùng một động cơ thực thi tinh gọn (**ONNX Runtime** hoặc **tract**).
+
 Khử nhiễu trực tiếp trên thiết bị gần như luôn yêu cầu **xuất (export)** đồ thị đã huấn luyện sang một runtime suy luận chuyên biệt. **ONNX** (định dạng trao đổi đồ thị) đóng vai trò tệp trung gian; **ONNX Runtime (ORT)** là engine đa nền tảng phổ biến (bao gồm cả phiên bản Web); còn **tract** là thư viện suy luận viết bằng Rust khi bạn cần một chuỗi thực thi thuần Rust. Gói `deepfilternet3-noise-filter` **1.3.0** không đưa PyTorch vào trình duyệt: ghi chú phát hành công khai cho biết đường thực thi WASM (WebAssembly — mã nhị phân chạy trong trình duyệt) được xây dựng lại với **tract 0.23.3**. Trình duyệt chỉ tải module đã biên dịch cùng tệp nén `DeepFilterNet3_onnx.tar.gz`, chứ không chạy một session Python. Bài học này xác định tiêu chí chọn runtime, hợp đồng đầu vào/đầu ra khi chạy streaming, và các lỗi kích thước tensor (shape) khiến đồ thị chạy được trong notebook nhưng lại lỗi khi đưa vào AudioWorklet (callback xử lý âm thanh trên luồng thời gian thực).
+
+**Mạch bài học:** Vực thẳm từ PyTorch sang trình duyệt → Bản đồ kiến thức nền (Đồ thị tĩnh ONNX & Opset, Runtime ORT vs. `tract`, Hợp đồng Tensor Streaming `[1, T, F]`) → Cấu trúc tệp ONNX & cố định phiên bản → Bảng so sánh ORT và `tract` → Khung giải thích tính tay dung lượng I/O từng hop và hậu quả của lỗi cố định trục `T=100` / sót `float64` → Mini-lab, Bẫy thường gặp và Bài tập.
 
 ![Đồ thị ONNX được xuất thành module WASM, trình duyệt tải cạnh kho mô hình]({{ site.imgurl }}/generated/onnx-wasm-path.png)
 
@@ -20,6 +24,20 @@ Khử nhiễu trực tiếp trên thiết bị gần như luôn yêu cầu **xu�
 ## Mục tiêu học tập
 
 Sau bài học này, bạn sẽ giải thích được vai trò định dạng trao đổi của ONNX trong tăng cường giọng nói, so sánh được ORT với `tract` cho ứng dụng trình duyệt và tệp thực thi Rust, liệt kê được các lỗi export chỉ bộc lộ khi chạy từng hop, đồng thời phân biệt được tensor ảnh kiểu NCHW với khung đặc trưng kiểu DeepFilter `[1, T, F]` trước khi khởi tạo session.
+
+## Bản đồ kiến thức nền: Chuỗi biên dịch và thực thi suy luận trên thiết bị biên gồm những gì?
+
+### 1. Biểu diễn trung gian (ONNX — Open Neural Network Exchange) và Opset
+- **Là gì:** Một định dạng nhị phân (Protobuf) mô tả mạng nơ-ron dưới dạng **đồ thị có hướng không chu trình (DAG)** gồm các nút toán tử chuẩn hóa (`Conv`, `GRU`, `MatMul`...) và các tensor trọng số cố định (`initializer`), được đánh phiên bản qua **opset**.
+- **Nghiên cứu gì:** Tách rời công cụ *huấn luyện* (PyTorch/JAX) khỏi công cụ *thực thi* (C++, Rust, WASM), giúp đồ thị được tối ưu hóa tĩnh (gộp lớp, loại bỏ nút thừa, tiền tính hằng số) trước khi chạy.
+
+### 2. Động cơ suy luận (Inference Runtime): ONNX Runtime (ORT) vs. `tract`
+- **Là gì:** Chương trình đọc tệp `.onnx`, lập lịch bộ nhớ tĩnh (memory arena) và gọi các nhân tính toán tối ưu hóa phần cứng (SIMD, AVX, NEON, WebGPU).
+- **Nghiên cứu gì:** Lựa chọn đúng công cụ theo đích triển khai: ORT mạnh về độ phủ toán tử đa nền tảng và `onnxruntime-web`; `tract` thuần Rust giúp biên dịch gọn cùng lõi DSP `libDF` sang một tệp WASM thống nhất như trong `deepfilternet3-noise-filter` 1.3.0.
+
+### 3. Hợp đồng Tensor Streaming (`[1, T, F]` + `state_in`/`state_out`)
+- **Là gì:** Giao diện cố định giữa phần DSP bên ngoài (STFT/iSTFT, cửa sổ, OLA) và đồ thị ONNX bên trong — yêu cầu chính xác bậc tensor, trục thời gian `T = 1` và các cổng truyền trạng thái tường minh.
+- **Nghiên cứu gì:** Ngăn chặn nhóm lỗi "chạy mượt khi test offline theo lô nhưng nổ tung ở thời gian thực" do trục tĩnh, lệch kiểu `float64`/`float32` hoặc thiếu tensor trạng thái.
 
 ## Kế hoạch 60 phút
 
@@ -56,6 +74,22 @@ Hãy chọn ORT khi cần một tệp ONNX dễ kiểm chứng từ Python đi k
 Mô hình streaming cần khai báo khung đầu vào có trục thời gian đúng bằng một hop, đi kèm các tensor trạng thái hồi tiếp ở đầu vào và đầu ra. Hợp đồng tiêu chuẩn ở đây là `features` có kích thước `[1, T, F]` với `T = 1` trong callback, cùng cặp `state_in` / `state_out` có kích thước cố định. Trục batch động hữu ích khi chạy kiểm thử offline, nhưng trong callback âm thanh gần như luôn bằng 1. Cần khai báo rõ ràng các trục này khi xuất mô hình; một số kịch bản kiểm thử offline vô tình cố định cứng `T = 100` lúc export, khiến đồ thị vẫn nạp thành công nhưng từ chối mọi hop thời gian thực.
 
 Định dạng NCHW như `[1, 3, 224, 224]` là quy ước cho dữ liệu ảnh. Dù chiều đầu tiên bằng 1, tensor bậc 4 vẫn sai kích thước đối với khung đặc trưng DeepFilter; hợp đồng của bài học chỉ chấp nhận tensor bậc 3 với chiều batch bằng 1. Bước triển khai thực tế sau bài kiểm tra minh họa này là khởi tạo `ort.InferenceSession` và đối chiếu **tên đầu vào** khớp hoàn toàn với đồ thị, chứ không chỉ kiểm tra số chiều.
+
+## Khung giải thích: Tính tay ngân sách I/O của một hop ONNX và hai cái bẫy export kinh điển (nên đọc chậm)
+
+### Phép tính 1: Kích thước byte truyền qua ranh giới session ở mỗi hop (`T = 1`)
+Xét một hop kiểu DeepFilter ở 48 kHz với kiểu dữ liệu chuẩn `float32` (4 byte/phần tử):
+- Đặc trưng băng ERB `feat_erb` shape `[1, 1, 32]`: $$32 \times 4 = \mathbf{128\text{ byte}}$$.
+- Đặc trưng phổ phức tần số thấp `feat_spec` shape `[1, 1, 96, 2]` (phần thực + ảo cho 96 bin): $$96 \times 2 \times 4 = \mathbf{768\text{ byte}}$$.
+- Trạng thái ẩn GRU `h_in` shape `[1, 1, 256]`: $$256 \times 4 = \mathbf{1\,024\text{ byte}}$$.
+- **Tổng đầu vào cho 1 hop:** $$128 + 768 + 1024 = \mathbf{1\,920\text{ byte} \approx 1{,}88\text{ KB}}$$ — nằm gọn trong bộ nhớ đệm L1 của CPU!
+
+### Phép tính 2: Cái giá của hai lỗi export phổ biến
+1. **Cố định cứng trục `T = 100` lúc export (lấy nhầm mẫu 1 giây làm dummy input):**
+   - Tensor đầu vào phình gấp 100 lần; nếu cố "chữa cháy" bằng cách gom đủ 100 hop mới gọi session một lần, bạn lập tức cộng thêm $$100 \times 10\text{ ms} = \mathbf{1\,000\text{ ms}}$$ (1 giây trọn vẹn!) độ trễ vào cuộc gọi — biến hội thoại thời gian thực thành bộ đàm!
+2. **Sót kiểu `float64` (mặc định của NumPy `np.zeros`) thay vì `float32`:**
+   - Mỗi tensor tăng gấp đôi dung lượng byte (từ 4 lên 8 byte/phần tử).
+   - Trên thanh ghi WASM `simd128` (128 bit), một lệnh chỉ xử lý được $$128 / 64 = \mathbf{2}$$ số `float64` thay vì $$128 / 32 = \mathbf{4}$$ số `float32`, làm thông lượng số học giảm ngay một nửa trước khi tính đến chi phí ép kiểu!
 
 ### Các lỗi thường gặp khi xuất mô hình
 

@@ -17,6 +17,23 @@ A DeepFilterNet hop is 480 samples. An AudioWorklet quantum is often 128. Those 
 
 *Figure. One fixed array. The writer advances `write_pos` as quanta arrive; the reader advances `read_pos` when a full hop is ready. Occupancy is the distance between them. The grey region is the only state that must survive the next callback. Capacity does not grow.*
 
+How do two threads—a hyper-punctual 128-sample `AudioWorklet` callback and a bursty 480-sample ML inference Worker—hand audio samples back and forth thousands of times per second **without ever locking a mutex**? The answer is one of the oldest, cleanest data structures in systems programming: the **lock-free Single-Producer Single-Consumer (SPSC) ring buffer**.
+
+This lecture traces the exact pointer arithmetic of a power-of-two ring buffer, explains why **underruns** (empty output buffer $$	o$$ audible clicks) and **overruns** (full input buffer $$	o$$ dropped audio) happen, and derives the exact minimum prefill latency needed to keep real-time streaming rock-solid.
+
+---
+
+## Background Knowledge Map: Lock-Free SPSC Queues and Jitter Absorption
+
+Four systems principles govern audio ring buffers:
+
+1. **Power-of-Two Wrap-Around Arithmetic:** Sizing a ring buffer to $$C = 2^k$$ samples (e.g., 2048 or 4096) replaces expensive modulo division `% C` with a single bitwise AND mask `idx & (C - 1)`, and using monotonically incrementing unsigned `write_idx` / `read_idx` avoids the classic "full vs. empty" ambiguity!
+2. **Lock-Free SPSC Memory Ordering:** With exactly one writer updating `write_idx` (with *release* semantics) and one reader updating `read_idx` (with *acquire* semantics via `Atomics.store`/`Atomics.load` in JS or `std::sync::atomic` in Rust), neither thread ever blocks the other.
+3. **Underrun vs. Overrun Mechanics:** An **underrun** happens when the audio callback asks for 128 output samples and fewer than 128 are ready—forcing zeros (a sharp discontinuity / click). An **overrun** happens when the producer writes faster than the consumer drains, overwriting unconsumed audio.
+4. **Prefill Latency vs. Safety Margin:** Pre-filling the output ring buffer with one hop of silence (e.g., 480 samples = 10 ms) absorbs the bursty compute time of the Worker thread at the cost of a fixed, predictable latency.
+
+---
+
 ## Learning objectives
 
 You will compute occupancy and free space after a 6-sample write and a 4-sample read; implement an overrun policy that drops the oldest sample rather than allocating; and choose a power-of-two capacity for a 480-sample hop, a 128-sample quantum, and a small jitter budget without hiding an extra 100 ms of delay in the ring.
@@ -141,6 +158,39 @@ PY
 **Expected**. `after_write6 6 2`, then `read4 [1.0, 2.0, 3.0, 4.0] occ 2`, then `dropped 1 occ 8`, then `next4 [6.0, 10.0, 11.0, 12.0]`. After the read, the ring held 5 and 6. Seven new samples needed one extra slot, so the oldest remaining sample (5) was dropped. 6 survived, then 10, 11, and 12.
 
 **Failure modes**. Raising the capacity instead of dropping (latency grows without a log line). Blocking when `free < n`. Using the bypass policy but still reporting the dropped-sample numbers above — bypass would have refused the write and left occupancy at 2. Forgetting to wrap `w` and `r` with modulo 8, so sample 16 lands past the array.
+
+---
+
+### Worked Numerical Example: Tracing a Capacity-8 Power-of-Two Ring Buffer by Hand
+
+Let $$C = 8$$ (mask `C - 1 = 7`), starting with monotonic counters `w = 0, r = 0`. Remember:
+- Samples available to read: $$	ext{avail} = w - r$$.
+- Free slots to write: $$	ext{free} = C - (w - r)$$.
+- Physical array slot: $$	ext{slot} = 	ext{idx} \ \&\ 7$$.
+
+| Step | Operation | `w` | `r` | Physical Slots Written/Read | `avail = w - r` | `free = 8 - avail` |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 0 | Init | 0 | 0 | — | 0 (Empty!) | 8 |
+| 1 | Push 5 samples | 5 | 0 | slots `0, 1, 2, 3, 4` | 5 | 3 |
+| 2 | Pop 3 samples | 5 | 3 | slots `0, 1, 2` | 2 | 6 |
+| 3 | Push 4 samples | 9 | 3 | slots `5, 6, 7, 0` (wrapped!) | 6 | 2 |
+| 4 | Try Push 3 | — | — | Only `free = 2 < 3` $$\implies$$ **OVERRUN!** | 6 | 2 |
+| 5 | Pop 6 samples | 9 | 9 | slots `3, 4, 5, 6, 7, 0` | 0 (Empty!) | 8 |
+
+Now scale up to our **48 kHz AudioWorklet + 480-sample Worker**:
+- Input ring buffer collects 128-sample chunks until `avail >= 480` (takes up to 4 callbacks = 512 samples).
+- Output ring buffer should be pre-filled with at least `480` samples (10 ms) so that while the Worker takes up to 10 ms to denoise the frame, the `AudioWorklet` never sees `avail < 128`! Choosing buffer capacity $$C = 2048$$ samples (42.7 ms) leaves generous room against transient OS jitter.
+
+### Deep-Dive Explanation: Four Rules for Bulletproof Audio Ring Buffers (Read Slowly)
+
+1. **Always check `avail` / `free` *before* touching memory:** Never partially overwrite or read uninitialized slots; either push/pop the whole chunk or record an explicit overrun/underrun counter for telemetry.
+2. **Use `Atomics.store` AFTER writing samples, and `Atomics.load` BEFORE reading samples:** This acquire–release pair guarantees the consumer never reads half-written float samples due to CPU instruction reordering.
+3. **Never let underrun glitches stay silent in metrics:** Increment an atomic `underrun_count` and fade to/from zero over a few milliseconds during recovery to turn harsh clicks into soft dips.
+4. **Right-size your prefill:** Too little prefill causes constant clicks; too much prefill (e.g., 200 ms) ruins live conversation. Start at $$1	ext{ hop} + 1	ext{ quantum}$$ and tune from real p99 telemetry.
+
+**Quick check.** In our capacity-8 ring buffer above, if `w = 14` and `r = 6`, how many samples are available (`avail`), how many slots are free (`free`), and which physical index (`idx & 7`) will the *next* pop read from?
+
+---
 
 ## Exercises
 

@@ -17,6 +17,46 @@ Mọi track WebRTC và mọi lượt suy luận của DeepFilterNet đều giả
 
 *Hình. Quá trình lấy mẫu lặp lại phổ theo chu kỳ \(f_s\) Hz; phần chồng lấn giữa các bản sao là aliasing mà bộ khử nhiễu mạng nơ-ron không thể khôi phục ngược lại.*
 
+
+Bạn hẳn từng xem video quay bánh xe ô tô đang lao nhanh về phía trước nhưng trên màn hình lại thấy nan hoa quay ngược chậm rãi — đó chính là **hiện tượng chồng phổ (aliasing)** trong thị giác do tốc độ khung hình máy quay quá chậm so với tốc độ quay của bánh xe! Trong âm thanh số, điều y hệt xảy ra khi ta chuyển sóng áp suất liên tục thành dãy số rời rạc: nếu tần số lấy mẫu $$f_s$$ không đủ nhanh, các âm cao tần (như tiếng chũm chọe hay tiếng rít kim loại) không biến mất mà **gấp ngược xuống thành những âm giả méo mó** nằm ngay giữa dải giọng nói!
+
+---
+
+## Bản đồ kiến thức nền: Định lý Lấy mẫu Nyquist–Shannon đứng trên ba trụ cột nào?
+
+### 1. Lấy mẫu = Nhân với lược Dirac trong miền thời gian ↔ Lặp tuần hoàn phổ trong miền tần số
+Lấy mẫu tín hiệu liên tục $$x(t)$$ mỗi chu kỳ $$T_s = 1/f_s$$ tương đương nhân $$x(t)$$ với chuỗi xung Dirac $$\sum \delta(t - nT_s)$$. Qua biến đổi Fourier, phép nhân này biến thành **tích chập với lược Dirac tần số**, tạo ra vô số bản sao của phổ gốc $$X(f)$$ đặt lặp lại tại các tâm $$0, \pm f_s, \pm 2f_s, \dots$$!
+
+### 2. Điều kiện Nyquist ($$f_s > 2 f_{\max}$$) và Bộ lọc chống chồng phổ (Anti-Aliasing Filter)
+Để các bản sao phổ không đè lên nhau, biên trên $$f_{\max}$$ của bản sao gốc phải nhỏ hơn biên dưới $$f_s - f_{\max}$$ của bản sao kế tiếp — tức là **$$f_s > 2 f_{\max}$$** (ngưỡng $$f_s/2$$ gọi là **tần số Nyquist**). Vì thế chuẩn đĩa CD chọn $$f_s = 44.1\text{ kHz}$$ và âm thanh số/WebRTC chọn $$48\text{ kHz}$$ để bao trọn ngưỡng nghe 20 kHz của tai người, kèm một bộ lọc thông thấp tương tự (anti-aliasing filter) cắt mọi thành phần trên $$f_s/2$$ *trước khi* đưa vào mạch ADC!
+
+### 3. Công thức Khôi phục Whittaker–Shannon (Nội suy Sinc)
+Nếu thỏa điều kiện Nyquist, ta chỉ cần giữ lại bản sao gốc trong dải $$[-f_s/2, +f_s/2]$$ (nhân với cửa sổ chữ nhật tần số), tương đương nội suy trong miền thời gian bằng tổng các hàm $$\operatorname{sinc}$$ — khôi phục **chính xác 100%** sóng tương tự ban đầu mà không mất dù chỉ một chút thông tin!
+
+---
+
+### Khung giải thích: tự tay tính tần số giả (Aliasing) khi lấy mẫu sai tốc độ (nên đọc chậm)
+
+Giả sử micro thu được một tiếng rít cao tần hình sin thuần ở tần số $$f_0 = 12\,000\text{ Hz}$$ ($$12\text{ kHz}$$): $$x(t) = \cos(2\pi \cdot 12\,000\,t)$$. Một kỹ sư quên đặt bộ lọc chống chồng phổ và hạ tốc độ mẫu xuống $$f_s = 16\,000\text{ Hz}$$ (tần số Nyquist chỉ là $$f_N = 8\,000\text{ Hz}$$). Chuyện gì xảy ra ở các mẫu số $$x[n] = x(n/f_s)$$?
+
+1. **Thay $$t = n / 16\,000$$ vào sóng gốc:**
+   $$
+   x[n] = \cos\!\Bigl(2\pi \cdot \frac{12\,000}{16\,000}\,n\Bigr) = \cos\!\Bigl(2\pi \cdot \frac{3}{4}\,n\Bigr).
+   $$
+2. **Dùng tính tuần hoàn $$2\pi$$ và tính chẵn của hàm cosin:**
+   $$
+   \cos\!\Bigl(2\pi \cdot \frac{3}{4}\,n\Bigr) = \cos\!\Bigl(2\pi \cdot \frac{3}{4}\,n - 2\pi n\Bigr) = \cos\!\Bigl(-2\pi \cdot \frac{1}{4}\,n\Bigr) = \cos\!\Bigl(2\pi \cdot \frac{1}{4}\,n\Bigr)!
+   $$
+3. **Đọc ra tần số giả $$f_{\text{alias}}$$:** Tỉ số $$\frac{1}{4}$$ nhân với $$f_s = 16\,000\text{ Hz}$$ cho ra:
+   $$
+   f_{\text{alias}} = |f_0 - f_s| = |12\,000 - 16\,000| = \mathbf{4\,000\text{ Hz}}!
+   $$
+4. **Kiểm chứng trực tiếp 4 mẫu đầu tiên ($$n = 0, 1, 2, 3$$):**
+   - Sóng 12 kHz lấy mẫu ở 16 kHz cho: $$[1,\ 0,\ -1,\ 0]$$.
+   - Sóng 4 kHz lấy mẫu ở 16 kHz cũng cho: $$[1,\ 0,\ -1,\ 0]$$ — **giống hệt nhau từng con số một!** Một khi đã lấy mẫu hỏng mà không lọc trước, không có thuật toán AI nào trên đời tách ngược được 12 kHz khỏi 4 kHz nữa!
+
+---
+
 ## Mục tiêu học tập
 
 1. Phát biểu định lý lấy mẫu, tốc độ Nyquist và tần số Nyquist.

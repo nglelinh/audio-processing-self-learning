@@ -17,6 +17,35 @@ DPDFNet, DeepFilterGAN và HDF-Net trong khóa học này chỉ đóng vai trò 
 
 *Hình. DPDFNet, DeepFilterGAN và HDF-Net chỉ là các tên gọi khảo sát trong danh sách đọc, không phải checkpoint tải trực tiếp từ bài học này. Mọi phương án thay thế đều phải duy trì bước nhảy hop STFT nhân quả, kích thước trạng thái bị chặn và hệ số RTF dưới 1 trên CPU đích.*
 
+Trong nghiên cứu học sâu cho âm thanh, hầu như mỗi tháng đều xuất hiện một cái tên kiến trúc mới hứa hẹn nhích thêm $$0{,}05$$ điểm PESQ hay $$0{,}2\text{ dB}$$ SI-SDR trên bảng xếp hạng. Nhưng dưới góc nhìn của một kỹ sư hệ thống đang vận hành sản phẩm thời gian thực (như bộ lọc nhiễu trên trình duyệt hay ứng dụng gọi thoại), **một cái tên mới trên bảng benchmark chưa bao giờ tự động trở thành lý do để thay mô hình đang chạy ổn định**. Bài khảo sát này giúp bạn xây dựng "bộ lọc tư duy kỹ thuật" khi đứng trước các hướng kế tục xoay quanh họ DeepFilterNet — như kiến trúc hai đường (dual-path), huấn luyện đối nghịch (GAN) hay lọc phân cấp (hierarchical) — dựa trên ba thước đo không biết nói dối: ngân sách RTF, độ trễ thuật toán và tính tương thích thực thi ONNX/AudioWorklet.
+
+## Bản đồ kiến thức nền: Ba hướng mở rộng kiến trúc và chi phí kỹ thuật đi kèm
+
+### 1. Hai đường thời gian–tần số (Dual-Path: Thời gian + Tần số)
+Các mạng RNN/GRU chuẩn trong DeepFilterNet quét mạnh theo trục thời gian, còn trục tần số chủ yếu xử lý bằng tích chập cục bộ. Tư duy **Dual-Path** (như trong các biến thể kiểu DPDFNet) luân phiên quét dọc theo *trục tần số* (để nắm bắt quan hệ họa âm cách xa nhau trên cùng một khung) rồi quét dọc theo *trục thời gian* (để bám quỹ đạo giọng nói). Lợi ích là nắm bắt cấu trúc họa âm toàn cục tốt hơn, nhưng cái giá phải trả là thêm nhiều lớp tuần tự/chú ý trên mỗi khung, dễ đội RTF và làm tăng số toán tử khó tối ưu trên WebAssembly/ONNX Runtime.
+
+### 2. Huấn luyện đối nghịch (GAN) — chi phí 0 lúc suy luận nhưng rủi ro "ảo giác"
+Ý tưởng của các nhánh kiểu **DeepFilterGAN** là giữ một bộ sinh (Generator) gọn nhẹ để chạy lúc suy luận, còn bộ phân biệt (Discriminator — ví dụ phân biệt phổ đa thang đo) chỉ tồn tại *lúc huấn luyện* nhằm ép âm thanh đầu ra nghe sắc nét, giống tiếng người thật thay vì bị mờ đục do hàm mất mát MSE. Điểm cộng tuyệt vời là **không tăng thêm RTF lúc triển khai** nếu giữ nguyên bộ sinh; điểm trừ là mô hình GAN có thể sinh ra các thành phần tần số cao giả hoặc méo nhẹ ở tình huống ngoài phân bố (OOD), đòi hỏi kiểm thử nghe mù kỹ lưỡng.
+
+### 3. Lọc phân cấp (Hierarchical) và nguyên tắc kỷ luật thư mục khoa học
+Các hướng lọc phân cấp (kiểu HDF-Net) chia bài toán khử nhiễu theo nhiều mức độ phân giải hoặc nhiều chặng tinh chỉnh liên tiếp. Tuy nhiên, mỗi tầng tinh chỉnh bổ sung đều có nguy cơ cộng thêm khung nhìn trước (*look-ahead*) hoặc tăng dung lượng trạng thái cần giữ trong bộ nhớ cache. Quan trọng không kém về mặt học thuật: bài học này rèn thói quen **kỷ luật trích dẫn** — chỉ ghi nhận con số, năm xuất bản và cấu trúc khi đã tự tay mở đọc bài báo gốc, tuyệt đối không suy đoán từ tên gọi.
+
+### Khung giải thích: Cầm tay tính ngân sách độ phức tạp và quyết định "Đổi hay Giữ" trong AudioWorklet (nên đọc chậm)
+
+Giả sử bạn đang vận hành một luồng âm thanh $$48\text{ kHz}$$ với hop $$H = 10\text{ ms}$$ trong trình duyệt (AudioWorklet + WASM/ONNX). Để đảm bảo không bao giờ giật tiếng (buffer underrun) trên laptop tầm trung khi còn chạy kèm WebRTC AEC và video, đội kỹ thuật đặt trần an toàn:
+- Thời gian suy luận tối đa mỗi khung: $$T_{\max} = 2{,}5\text{ ms}$$ (tương ứng $$\mathrm{RTF} \le 0{,}25$$).
+- Tổng độ trễ thuật toán tối đa: $$L_{\max} = 40\text{ ms}$$.
+
+Ta đặt lên bàn cân một phép tính nhanh cho 3 kịch bản nâng cấp giả định so với nền **DeepFilterNet3** (đang chạy $$T_{\text{base}} = 0{,}8\text{ ms/khung}$$, $$\mathrm{RTF} = 0{,}08$$, độ trễ $$40\text{ ms}$$):
+
+| Kịch bản nâng cấp | Phép tính chi phí cốt lõi | Thời gian / khung ước tính | Độ trễ thuật toán | Quyết định kỹ thuật |
+| :--- | :--- | :---: | :---: | :--- |
+| **1. Thêm Self-Attention toàn cục dọc $$F = 96$$ bin (Dual-Path ngây thơ)** | Số cặp tương tác mỗi khung tăng từ $$O(F) = 96$$ lên $$O(F^2) = 96^2 = 9\,216$$ (gấp $$96\times$$ tương tác) | Giả sử đội $$3\times \to 2{,}4\text{ ms}$$ ($$\mathrm{RTF}=0{,}24$$) | $$40\text{ ms}$$ | **Rủi ro cao** — sát trần $$2{,}5\text{ ms}$$, dễ rớt khung khi CPU bận |
+| **2. Huấn luyện lại Generator cũ bằng Discriminator (hướng GAN)** | Discriminator bỏ hoàn toàn khi xuất ONNX $$\implies +0\text{ ms}$$ suy luận | $$0{,}8\text{ ms}$$ ($$\mathrm{RTF}=0{,}08$$) | $$40\text{ ms}$$ | **Đáng thử** — miễn là vượt qua bài nghe mù không sinh lỗi giả |
+| **3. Thêm 1 tầng tinh chỉnh phân cấp cần thêm $$1$$ khung nhìn trước** | Độ trễ cộng thêm $$+1 \times H = +10\text{ ms}$$ | Giả sử $$1{,}3\text{ ms}$$ ($$\mathrm{RTF}=0{,}13$$) | $$40 + 10 = 50\text{ ms}$$ | **Vượt trần độ trễ** $$L_{\max} = 40\text{ ms}$$ — cần cân nhắc kỹ với VoIP |
+
+Bảng tính gọn này minh họa một nguyên tắc vàng của kỹ thuật âm thanh thực chiến: **chỉ chuyển đổi mô hình khi bạn chứng minh được bằng con số rằng nó sửa được một lỗi nghe tái hiện được mà không phá vỡ trần RTF và độ trễ của sản phẩm**.
+
 ## Mục tiêu học tập
 
 Sau bài học này, bạn sẽ tóm tắt được trọng tâm nghiên cứu gắn với từng cái tên DPDFNet, DeepFilterGAN và HDF-Net; tuân thủ nguyên tắc không trích dẫn tiêu đề hay năm xuất bản nếu chưa đọc trực tiếp PDF; và ra quyết định triển khai, theo dõi hay bỏ qua dựa trên RTF, khả năng hỗ trợ toán tử ONNX và một lỗi nghe tái hiện được.

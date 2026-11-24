@@ -17,6 +17,23 @@ DeepFilterNet3 in the browser needs a **WASM** module and a model archive, `Deep
 
 *Figure. The client turns cdnUrl into a WASM URL and a model URL, then compiles WASM.*
 
+Picture a team of 50 engineers clicking "Join Daily Standup" at 9:00 AM sharp. If your web app fetches a 3 MB `.onnx` model from your origin API server with `Cache-Control: no-cache`, you just triggered 50 redundant origin downloads, delayed everyone’s audio by 3 seconds, and burned unnecessary egress bills. Put that same content-hashed model behind a global **CDN edge** with `immutable` caching and browser **Cache API / IndexedDB** persistence, and 49 of those 50 calls load the model locally in **under 20 milliseconds**!
+
+This lecture engineers the complete **CDN model loading pipeline**: immutable content-hashed URLs, proper CORS/CORP headers for cross-origin isolated pages, browser Cache API / IndexedDB caching, and resilient timeout + fallback logic.
+
+---
+
+## Background Knowledge Map: Edge Delivery, Browser Caching, and Cross-Origin Security
+
+Four web-infrastructure pillars turn heavy ML assets into instant-loading web features:
+
+1. **Immutable Content-Hashed URLs:** Serving `dfnet-v2.9f3a8c.onnx` with `Cache-Control: public, max-age=31536000, immutable` tells both CDN edge PoPs and the browser never to revalidate—zero conditional `304 Not Modified` round trips!
+2. **CORS + CORP Under `COOP`/`COEP`:** When your app enables `SharedArrayBuffer` via `Cross-Origin-Embedder-Policy: require-corp`, *every* CDN asset (`.wasm`, `.onnx`, worklet `.js`) must return `Cross-Origin-Resource-Policy: cross-origin` and `Access-Control-Allow-Origin`—otherwise the browser silently blocks the fetch!
+3. **Cache API vs. IndexedDB Persistence:** Storing fetched `ArrayBuffer` or `Response` objects in the browser’s Cache API survives page reloads and works inside Workers without hitting the network again.
+4. **Bounded Timeouts & Non-Blocking Call Join:** Never block joining a voice call waiting for a 10-second CDN timeout! Start the call immediately (with native browser NS active), load the neural model asynchronously with an `AbortController` timeout, and hot-swap it in once ready.
+
+---
+
 ## Learning objectives
 
 You will write the resolved URLs for package ≤ 1.1.2 and for the 1.3.0 README rule, keep `v2` out of `cdnUrl`, set cache headers that survive a version bump, and bypass suppression when the fetch fails.
@@ -144,6 +161,31 @@ https://example.com/df3/v2/models/DeepFilterNet3_onnx.tar.gz
 3. Uploading raw audio from production.
 4. One folder shared blindly by ≤ 1.1.2 and ≥ 1.2.0 clients.
 5. Wrong WASM MIME type.
+
+---
+
+### Worked Numerical Example: First-Visit vs. Repeat-Visit Startup Latency Budget
+
+Compare loading a `1.3 MB` compressed bundle (`0.85 MB` INT8 model + `0.45 MB` WASM runtime) under three caching strategies:
+
+| Scenario | DNS + TLS + RTT | Transfer Time (@ 10 Mbps) | WASM Compile + Session Init | Total Time to Neural NS Ready |
+| :--- | :--- | :--- | :--- | :--- |
+| **Origin Server (`no-cache`)** | $$180	ext{ ms}$$ | $$1{,}040	ext{ ms}$$ | $$110	ext{ ms}$$ | **$$1{,}330	ext{ ms}$$** (every call!) |
+| **CDN Edge Cold Visit (immutable)** | $$45	ext{ ms}$$ | $$1{,}040	ext{ ms}$$ | $$110	ext{ ms}$$ | **$$1{,}195	ext{ ms}$$** (1st visit only) |
+| **Browser Cache API Hit (repeat visit)** | $$0	ext{ ms}$$ | $$12	ext{ ms}$$ (local SSD read) | $$110	ext{ ms}$$ | **$$122	ext{ ms}$$** (**10.9× faster!**) |
+
+Even better: if you store the pre-compiled `WebAssembly.Module` (where supported) or warm the cache on app idle before the user clicks "Join Call," neural noise suppression activates in **under 50 ms**!
+
+### Deep-Dive Explanation: Four Rules for Reliable CDN Model Loading (Read Slowly)
+
+1. **Always set explicit `Content-Type: application/wasm` on `.wasm` files:** `WebAssembly.instantiateStreaming` refuses to stream-compile if the CDN serves `.wasm` as `application/octet-stream`!
+2. **Test your CDN headers with `curl -I` before every release:** Confirm `content-encoding: br`, `cache-control: ... immutable`, `access-control-allow-origin`, and `cross-origin-resource-policy: cross-origin` are all present.
+3. **Never block `joinRoom()` on model download:** Joining with native browser NS and upgrading seamlessly 1 second later feels instant to users and survives flaky airport Wi-Fi.
+4. **Verify SHA-256 on download, not just HTTP 200:** Captive hotel Wi-Fi portals sometimes return HTTP 200 with an HTML login page instead of your `.onnx` binary—hash verification catches it immediately and falls back cleanly.
+
+**Quick check.** If a browser tab enables `Cross-Origin-Embedder-Policy: require-corp` to unlock `SharedArrayBuffer`, what happens when it fetches `https://cdn.example.com/model.onnx` if the CDN omits the `Cross-Origin-Resource-Policy` header?
+
+---
 
 ## Exercises
 

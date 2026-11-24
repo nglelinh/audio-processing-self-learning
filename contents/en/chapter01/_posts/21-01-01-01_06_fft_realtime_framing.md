@@ -11,16 +11,36 @@ lesson_type: required
 draft: false
 ---
 
-An FFT textbook ends at complexity; a product starts at the callback. This lesson places FFTs inside streaming STFT frames: hops per second, algorithmic latency, buffer reuse, and a DeepFilterNet-oriented case study pointer.
+A DSP textbook stops the moment it proves the FFT runs in $$O(N\log N)$$; a real-time audio product *begins* when that FFT has to fire every 10 milliseconds inside a browser AudioWorklet without dropping a single sample.
+
+In streaming speech enhancement, you never transform a whole file at once. You slide a short analysis window of length $$L$$ across an incoming ring buffer in steps of hop $$R$$, run a forward FFT, enhance the bins, run an inverse FFT, and overlap-add back into an output ring buffer. This lesson turns that loop into exact numbers: hops per second, FFTs per second, AudioWorklet quantum mismatches, and zero-allocation streaming hygiene.
 
 ![Overlapping analysis frames, each one a windowed FFT, added back on the synthesis side]({{ site.imgurl }}/generated/stft-ola.png)
 
 *Figure. Real-time FFT work is this picture on a clock: one new hop in, one windowed transform, overlap-add out. The basis is still the DFT basis; the schedule is the hop.*
 
+**Lesson roadmap:** Background Knowledge Map (streaming STFT loop, hop rate vs. window delay, callback quanta vs. DSP hops) → Key formulas & full 48 kHz / $$L=960, R=480$$ accounting → DeepFilterNet configuration pointers & audio-thread hygiene → Worked examples: FFTs/s across 48 kHz & 16 kHz and latency sketches → Deep-Dive Explanation (Read Slowly): 3 steps budgeting a live AudioWorklet STFT loop → Pitfalls, Mini-lab, Exercises & Videos.
+
+---
+
+## Background Knowledge Map: Streaming STFT on a Hard Real-Time Clock
+
+### 1. The Five-Stage Streaming Loop
+Every hop advance of $$R$$ samples triggers one complete cycle: (1) pull $$L$$ samples from the input ring buffer, (2) multiply by analysis window $$w$$, (3) run forward FFT, (4) apply classical or neural enhancement, and (5) run inverse FFT + overlap-add (OLA) into the output ring buffer.
+
+### 2. Window Length $$L$$ vs. Hop Size $$R$$
+- **Window $$L$$** sets your **frequency resolution** ($$\Delta f \sim f_s/L$$) and the initial **buffering delay** to assemble a full analysis frame.
+- **Hop $$R$$** sets your **compute cadence** ($$\text{hops/s} = f_s / R$$, with $$2 f_s / R$$ forward+inverse transforms per second per channel) and the time budget $$T_{\mathrm{hop}} = R / f_s$$ before the next frame arrives.
+
+### 3. AudioWorklet Quanta Are Not STFT Hops
+Web Audio invokes `process()` in fixed **128-sample quanta** ($$2.67\,\mathrm{ms}$$ at 48 kHz), while a speech model may expect a **480-sample hop** ($$10\,\mathrm{ms}$$). A lock-free ring buffer bridges the non-integer ratio ($$480 / 128 = 3.75$$ quanta/hop), and all FFT plans and scratch arrays must be preallocated so the audio thread never triggers garbage collection.
+
+---
+
 ## Learning objectives
 
 1. Budget FFT cost inside a frame callback / AudioWorklet quantum.
-2. Relate hop size, \(N\)-point FFT, and algorithmic latency.
+2. Relate hop size, $$N$$-point FFT, and algorithmic latency.
 3. Compute FFTs/s for common speech configurations.
 4. Identify when FFT dominates RTF versus neural ops.
 5. Apply streaming hygiene: preallocated buffers, plan reuse, OLA continuity.
@@ -41,10 +61,10 @@ An FFT textbook ends at complexity; a product starts at the callback. This lesso
 
 Each hop:
 
-1. Assemble \(L\) samples (from ring buffer) with hop advance \(R\).
-2. Multiply by analysis window \(w\).
-3. FFT → \(X(\ell,\cdot)\).
-4. Enhance → \(\hat{X}(\ell,\cdot)\) (mask/filter/net).
+1. Assemble $$L$$ samples (from ring buffer) with hop advance $$R$$.
+2. Multiply by analysis window $$w$$.
+3. FFT → $$X(\ell,\cdot)$$.
+4. Enhance → $$\hat{X}(\ell,\cdot)$$ (mask/filter/net).
 5. iFFT → windowed frame; overlap-add into output ring.
 
 State across hops: OLA buffer, any RNN/DF state, noise tracker state.
@@ -64,9 +84,9 @@ $$
 
 (per channel). Stereo without downmix doubles that.
 
-**Algorithmic buffering** is at least related to \(L\) and look-ahead frames; details in Ch. 02. Rule of thumb: larger \(L\) → better frequency detail, more delay.
+**Algorithmic buffering** is at least related to $$L$$ and look-ahead frames; details in Ch. 02. Rule of thumb: larger $$L$$ → better frequency detail, more delay.
 
-**One configuration, fully counted.** Take \(f_s=48\,\mathrm{kHz}\) (the full-band default of `deepfilternet3-noise-filter` 1.3.0), \(L=960\), \(R=480\). These are lesson numbers for the arithmetic, not a claim that Mezon’s unpublished graph uses this exact pair.
+**One configuration, fully counted.** Take $$f_s=48\,\mathrm{kHz}$$ (the full-band default of `deepfilternet3-noise-filter` 1.3.0), $$L=960$$, $$R=480$$. These are lesson numbers for the arithmetic, not a claim that Mezon’s unpublished graph uses this exact pair.
 
 $$
 T_{\mathrm{hop}}=\frac{480}{48000}=10\,\mathrm{ms},\qquad
@@ -74,15 +94,15 @@ T_{\mathrm{hop}}=\frac{480}{48000}=10\,\mathrm{ms},\qquad
 T_{\mathrm{win}}=\frac{960}{48000}=20\,\mathrm{ms}.
 $$
 
-Overlap is \((L-R)/L=1/2\). A causal implementation cannot run the first analysis FFT until 960 samples have arrived, so the buffering delay before that first transform is 20 ms. We will call that the algorithmic delay of *filling the analysis window*. Releasing samples earlier, or holding an extra look-ahead hop, changes the constant; it does not change the hop rate. Two transforms per hop (forward and inverse) give \(2\times 100=200\) FFTs per second per channel. The hop budget is 10 ms of wall clock. At 48 kHz a 128-sample AudioWorklet quantum is \(128/480=0.267\) of a hop, so you need \(480/128=3.75\) quanta to fill \(R\), and \(960/128=7.5\) quanta to fill \(L\). `DeepFilterNet3Core` still has to be fed on whatever hop the model card states; this count is how you check that card against the callback.
+Overlap is $$(L-R)/L=1/2$$. A causal implementation cannot run the first analysis FFT until 960 samples have arrived, so the buffering delay before that first transform is 20 ms. We will call that the algorithmic delay of *filling the analysis window*. Releasing samples earlier, or holding an extra look-ahead hop, changes the constant; it does not change the hop rate. Two transforms per hop (forward and inverse) give $$2\times 100=200$$ FFTs per second per channel. The hop budget is 10 ms of wall clock. At 48 kHz a 128-sample AudioWorklet quantum is $$128/480=0.267$$ of a hop, so you need $$480/128=3.75$$ quanta to fill $$R$$, and $$960/128=7.5$$ quanta to fill $$L$$. `DeepFilterNet3Core` still has to be fed on whatever hop the model card states; this count is how you check that card against the callback.
 
 ### AudioWorklet quanta vs STFT hops
 
-Browser render quanta are often 128 samples. At 48 kHz, \(128/48000\approx2.67\,\mathrm{ms}\). Your STFT hop might be 5–10 ms. Design a ring buffer: accumulate quanta until a hop is ready; never assume quantum == hop.
+Browser render quanta are often 128 samples. At 48 kHz, $$128/48000\approx2.67\,\mathrm{ms}$$. Your STFT hop might be 5–10 ms. Design a ring buffer: accumulate quanta until a hop is ready; never assume quantum == hop.
 
 ### Underrun inequality
 
-Let \(T_{\mathrm{proc}}(\ell)\) be wall time for hop \(\ell\). Need
+Let $$T_{\mathrm{proc}}(\ell)$$ be wall time for hop $$\ell$$. Need
 
 $$
 T_{\mathrm{proc}}(\ell) < T_{\mathrm{hop}}
@@ -107,17 +127,40 @@ DeepFilterNet family papers describe STFT-based front-ends with ERB-scale featur
 
 ### FFTs per second
 
-\(f_s=48\,\mathrm{kHz}\), \(R=480\) (10 ms): hops/s=100, FFT+iFFT ≈200 transforms/s/channel.
+$$f_s=48\,\mathrm{kHz}$$, $$R=480$$ (10 ms): hops/s=100, FFT+iFFT ≈200 transforms/s/channel.
 
-\(f_s=16\,\mathrm{kHz}\), \(R=160\) (10 ms): same 100 hops/s; smaller \(N\) often.
+$$f_s=16\,\mathrm{kHz}$$, $$R=160$$ (10 ms): same 100 hops/s; smaller $$N$$ often.
 
 ### Latency sketch
 
-\(L=20\,\mathrm{ms}\), \(R=10\,\mathrm{ms}\), model look-ahead 1 hop → ballpark algorithmic delay tens of ms (exact depends on OLA definition). Product budgets must measure end-to-end.
+$$L=20\,\mathrm{ms}$$, $$R=10\,\mathrm{ms}$$, model look-ahead 1 hop → ballpark algorithmic delay tens of ms (exact depends on OLA definition). Product budgets must measure end-to-end.
 
 ### When FFT dominates
 
 Classical spectral subtraction on MCU: FFT~all. DFN-class on laptop: net~all. Mobile mid-tier + debug WASM without SIMD: both hurt — profile.
+
+---
+
+### Deep-Dive Explanation: Budgeting a Live Streaming STFT Callback Step by Step (Read Slowly)
+
+#### Step 1: Separate “how often you compute” from “how long you wait”
+With $$L = 960, R = 480$$ at $$48\,\mathrm{kHz}$$, your compute cadence is governed by $$R$$ ($$100\,\mathrm{hops/s} \implies 200\,\mathrm{FFTs/s}$$ and a $$10\,\mathrm{ms}$$ deadline per hop), whereas your initial buffering delay is governed by $$L$$ ($$20\,\mathrm{ms}$$ to fill the first window). Halving $$R$$ from $$480$$ to $$240$$ **doubles** your FFT + neural CPU load even if $$L$$ stays unchanged!
+
+#### Step 2: Account for the non-integer quantum ratio ($$480 / 128 = 3.75$$)
+Because Web Audio delivers 128 samples per callback, your ring buffer accumulates $$128 \to 256 \to 384 \to 512$$ samples: on callback #4 you pop 480 samples, run STFT + NS + ISTFT, push 480 clean samples to the output ring, and keep the remaining 32 samples for the next cycle.
+
+#### Step 3: Profile all three stages separately at p95/p99
+Instrument `t_stft`, `t_model`, and `t_istft_ola` individually across several thousand hops. Never assume `t_istft_ola` is free—especially in unoptimized JS/WASM without SIMD or when an accidental `new Float32Array` triggers garbage collection mid-call.
+
+Summary of the real-time framed FFT budget:
+
+$$
+128\text{-smp quanta}
+\;\xrightarrow{\text{Ring buffer (3.75}\times)}\;
+R = 480\ (10\,\mathrm{ms})
+\;\xrightarrow{200\text{ FFTs/s + NS}}\;
+T_{\mathrm{stft}} + T_{\mathrm{ns}} + T_{\mathrm{istft}} < 10\,\mathrm{ms}.
+$$
 
 ## Common pitfalls
 
@@ -129,7 +172,7 @@ Classical spectral subtraction on MCU: FFT~all. DFN-class on laptop: net~all. Mo
 
 ## Mini-lab
 
-**Goal.** Count hops per second and the analysis-window delay for \(L=960\), \(R=480\) at 48 kHz.
+**Goal.** Count hops per second and the analysis-window delay for $$L=960$$, $$R=480$$ at 48 kHz.
 
 ```python
 fs, L, R = 48_000, 960, 480
@@ -143,21 +186,21 @@ print(f"ffts_per_s={ffts_per_s:.0f} algo_delay_ms={win_ms:.1f}")
 
 **Expected.** `hops_per_s=100 hop_ms=10.0 win_ms=20.0`, then `ffts_per_s=200 algo_delay_ms=20.0`. The delay printed here is the time to collect one analysis window, not a full-product mouth-to-ear figure.
 
-**Failure modes.** Setting algorithmic delay to the hop (10 ms) and forgetting the window must fill first. Counting one FFT per hop when the inverse is also on the clock. Copying \(L\) and \(R\) onto a model card that documents a different pair.
+**Failure modes.** Setting algorithmic delay to the hop (10 ms) and forgetting the window must fill first. Counting one FFT per hop when the inverse is also on the clock. Copying $$L$$ and $$R$$ onto a model card that documents a different pair.
 
 ## Mini exercises
 
-1. \(f_s=16\,\mathrm{kHz}\), \(R=256\): hop ms and hops/s?
-2. Budget \(T_{\mathrm{proc}}\) for RTF 0.4 at that hop.
+1. $$f_s=16\,\mathrm{kHz}$$, $$R=256$$: hop ms and hops/s?
+2. Budget $$T_{\mathrm{proc}}$$ for RTF 0.4 at that hop.
 3. 128-sample quantum at 48 kHz: how many quanta to fill a 10 ms hop?
 4. List state that must persist across hops for STFT-NS.
 5. Sketch a profiler plan separating STFT vs neural vs ISTFT time.
 
 ### Answer hints
 
-1. \(256/16000=16\,\mathrm{ms}\), so hops/s \(=1000/16=62.5\).
-2. RTF 0.4 on a 16 ms hop allows \(6.4\,\mathrm{ms}\) of processing.
-3. A 10 ms hop at 48 kHz is 480 samples, and \(480/128=3.75\) quanta. You accumulate four quanta and still have a remainder unless the ring buffer stores the extra 0.25.
+1. $$256/16000=16\,\mathrm{ms}$$, so hops/s $$=1000/16=62.5$$.
+2. RTF 0.4 on a 16 ms hop allows $$6.4\,\mathrm{ms}$$ of processing.
+3. A 10 ms hop at 48 kHz is 480 samples, and $$480/128=3.75$$ quanta. You accumulate four quanta and still have a remainder unless the ring buffer stores the extra 0.25.
 4. OLA tail, analysis window, hop counter, and any recurrent state inside the suppressor.
 5. Three timers around analysis FFT, the neural forward, and iFFT plus overlap-add, reported as p95 over at least a few thousand hops.
 

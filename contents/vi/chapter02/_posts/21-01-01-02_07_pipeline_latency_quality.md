@@ -13,6 +13,41 @@ draft: false
 
 Mỗi lựa chọn về STFT và kiến trúc mô hình đều là một sự đánh đổi giữa độ trễ, tải CPU và chất lượng âm thanh. Nguyên tắc cốt lõi để tránh quyết định triển khai sai lầm là: **độ trễ thuật toán cho biết âm thanh bị trễ bao lâu, còn hệ số thời gian thực (RTF) cho biết CPU có xử lý kịp hay không.** Một mô hình chạy rất nhanh vẫn có thể gây độ trễ quá lớn cho cuộc gọi.
 
+
+Trong phòng thí nghiệm, bạn có thể đẩy kích thước cửa sổ lên 64 ms và cho mạng nơ-ron nhìn trước nửa giây để ghi điểm PESQ cao chót vót trên bảng xếp hạng. Nhưng khi đưa lên cuộc gọi thoại thật, kỹ sư hệ thống phải đối mặt với **tam giác đánh đổi nghiệt ngã** của mọi pipeline âm thanh thời gian thực: **Độ trễ (Latency) – Chất lượng phổ (Quality) – Chi phí tính toán (CPU/RTF)**. Bài học tổng kết Chương 2 này giúp bạn nhìn toàn bộ pipeline STFT → Xử lý → ISTFT như một bài toán tối ưu kỹ thuật có thể đo đạc bằng con số!
+
+---
+
+## Bản đồ kiến thức nền: Đánh đổi Độ trễ – Chất lượng – CPU trong Pipeline đứng trên ba trụ cột nào?
+
+### 1. Giải phẫu tổng độ trễ (Algorithmic + Buffering + Compute Latency)
+Độ trễ một chiều của pipeline không chỉ là thời gian chạy mô hình! Nó gồm 4 phần cộng dồn: (1) **Độ trễ khung STFT/OLA** (thường bằng $$N$$ hoặc $$H$$ tùy cách căn đệm), (2) **Độ trễ nhìn trước (Look-ahead)** nếu dùng tích chập tương lai $$L_{\text{la}}$$ khung, (3) **Độ trễ đệm đồng bộ kích thước khối** (ví dụ nối 128 mẫu AudioWorklet với 480 mẫu hop), và (4) **Thời gian tính toán CPU** $$T_{\text{compute}}$$.
+
+### 2. Tỉ lệ thuận nghịch giữa Bước nhảy $$H$$ và Tải CPU
+Giảm bước nhảy $$H$$ đi một nửa (ví dụ từ 10 ms xuống 5 ms, tăng chồng lấp từ 50% lên 75%) giúp giảm độ trễ phản hồi và làm mượt chuyển tiếp âm thanh, nhưng lập tức **nhân đôi số khung mỗi giây** (từ 100 lên 200 khung/giây) — kéo theo tải CPU của cả FFT lẫn mạng nơ-ron tăng đúng **gấp 2 lần**!
+
+### 3. Thiết kế điểm ngọt thực chiến (Sweet Spot)
+Các hệ thống thoại thương mại (WebRTC APM, RNNoise, DeepFilterNet3) hội tụ về một vùng thiết kế rất hẹp: **hop 10 ms, cửa sổ 20 ms, look-ahead 0–20 ms** (tổng độ trễ thuật toán 20–40 ms) và **RTF < 0.25** trên một nhân CPU tầm trung.
+
+---
+
+### Khung giải thích: tự tay so sánh hai cấu hình Pipeline STFT ở 48 kHz (nên đọc chậm)
+
+Giả sử bạn đang chọn cấu hình STFT cho một mô hình khử nhiễu tốn cố định $$T_{\text{model}} = 2.0\text{ ms}$$ cho mỗi lần suy luận khung ở $$f_s = 48\,000\text{ Hz}$$:
+
+1. **Cấu hình A (Ưu tiên độ trễ cực thấp):** $$N = 480\text{ (10 ms)},\ H = 240\text{ (5 ms)},\ \text{look-ahead} = 0$$.
+   - Độ phân giải tần số: $$\Delta f = \frac{48\,000}{480} = \mathbf{100\text{ Hz/bin}}$$ (khá thô, khó tách hài âm giọng nam 100–130 Hz).
+   - Số khung/giây: $$200\text{ khung/s}$$; hệ số thời gian thực: $$\text{RTF}_A = \frac{2.0\text{ ms}}{5.0\text{ ms}} = \mathbf{0.40}$$ (ngốn 40% nhân CPU!).
+   - Độ trễ thuật toán: $$10 + 2.0 = \mathbf{12\text{ ms}}$$.
+2. **Cấu hình B (Điểm ngọt kiểu DeepFilterNet):** $$N = 960\text{ (20 ms)},\ H = 480\text{ (10 ms)},\ \text{look-ahead} = 2\text{ khung (20 ms)}$$.
+   - Độ phân giải tần số: $$\Delta f = \frac{48\,000}{960} = \mathbf{50\text{ Hz/bin}}$$ (mịn gấp đôi, tách sạch hài âm giọng nói!).
+   - Số khung/giây: $$100\text{ khung/s}$$; hệ số thời gian thực: $$\text{RTF}_B = \frac{2.0\text{ ms}}{10.0\text{ ms}} = \mathbf{0.20}$$ (giảm **50% tải CPU** so với Cấu hình A!).
+   - Độ trễ thuật toán: $$20 + 20 + 2.0 = \mathbf{42\text{ ms}}$$ (vẫn nằm thoải mái trong ngân sách 150 ms của VoIP).
+
+Nhìn hai con số đặt cạnh nhau, bạn thấy ngay vì sao Cấu hình B là chuẩn vàng của công nghiệp thoại hiện đại!
+
+---
+
 ## Mục tiêu học tập
 
 1. Liệt kê các công đoạn trong pipeline đóng góp vào độ trễ và tải CPU.

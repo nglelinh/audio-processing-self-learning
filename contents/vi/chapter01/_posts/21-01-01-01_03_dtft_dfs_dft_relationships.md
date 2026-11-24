@@ -17,6 +17,46 @@ Mã nguồn thực tế không bao giờ tính biến đổi DTFT vô hạn mà 
 
 *Hình. DFT không tính một đường cong phổ liên tục mà tính tích trong với các thành phần cơ sở phức rời rạc này, mỗi bin ứng với một tần số.*
 
+
+Một trong những nỗi hoang mang kinh điển nhất của sinh viên khi bước vào xử lý tín hiệu số là "rừng chữ viết tắt": **CFT, DTFT, DFS, rồi DFT** — cả bốn đều mang tên Fourier, đều có dấu tổng hoặc tích phân với $$e^{-j\omega n}$$, nhưng tại sao có cái liên tục, có cái rời rạc, cái thì tuần hoàn, cái lại hữu hạn? Bí mật hóa ra cực kỳ gọn gàng: tất cả chỉ tuân theo **một quy luật đối xứng duy nhất** — *rời rạc ở miền này thì tuần hoàn ở miền kia, và ngược lại*!
+
+---
+
+## Bản đồ kiến thức nền: Bốn họ Biến đổi Fourier liên hệ với nhau qua ba quy luật nào?
+
+### 1. Ma trận đối xứng Rời rạc ↔ Tuần hoàn
+Hãy nhớ bảng 4 ô nhỏ gọn sau:
+- **CFT:** Thời gian *liên tục, không tuần hoàn* ↔ Tần số *liên tục, không tuần hoàn*.
+- **DTFT:** Thời gian *rời rạc* ($$n \in \mathbb{Z}$$) ↔ Tần số *liên tục nhưng tuần hoàn* chu kỳ $$2\pi$$ ($$\omega \in [-\pi, \pi)$$).
+- **DFS (Chuỗi Fourier rời rạc):** Thời gian *rời rạc, tuần hoàn* chu kỳ $$N$$ ↔ Tần số *rời rạc, tuần hoàn* chu kỳ $$N$$.
+- **DFT:** Chỉ lấy **đúng 1 chu kỳ** ($$0 \le n, k \le N-1$$) của DFS — đây là phiên bản duy nhất máy tính tính trực tiếp được trên mảng hữu hạn $$N$$ phần tử!
+
+### 2. Quan hệ cầu nối: DFT chính là "Lấy mẫu đều của DTFT"
+Nếu bạn có một tín hiệu hữu hạn $$N$$ mẫu $$x[0], \dots, x[N-1]$$, thì DTFT của nó là một đường cong phổ liên tục trơn mượt $$X(e^{j\omega})$$ trên vòng tròn đơn vị. Khi tính **DFT cỡ $$N$$**, ta đơn giản chỉ đang **chấm $$N$$ điểm cách đều nhau** trên đường cong liên tục đó tại các tần số $$\omega_k = \frac{2\pi k}{N}$$!
+
+### 3. Ý nghĩa của Zero-Padding (Đệm số 0)
+Đệm thêm số $$0$$ vào đuôi tín hiệu (ví dụ kéo dài từ $$N = 4$$ lên $$M = 16$$ mẫu) **không hề làm thay đổi đường cong DTFT gốc** (vì cộng thêm $$0 \cdot e^{-j\omega n} = 0$$), mà chỉ **lấy mẫu dày hơn** (16 điểm thay vì 4 điểm) trên chính đường cong DTFT ấy — giúp vẽ đồ thị phổ mượt hơn nhưng *không* tăng độ phân giải thực sự để tách hai sóng sát nhau!
+
+---
+
+### Khung giải thích: tự tay lấy mẫu đường cong DTFT để thu ra đúng DFT 4 điểm (nên đọc chậm)
+
+Xét tín hiệu cực ngắn chỉ gồm 2 mẫu khác không: $$x[0] = 1,\ x[1] = 1$$ (và bằng $$0$$ ở mọi chỗ khác).
+
+1. **Tính đường cong DTFT liên tục $$X(e^{j\omega})$$:**
+   $$
+   X(e^{j\omega}) = \sum_{n=-\infty}^{\infty} x[n]\,e^{-j\omega n} = 1 + e^{-j\omega}.
+   $$
+   Đây là một hàm liên tục theo $$\omega \in [0, 2\pi)$$ với biên độ $$|X(e^{j\omega})| = 2\bigl|\cos(\omega/2)\bigr|$$.
+2. **Đệm 2 số 0 để tính DFT cỡ $$N = 4$$ (tức $$x = [1, 1, 0, 0]$$):** Lấy mẫu $$X(e^{j\omega})$$ tại 4 điểm $$\omega_k = \frac{2\pi k}{4} = \frac{\pi k}{2}$$ ($$k = 0, 1, 2, 3$$):
+   - $$k = 0\ (\omega_0 = 0):$$ $$X[0] = 1 + e^{0} = \mathbf{2}$$.
+   - $$k = 1\ (\omega_1 = \pi/2):$$ $$X[1] = 1 + e^{-j\pi/2} = \mathbf{1 - j}$$ (biên độ $$\sqrt{2} \approx 1.414$$).
+   - $$k = 2\ (\omega_2 = \pi):$$ $$X[2] = 1 + e^{-j\pi} = 1 - 1 = \mathbf{0}$$.
+   - $$k = 3\ (\omega_3 = 3\pi/2):$$ $$X[3] = 1 + e^{-j3\pi/2} = \mathbf{1 + j}$$ (biên độ $$\sqrt{2} \approx 1.414$$).
+3. **So sánh với DFT cỡ $$N = 2$$ (không đệm 0):** Nếu chỉ lấy $$N = 2$$ điểm ($$\omega = 0, \pi$$), ta chỉ thấy $$X = [2, 0]$$ — bỏ lỡ hoàn toàn giá trị $$1 \mp j$$ nằm giữa! Đệm số 0 lên $$N = 4$$ hay $$N = 8$$ làm lộ rõ hình dáng đường cong $$2|\cos(\omega/2)|$$ của DTFT mà không thêm chút thông tin mới nào vào tín hiệu gốc!
+
+---
+
 ## Mục tiêu học tập
 
 1. Phân biệt DTFT (thời gian rời rạc, tần số liên tục) với DFT (lưới tần số hữu hạn).

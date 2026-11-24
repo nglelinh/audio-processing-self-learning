@@ -17,6 +17,43 @@ Giáo trình FFT thường dừng lại ở phân tích độ phức tạp, còn
 
 *Hình. FFT thời gian thực vận hành theo nhịp đồng hồ: nhận một hop mới, tính biến đổi trên khung đã áp cửa sổ, rồi tổng hợp ra ngoài bằng overlap-add. Hệ cơ sở vẫn là DFT, còn lịch trình là bước nhảy hop.*
 
+
+Thuật toán FFT trong sách giáo khoa luôn giả định bạn có sẵn cả một mảng tín hiệu đứng yên trên bàn. Nhưng tiếng nói của con người không bao giờ đứng yên: chỉ trong 100 mili giây, miệng bạn đã kịp chuyển từ phụ âm xát cao tần /s/ sang nguyên âm trầm ấm /a/. Muốn đưa FFT vào cuộc gọi thoại thời gian thực, kỹ sư phải **cắt dòng âm thanh liên tục thành từng lát khung (frame)** gối đầu lên nhau — đủ ngắn để giọng nói coi như "gần dừng" (quasi-stationary) bên trong mỗi lát, nhưng đủ dài để phân tách được các vạch tần số!
+
+---
+
+## Bản đồ kiến thức nền: Chia khung FFT Thời gian thực đứng trên ba trụ cột nào?
+
+### 1. Giả thiết Gần dừng (Quasi-Stationarity) của Tiếng nói
+Dây thanh và khoang miệng con người chuyển động theo quán tính cơ học, nên đặc tính phổ của tiếng nói thay đổi chậm trong cửa sổ **10–30 ms**. Đó là lý do hầu hết hệ thống xử lý thoại (WebRTC, Opus, DeepFilterNet) đều chọn độ dài khung chuẩn quanh mốc **20 ms** và bước nhảy (hop) **10 ms**.
+
+### 2. Đánh đổi Độ phân giải Thời gian – Tần số ($$\Delta f = f_s / N$$)
+Chọn kích thước FFT $$N$$ quyết định trực tiếp khoảng cách giữa hai bin tần số liền kề: $$\Delta f = \frac{f_s}{N}$$. Khung càng dài thì $$\Delta f$$ càng mịn (nhìn rõ hài âm), nhưng độ trễ càng lớn và các tiếng nổ ngắn (như gõ bàn phím) càng bị nhòe theo thời gian.
+
+### 3. Tính tương thích phần cứng và Mixed-Radix FFT
+Ở tốc độ chuẩn 48 kHz, khung 20 ms tương ứng đúng $$N = 960\text{ mẫu}$$ — không phải lũy thừa của 2! Thay vì ép đệm 0 lên $$1\,024$$ (làm lệch lưới tần số), các thư viện hiện đại (RustFFT, PocketFFT) phân tích thừa số $$960 = 2^6 \cdot 3 \cdot 5$$ để chạy **mixed-radix FFT** gần nhanh ngang radix-2 thuần!
+
+---
+
+### Khung giải thích: tự tay kiểm tra bộ thông số khung thực chiến của DeepFilterNet (nên đọc chậm)
+
+Hãy kiểm chứng trọn bộ thông số cốt lõi của hệ thống khử nhiễu 48 kHz bằng những phép chia sơ cấp:
+
+1. **Độ dài khung & Bước nhảy:** Với $$f_s = 48\,000\text{ Hz}$$, chọn khung $$N = 960\text{ mẫu}$$ và bước nhảy $$H = 480\text{ mẫu}$$:
+   - Thời lượng khung: $$T_{\text{frame}} = \frac{960}{48\,000} = \mathbf{20\text{ ms}}$$.
+   - Bước nhảy (tốc độ cập nhật): $$T_{\text{hop}} = \frac{480}{48\,000} = \mathbf{10\text{ ms}}$$ (chồng lấp $$50\%$$, tức $$100\text{ khung/giây}$$).
+2. **Lưới tần số `rfft`:** Vì tín hiệu micro là số thực, số bin phổ độc lập chỉ là:
+   $$
+   K = \frac{N}{2} + 1 = \frac{960}{2} + 1 = \mathbf{481\text{ bin}} \quad (k = 0, 1, \dots, 480).
+   $$
+   Khoảng cách mỗi bin đúng tròn trịa: $$\Delta f = \frac{48\,000}{960} = \mathbf{50\text{ Hz/bin}}$$!
+3. **Tra cứu nhanh tần số của bất kỳ bin nào:**
+   - Bin $$k = 0 \to 0\text{ Hz}$$ (DC); Bin $$k = 1 \to 50\text{ Hz}$$ (đúng tần số ù điện lưới 50 Hz!).
+   - Bin $$k = 20 \to 20 \times 50 = \mathbf{1\,000\text{ Hz}}$$; Bin $$k = 480 \to \mathbf{24\,000\text{ Hz}}$$ (tần số Nyquist).
+   - Lưu lượng dữ liệu phổ cần xử lý: $$100\text{ khung/giây} \times 481\text{ bin} = 48\,100$$ số phức/giây — cực gọn cho mạng nơ-ron chạy thời gian thực!
+
+---
+
 ## Mục tiêu học tập
 
 1. Lập ngân sách chi phí FFT trong phạm vi một callback hoặc quantum của AudioWorklet.

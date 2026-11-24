@@ -13,6 +13,38 @@ draft: false
 
 Trừ phổ (spectral subtraction) là bước nhập môn kinh điển của bài toán khử nhiễu: ước lượng phổ biên độ nhiễu, trừ đi từ phổ tín hiệu quan sát rồi tái tạo lại dạng sóng. Thuật toán đủ gọn để tự cài đặt trong một buổi chiều, nhưng cũng đủ sâu để phơi bày hầu hết các dạng méo âm — đặc biệt là *nhiễu nhạc (musical noise)* — mà các hệ thống mạng nơ-ron hiện đại vẫn phải tìm cách khắc phục. Bài học này xây dựng công thức trừ phổ trên biên độ STFT, trình bày kỹ thuật trừ dư (over-subtraction) và đặt ngưỡng sàn phổ (spectral floor) trong các bộ tiền xử lý thực tế (như SpeexDSP), đồng thời chỉ rõ khi nào trừ phổ vẫn hữu ích làm tầng tiền xử lý nhẹ trước mô hình mạng nơ-ron.
 
+Nếu bạn đứng trong một quán cà phê ồn ào và cố lắng nghe người bạn đối diện, phản xạ tự nhiên nhất của não bộ — và cũng là ý tưởng đầu tiên trong lịch sử khử nhiễu số — là: *đợi lúc bạn mình ngừng nói để "ghi nhớ" tiếng ồn nền, rồi lấy tổng âm thanh trừ bớt tiếng ồn đó đi*. Thoạt nghe tưởng chừng quá đơn giản để có thể sai, nhưng chính phép trừ tưởng như ngây thơ ấy lại mở ra một bài học sâu sắc về thống kê ngẫu nhiên: khi trừ đi một đại lượng trung bình khỏi một tín hiệu nhiễu biến động ngẫu nhiên từng khung một, những đỉnh nhiễu sót lại sẽ kêu lách tách như những nốt nhạc rơi rời rạc — thứ mà giới kỹ sư gọi là **nhiễu nhạc (musical noise)**.
+
+## Bản đồ kiến thức nền: Trừ phổ nằm ở đâu trong xử lý tín hiệu thống kê?
+
+### 1. Mô hình cộng tính và giả định độc lập thống kê
+Trong phòng kín không vang quá nặng, sóng âm thu được tại micro là tổng tuyến tính $$y[t] = s[t] + n[t]$$. Nhờ tính tuyến tính của biến đổi Fourier thời gian ngắn (STFT), quan hệ này giữ nguyên trên từng ô thời gian–tần số: $$Y(\ell, k) = S(\ell, k) + N(\ell, k)$$. Khi giả định tiếng nói và nhiễu không tương quan nhau, công suất kỳ vọng cộng trực tiếp: $$E[\vert Y \vert^2] = E[\vert S \vert^2] + E[\vert N \vert^2]$$. Trừ phổ thay kỳ vọng lý thuyết bằng phổ tức thời $$\vert Y(\ell, k) \vert$$ và một ước lượng trung bình $$\vert \hat{N}(k) \vert$$ đo được trong các khoảng lặng.
+
+### 2. Bất đối xứng giữa biên độ và pha trong thính giác người
+Một số phức STFT gồm biên độ $$\vert Y \vert$$ và pha $$\angle Y$$. Các thực nghiệm tâm âm học kinh điển (Wang & Lim, 1982) cho thấy ở mức SNR trung bình và cao, tai người nhạy cảm với sai số biên độ hơn nhiều so với sai số pha cục bộ. Vì thế, thuật toán trừ phổ cổ điển (Boll, 1979) chỉ sửa biên độ để lấy $$\vert \hat{S} \vert$$ rồi ghép lại với chính pha nhiễu $$\angle Y$$ trước khi biến đổi ngược ISTFT.
+
+### 3. Cơ chế sinh nhiễu nhạc và hai van an toàn $$\alpha, \beta$$
+Do nhiễu nền là quá trình ngẫu nhiên, biên độ thực $$\vert N(\ell, k) \vert$$ dao động mạnh quanh mức trung bình $$\vert \hat{N}(k) \vert$$. Nếu trừ đúng $$1\times$$ mức trung bình rồi cắt về $$0$$ khi âm (half-wave rectification), một nửa số bin nhiễu bị xóa sạch về $$0$$, còn nửa kia trồi lên thành những gai nhọn cô lập xuất hiện rồi biến mất sau mỗi $$10\text{ ms}$$. Qua ISTFT, mỗi gai cô lập trở thành một hình sin ngắn nghe như tiếng "bíp" hay tiếng nước nhỏ giọt. Giải pháp kinh điển của Berouti (1979) là trừ dư bằng hệ số $$\alpha > 1$$ để dập các gai cô lập, đồng thời giữ lại một **sàn phổ (spectral floor)** $$\beta \vert Y \vert$$ (hoặc $$\beta \vert \hat{N} \vert$$) nhằm lấp các hố phổ đen kịt bằng một lớp nền dịu đều tai hơn.
+
+### Khung giải thích: Cầm tay tính 3 bin STFT để thấy rõ sự khác biệt giữa trừ ngây thơ và trừ có $$\alpha, \beta$$ (nên đọc chậm)
+
+Giả sử bộ ước lượng nhiễu trong khoảng lặng cho $$\vert \hat{N}(k) \vert = 2{,}0$$ tại cả 3 bin tần số xét cùng một khung. Quan sát biên độ đo được $$\vert Y(k) \vert$$ tại 3 bin:
+- **Bin A (họa âm tiếng nói mạnh):** $$\vert Y_A \vert = 10{,}0$$.
+- **Bin B (đỉnh nhiễu ngẫu nhiên trồi lên trong khoảng lặng):** $$\vert Y_B \vert = 3{,}0$$.
+- **Bin C (đáy nhiễu ngẫu nhiên tụt xuống thấp):** $$\vert Y_C \vert = 1{,}2$$.
+
+Ta so sánh trực tiếp hai công thức:
+1. **Trừ ngây thơ ($$\alpha = 1{,}0,\; \beta = 0$$):** $$\vert \hat{S} \vert = \max(\vert Y \vert - \vert \hat{N} \vert,\; 0)$$.
+2. **Trừ dư kèm sàn phổ ($$\alpha = 2{,}0,\; \beta = 0{,}1$$):** $$\vert \hat{S} \vert = \max(\vert Y \vert - \alpha \vert \hat{N} \vert,\; \beta \vert Y \vert)$$.
+
+| Bin tần số | $$\vert Y \vert$$ | Trừ ngây thơ ($$\alpha=1,\beta=0$$) | Trừ dư + sàn phổ ($$\alpha=2,\beta=0{,}1$$) | Ý nghĩa âm học |
+| :--- | :---: | :---: | :---: | :--- |
+| **Bin A** (tiếng nói) | $$10{,}0$$ | $$\max(10{,}0 - 2{,}0,\; 0) = 8{,}0$$ | $$\max(10{,}0 - 4{,}0,\; 1{,}0) = 6{,}0$$ | Giữ được họa âm chính (giảm nhẹ biên độ) |
+| **Bin B** (gai nhiễu) | $$3{,}0$$ | $$\max(3{,}0 - 2{,}0,\; 0) = 1{,}0$$ | $$\max(3{,}0 - 4{,}0,\; 0{,}3) = 0{,}3$$ | Trừ ngây thơ để lọt gai $$1{,}0$$ gây **nhiễu nhạc**; $$\alpha=2$$ dập gọn xuống $$0{,}3$$ |
+| **Bin C** (đáy nhiễu) | $$1{,}2$$ | $$\max(1{,}2 - 2{,}0,\; 0) = 0{,}0$$ | $$\max(1{,}2 - 4{,}0,\; 0{,}12) = 0{,}12$$ | Trừ ngây thơ tạo hố $$0{,}0$$ đột ngột; sàn $$\beta$$ giữ nền êm $$0{,}12$$ |
+
+Nhìn vào cột giữa và cột phải, bạn thấy ngay cái giá phải trả: $$\alpha = 2{,}0$$ dập sạch gai nhiễu ở Bin B (từ $$1{,}0$$ xuống $$0{,}3$$) nhưng đồng thời làm tiếng nói ở Bin A hơi mỏng đi (từ $$8{,}0$$ xuống $$6{,}0$$). Chính sự đánh đổi cố hữu giữa *khử sạch nhiễu* và *méo giọng* này sẽ dẫn ta sang bộ lọc Wiener mượt mà hơn ở bài 03-02.
+
 ## Mục tiêu học tập
 
 Sau bài học này, bạn sẽ nắm được mô hình hỗn hợp cộng tính trên miền STFT, viết được giả mã thuật toán trừ phổ biên độ kèm hệ số trừ dư và ngưỡng sàn, giải thích được vì sao các đỉnh nhiễu dư nghe giống tiếng "nhạc", và xác định được khi nào bộ trừ phổ cổ điển nên dùng làm tầng tiền xử lý thay vì chuyển thẳng sang lọc Wiener hoặc mặt nạ mạng nơ-ron.

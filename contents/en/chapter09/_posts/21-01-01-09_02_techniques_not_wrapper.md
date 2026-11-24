@@ -17,6 +17,23 @@ Capstone credit is for a technique you can measure: framing and overlap, a suppr
 
 *Figure. The technique under the wrapper: 48 kHz PCM, STFT, an ERB gain path, a deep filter on the complex spectrum, then ISTFT and overlap-add. Your capstone should name which of these you are studying.*
 
+It takes ten minutes to install an npm package and copy-paste five lines of initialization code. It takes **deep signal-processing and systems judgment** to debug why Bluetooth headset users sound like chipmunks, why Safari silently drops audio after 30 seconds, or why toggling noise suppression mid-sentence produces a harsh pop. Frameworks and npm wrappers change every two years; the **underlying techniques**—sample-rate adaptation, click-free crossfading, state resets, and real-time memory discipline—last your entire career!
+
+This lecture strips away the npm wrapper to spotlight the portable engineering techniques that transfer across WebRTC, desktop apps, mobile SDKs, and embedded DSP.
+
+---
+
+## Background Knowledge Map: Four Transferable Techniques Beyond Any SDK Wrapper
+
+Mastering these four techniques lets you build or debug *any* real-time audio pipeline from scratch:
+
+1. **Sample-Rate Adaptation (Resampling):** Hardware microphones run at 16 kHz (Bluetooth HFP), 44.1 kHz (legacy USB/macOS), or 48 kHz (standard WebRTC). Feeding 44.1 kHz audio directly into a 48 kHz STFT model shifts every frequency bin by $$48/44.1 pprox +8.84\%$$—warping vocal formants and breaking harmonic filters!
+2. **Click-Free Bypass & Gain Crossfading:** Switching abruptly from denoised audio to raw audio creates a step discontinuity (audible *click*). Applying a short 5–10 ms linear or raised-cosine crossfade eliminates the transient completely.
+3. **DC-Offset & Denormal Protection:** Cheap microphones often introduce a constant DC bias; a simple 1st-order high-pass filter ($$f_c pprox 60	ext{–}80	ext{ Hz}$$) removes rumble and DC offset before STFT analysis, while flushing subnormal floats prevents sudden 10× CPU slowdowns in IIR/GRU loops.
+4. **Deterministic State & Failure Recovery:** Sanitizing `NaN`/`Inf` outputs before they reach the speakers (protecting users’ ears!) and resetting model states on discontinuity.
+
+---
+
 ## What you should be able to do
 
 You should be able to propose one change grounded in Chapters 02–08, write the success and fail rules before you collect the second number, and keep the work in a personal fork or an external harness. You should also say which public control you will touch (`setSuppressionLevel`, `setEnabled`, or `assetConfig.cdnUrl`) and which metrics will stay `n/a`.
@@ -100,6 +117,29 @@ lines <your count, at least 8>
 ```
 
 Failure modes: a hypothesis with no fail rule; success defined only as “SI-SDR goes up”; editing files under the shared product repo as the implementation step; claiming the ERB diagram means you must retrain the filter.
+
+---
+
+### Worked Numerical Example: Quantifying Sample-Rate Mismatch & Click-Free Crossfade Length
+
+1. **Sample-rate mismatch distortion:** Suppose a model trained strictly at $$f_s = 48{,}000	ext{ Hz}$$ receives a 1 kHz sine wave recorded at $$44{,}100	ext{ Hz}$$ *without* resampling. The model interprets those samples as if they arrived at 48 kHz, shifting the perceived frequency to:
+   $$f_{	ext{perceived}} = 1{,}000 	imes rac{48{,}000}{44{,}100} pprox \mathbf{1{,}088.4	ext{ Hz}}$$
+   —nearly **1.5 musical semitones sharp**, shifting every Bark/ERB band off its trained calibration!
+2. **Crossfade sample count for a smooth 5 ms toggle:** At $$f_s = 48{,}000	ext{ Hz}$$, a 5 ms raised-cosine fade takes:
+   $$N_{	ext{fade}} = 0.005 	imes 48{,}000 = 240	ext{ samples}$$
+   (just under two 128-sample Web Audio quanta). At sample $$n \in [0, 239]$$, blending $$y[n] = (1 - lpha_n)\,x_{	ext{raw}}[n] + lpha_n\,x_{	ext{ns}}[n]$$ with $$lpha_n = rac{1}{2}\!\left(1 - \cosrac{\pi n}{239}
+ight)$$ transitions smoothly from $$0 	o 1$$ with zero first-derivative kink!
+
+### Deep-Dive Explanation: Four Habits That Separate Audio Engineers From Wrapper Users (Read Slowly)
+
+1. **Always inspect the actual hardware `sampleRate` at runtime:** Never assume 48 kHz; either resample cleanly with a low-latency polyphase/sinc resampler or load a matching 16 kHz model variant.
+2. **Put a hard safety limiter / NaN guard at the very output:** One unguarded `NaN` inside a recursive filter or GRU latches forever; clamping output to `[-1.0, 1.0]` and replacing non-finite samples with `0.0` protects both users’ ears and WebRTC encoders.
+3. **Align raw vs. denoised delay before crossfading:** If your NS path has 30 ms of latency and your raw bypass path has 0 ms, crossfading them directly creates a brief comb-filter echo unless you delay the raw path by 30 ms during the transition.
+4. **Test the ugly edge cases explicitly:** Pure digital silence (`0.0`), full-scale clipping (`±1.0`), 1-second mic unplug, and rapid enable/disable clicks reveal 90% of wrapper bugs in 5 minutes.
+
+**Quick check.** If a user’s Bluetooth headset operates at $$16{,}000	ext{ Hz}$$ and you want a 5 ms click-free crossfade, how many samples long is $$N_{	ext{fade}}$$?
+
+---
 
 ## Exercises
 

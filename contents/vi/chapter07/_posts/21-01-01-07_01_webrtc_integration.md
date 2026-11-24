@@ -11,7 +11,11 @@ lesson_type: required
 draft: false
 ---
 
+Một lỗi kinh điển khi lần đầu tích hợp khử nhiễu mạng nơ-ron vào ứng dụng gọi video: kỹ sư cẩn thận gắn bộ lọc vào... **đầu ra loa (track từ xa)** thay vì đầu vào micro, hoặc bật đồng thời cả `noiseSuppression: true` của Chrome lẫn DeepFilterNet3! Kết quả là đầu dây bên kia vẫn nghe trọn tiếng quạt máy, còn giọng nói bị bóp nghẹt như nói qua ống bơ vì bị lọc hai lần liên tiếp. Trong một cuộc gọi WebRTC, *đặt bộ khử nhiễu ở đâu* quan trọng chẳng kém gì bản thân mô hình bên trong.
+
 Vị trí chèn bộ khử nhiễu trong một cuộc gọi WebRTC quyết định trực tiếp đến độ trễ, khả năng khử vọng (echo) và việc máy chủ SFU có nhận được tín hiệu giọng nói đã làm sạch hay không. Bài học này ánh xạ các điểm chèn tiềm năng với `getUserMedia`, bộ xử lý âm thanh tích hợp (Audio Processing Module — APM) của trình duyệt và `RTCPeerConnection`, đồng thời phân tích cách `DeepFilterNoiseFilterProcessor` trong gói `deepfilternet3-noise-filter` **1.3.0** can thiệp vào luồng phát (uplink) trước bước mã hóa thông qua TrackProcessor (cơ chế biến đổi track của LiveKit).
+
+**Mạch bài học:** Sai lầm đặt nhầm vị trí & lọc nhiễu hai lần → Bản đồ kiến thức nền (Luồng Uplink/Downlink & SFU, Phối hợp AEC/AGC/NS trong APM trình duyệt, Điểm chèn TrackProcessor trước Opus) → So sánh ba điểm chèn A, B, C → Cấu hình `getUserMedia` & nội thất đồ thị processor → Khung giải thích tính tay ngân sách độ trễ hội thoại 150 ms và hiệu ứng suy hao kép khi bật trùng hai bộ NS → Mini-lab, Bẫy thường gặp và Bài tập.
 
 ![Track audio local của LiveKit đi qua processor khử nhiễu trước khi publish]({{ site.imgurl }}/generated/livekit-trackprocessor.png)
 
@@ -20,6 +24,20 @@ Vị trí chèn bộ khử nhiễu trong một cuộc gọi WebRTC quyết đị
 ## Mục tiêu học tập
 
 Sau bài học này, bạn sẽ biết cách đặt bộ khử nhiễu mạng nơ-ron trên đường phát trước bước mã hóa, giữ lại tính năng khử vọng của trình duyệt đồng thời tắt bộ khử nhiễu mặc định của trình duyệt, và mô tả chính xác những gì `setProcessor` thay đổi trên `MediaStreamTrack` được phát hành mà không cần đẩy bước suy luận ra khỏi thiết bị.
+
+## Bản đồ kiến thức nền: Kiến trúc đường tiếng trong cuộc gọi WebRTC
+
+### 1. Luồng gửi (Uplink), Luồng nhận (Downlink) và Kiến trúc SFU
+- **Là gì:** Trong WebRTC dùng máy chủ chuyển tiếp có chọn lọc (**SFU — Selective Forwarding Unit** như LiveKit), mỗi máy khách mã hóa micro thành gói Opus gửi lên (uplink) và giải mã gói của người khác phát ra loa (downlink); SFU chỉ định tuyến gói mà không giải mã hay trộn âm.
+- **Nghiên cứu gì:** Khẳng định bộ khử nhiễu phải nằm trên **uplink cục bộ trước khi mã hóa Opus** để mọi người nghe đều nhận âm thanh sạch, tránh tiêu tốn băng thông Opus cho nhiễu và giữ chi phí CPU tỉ lệ theo số người đang nói (publisher) chứ không theo số người nghe.
+
+### 2. Phối hợp với Audio Processing Module (APM) của trình duyệt
+- **Là gì:** Trình duyệt tích hợp sẵn ba khối DSP chạy gần tầng phần cứng: **AEC** (khử vọng dựa trên tín hiệu tham chiếu loa), **AGC** (tự động cân bằng âm lượng) và **NS** (khử nhiễu cổ điển).
+- **Nghiên cứu gì:** Khi chèn bộ khử nhiễu mạng nơ-ron (như DeepFilterNet3), ta giữ `echoCancellation: true` và `autoGainControl: true`, nhưng **tắt `noiseSuppression: false`** để tránh hiệu ứng "khử nhiễu kép" (double suppression) làm đục giọng và cắt cụt phụ âm nhẹ.
+
+### 3. Móc chèn `TrackProcessor` và `MediaStreamDestination`
+- **Là gì:** Cơ chế chuẩn hóa của LiveKit (`audioTrack.setProcessor(filter)`) dựng đồ thị Web Audio `source → AudioWorkletNode → MediaStreamDestination` để xuất ra `processedTrack` đưa vào `RTCPeerConnection` sender mà không cần tải PCM lên đám mây.
+- **Nghiên cứu gì:** Cho phép bật/tắt bypass (`setEnabled(false)`) và chỉnh mức khử nhiễu ngay trong cuộc gọi mà không làm đứt kết nối RTP hay phải thương lượng lại SDP.
 
 ## Kế hoạch 60 phút
 
@@ -88,6 +106,20 @@ const stream = await navigator.mediaDevices.getUserMedia({
 Luôn ghi log kết quả từ `track.getSettings()` trên trình duyệt đích, vì Chrome và Safari không phải lúc nào cũng áp dụng đúng mọi ràng buộc bạn yêu cầu.
 
 Các thành phần như WASM (WebAssembly — mã nhị phân chạy trong trình duyệt) và CDN (mạng phân phối nội dung) thuộc phạm vi triển khai của điểm chèn A, không phải điểm B.
+
+## Khung giải thích: Tính tay ngân sách độ trễ một chiều và hậu quả lọc nhiễu kép (nên đọc chậm)
+
+### Phép tính 1: Cộng dồn độ trễ từ miệng tới tai (Mouth-to-Ear) ở điểm chèn A vs. điểm C
+Theo khuyến nghị hội thoại thời gian thực (mốc thực hành chuẩn $$< 150\text{ ms}$$ một chiều để không giẫm lời nhau):
+- **Điểm chèn A (Local trước Opus):**
+  $$\underbrace{10\text{ ms}}_{\text{thu + AEC}} + \underbrace{40\text{ ms}}_{\text{DF3 look-ahead}} + \underbrace{12{,}7\text{ ms}}_{\text{ring buffer}} + \underbrace{20\text{ ms}}_{\text{khung Opus}} + \underbrace{35\text{ ms}}_{\text{mạng 1 chiều}} + \underbrace{20\text{ ms}}_{\text{jitter buffer}} = \mathbf{137{,}7\text{ ms}} < 150\text{ ms}.$$
+- **Điểm chèn C (Giải mã → Khử nhiễu → Mã hóa lại trên SFU):** Phải gánh thêm giải mã + khung mới + hàng đợi máy chủ ($$\ge 35\text{ ms}$$), đẩy tổng độ trễ lên $$\ge \mathbf{172{,}7\text{ ms}}$$, vượt ngưỡng dễ gây nói đè trong cuộc họp đông người!
+
+### Phép tính 2: Vì sao bật trùng `noiseSuppression: true` + DeepFilterNet3 làm "bay màu" phụ âm gió?
+Xét một phụ âm xát nhẹ như `/s/` hoặc `/f/` có năng lượng ban đầu $$P_0$$.
+- Giả sử bộ NS của APM trình duyệt nhầm một phần phụ âm này là nhiễu gió nên suy giảm $$-12\text{ dB}$$ (hệ số biên độ $$g_1 = 10^{-12/20} \approx 0{,}251$$).
+- Tín hiệu đã bị làm yếu đó lại đi tiếp vào DeepFilterNet3; thấy tỉ số SNR đã tụt sâu, bộ lọc thứ hai tiếp tục suy giảm thêm $$-8\text{ dB}$$ ($$g_2 = 10^{-8/20} \approx 0{,}398$$).
+- **Tổng suy giảm nối tiếp:** $$-12 + (-8) = \mathbf{-20\text{ dB}}$$ (biên độ tổng $$g_1 g_2 = 0{,}10$$, công suất chỉ còn **$$1\%$$** ban đầu!). Tắt `noiseSuppression: false` trên `getUserMedia` giữ nguyên $$g_1 = 1$$ để mạng nơ-ron tự quyết định trên tín hiệu trung thực.
 
 ## Những gì processor thực sự chèn vào đồ thị
 

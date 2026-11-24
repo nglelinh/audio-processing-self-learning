@@ -11,7 +11,11 @@ lesson_type: required
 draft: false
 ---
 
+Trong thị giác máy tính, lượng tử hóa một mạng phân loại ảnh xuống INT8 thường chỉ làm độ chính xác top-1 nhích xuống 0,3% — mắt người chẳng hề nhận ra. Thế nhưng khi bạn mang đúng công thức lượng tử hóa đó áp vào một mô hình khử nhiễu giọng nói, chỉ một sai số làm tròn vỏn vẹn **0,004** ở tầng xuất mặt nạ gain cũng đủ biến khoảng lặng thành tiếng rít kim loại khó chịu (musical noise) hoặc thổi bay toàn bộ phụ âm gió nhẹ! Tại sao bài toán tiếng nói lại nhạy cảm với độ phân giải gần 0 đến vậy?
+
 **Lượng tử hóa (quantization)** giúp thu nhỏ dung lượng trọng số và thường đẩy nhanh tốc độ suy luận của mô hình tăng cường giọng nói. Điều này ảnh hưởng trực tiếp tới dung lượng tải xuống của bản WASM (WebAssembly — mã nhị phân chạy trong trình duyệt) và hệ số thời gian thực trên CPU. Tuy nhiên, lượng tử hóa không cẩn thận có thể làm méo giọng nói hoặc gây trôi trạng thái hồi tiếp. Rủi ro lớn nhất không nằm ở các trọng số có giá trị lớn mà nằm ở các hệ số khuếch đại (gain) gần 0, vì chúng nhân trực tiếp lên từng bin tần số. Bài học này trình bày lượng tử hóa INT8 ở góc độ kỹ thuật triển khai, cách hiệu chuẩn trên dữ liệu giọng nói thay vì ảnh, kèm một bài lab số học tự kiểm chứng.
+
+**Mạch bài học:** Vì sao tiếng nói nhạy hơn ảnh khi nén xuống INT8 → Bản đồ kiến thức nền (Ánh xạ tuyến tính INT8, Độ nhạy tương đối theo thang dB gần 0, Hiệu chuẩn theo miền giọng nói & giữ lớp nhạy cảm ở `float32`) → Công thức lượng tử hóa đối xứng & bảng 4 chế độ (Dynamic, Static PTQ, QAT, Weight-only) → Khung giải thích tính tay sai số theo dB trên 4 bin gain và so sánh tỉ lệ per-tensor vs. per-channel → Cổng kiểm duyệt phát hành, Mini-lab và Bài tập.
 
 ![Trọng số đã lượng tử hóa được đóng vào kho mô hình trước khi trình duyệt tải WASM]({{ site.imgurl }}/generated/onnx-wasm-path.png)
 
@@ -20,6 +24,20 @@ draft: false
 ## Mục tiêu học tập
 
 Sau bài học này, bạn sẽ phân biệt được lượng tử hóa INT8 động và tĩnh, tính được hệ số tỉ lệ đối xứng cùng sai số tuyệt đối lớn nhất trên một véctơ gain, giải thích được vì sao các bin có gain gần 0 gây suy giảm chất lượng nghe rõ rệt nhất, và thiết kế được quy trình kiểm duyệt kết hợp nghe thử A/B với SI-SDR trước khi phát hành trọng số lượng tử hóa.
+
+## Bản đồ kiến thức nền: Toán học và cảm thụ âm thanh phía sau lượng tử hóa INT8
+
+### 1. Lượng tử hóa tuyến tính (Uniform Affine / Symmetric Quantization)
+- **Là gì:** Nén số thực 32-bit (`float32`, 4 byte) xuống số nguyên 8-bit (`int8`, 1 byte, 255 mức đối xứng trong $$[-127, 127]$$) bằng phép chia cho bước lượng tử $$s$$ và làm tròn: $$q = \mathrm{clip}(\mathrm{round}(g / s), -128, 127)$$.
+- **Nghiên cứu gì:** Giảm gấp 4 lần dung lượng trọng số và lưu lượng băng thông bộ nhớ, đồng thời cho phép dùng các lệnh nhân-cộng số nguyên nhanh hơn trên CPU — đổi lại là nhiễu làm tròn bị chặn bởi $$s/2$$.
+
+### 2. Sai số tuyệt đối đều vs. Cảm thụ logarit (dB) của tai người
+- **Là gì:** Lượng tử hóa đều tạo ra sai số *tuyệt đối* như nhau ($$\le s/2$$) trên toàn dải giá trị, nhưng tai người cảm nhận âm lượng theo thang **logarit (decibel)** — tức phụ thuộc vào sai số *tương đối* $$\hat{g}/g$$.
+- **Nghiên cứu gì:** Giải thích nghịch lý cốt lõi của bài: cùng một sai số tuyệt đối $$0{,}0039$$ là hoàn toàn vô hại ở $$g = 0{,}5$$ (chỉ lệch 0,07 dB), nhưng lại là thảm họa gần **+6 dB** ở bin nhiễu có $$g = 0{,}004$$!
+
+### 3. Hiệu chuẩn (Calibration) và Lượng tử hóa hỗn hợp (Mixed Precision)
+- **Là gì:** Quy trình chạy một tập âm thanh đại diện (khoảng lặng, giọng nhỏ, tạp âm đám đông, SNR thấp) qua mô hình để ước lượng dải động từng lớp (Static PTQ), kết hợp giữ nguyên các lớp nhạy cảm (tầng xuất gain, trạng thái hồi tiếp GRU) ở `float32`.
+- **Nghiên cứu gì:** Tránh hai lỗi chí mạng: dải tỉ lệ bị kéo giãn bởi một giá trị ngoại lai (per-tensor thay vì per-channel) và sai số lượng tử hóa tích lũy thành trôi trạng thái trên cuộc gọi dài.
 
 ## Kế hoạch 60 phút
 
@@ -33,7 +51,7 @@ Sau bài học này, bạn sẽ phân biệt được lượng tử hóa INT8 đ
 
 ### Công thức tỉ lệ lượng tử hóa
 
-Một giá trị dấu phẩy động \(g\) được ánh xạ sang mã số nguyên \(q\) thông qua hệ số tỉ lệ \(s\) và điểm không (zero-point) tùy chọn \(z\):
+Một giá trị dấu phẩy động $$g$$ được ánh xạ sang mã số nguyên $$q$$ thông qua hệ số tỉ lệ $$s$$ và điểm không (zero-point) tùy chọn $$z$$:
 
 $$
 g \approx s\,(q - z).
@@ -45,13 +63,32 @@ $$
 s = \frac{\max_i |g_i|}{127}, \qquad q_i = \mathrm{clip}\big(\mathrm{round}(g_i / s), -128, 127\big), \qquad \hat g_i = s\, q_i.
 $$
 
-Khi phép làm tròn hoạt động chuẩn, sai số khôi phục trên mỗi phần tử không vượt quá khoảng nửa bước lượng tử \(s/2\). Các nhân tính toán GEMM sẽ thực hiện phép nhân trên số nguyên rồi quy đổi ngược về thang số thực. Đối với lớp tích chập (convolution), dùng hệ số tỉ lệ **theo từng kênh (per-channel)** thường vượt trội so với dùng một hệ số duy nhất cho cả tensor, bởi một kênh có giá trị ngoại lai lớn sẽ làm phình hệ số \(s\) của toàn bộ các kênh còn lại.
+Khi phép làm tròn hoạt động chuẩn, sai số khôi phục trên mỗi phần tử không vượt quá khoảng nửa bước lượng tử $$s/2$$. Các nhân tính toán GEMM sẽ thực hiện phép nhân trên số nguyên rồi quy đổi ngược về thang số thực. Đối với lớp tích chập (convolution), dùng hệ số tỉ lệ **theo từng kênh (per-channel)** thường vượt trội so với dùng một hệ số duy nhất cho cả tensor, bởi một kênh có giá trị ngoại lai lớn sẽ làm phình hệ số $$s$$ của toàn bộ các kênh còn lại.
 
 ### Nơi sai số lượng tử hóa trở thành tạp âm nghe thấy được
 
-Giả sử giá trị gain lớn nhất bằng \(1\). Khi đó \(s = 1/127 \approx 0.00787\), và sai số tuyệt đối chỉ ở mức vài phần nghìn. So với một bin có biên độ đầy thang, sai số này không đáng kể; nhưng với một bin có gain thực là \(0.004\), chỉ một mức mã nguyên đã tương đương toàn bộ tín hiệu. Trong bài mini-lab, véctơ \([1.0,\ 0.5,\ 0.02,\ 0.004,\ 0.0]\) được lượng tử hóa thành các mã \([127,\ 64,\ 3,\ 1,\ 0]\). Bin \(0.004\) bị đẩy lên thành \(1/127 \approx 0.00787\) — tức gần gấp đôi giá trị thật của một bin yếu — trong khi sai số tuyệt đối lớn nhất trên cả véctơ là khoảng \(0.00394\), xuất phát từ nửa bước làm tròn ở giá trị \(0.5\) chứ không phải ở bin đầy thang.
+Giả sử giá trị gain lớn nhất bằng $$1$$. Khi đó $$s = 1/127 \approx 0.00787$$, và sai số tuyệt đối chỉ ở mức vài phần nghìn. So với một bin có biên độ đầy thang, sai số này không đáng kể; nhưng với một bin có gain thực là $$0.004$$, chỉ một mức mã nguyên đã tương đương toàn bộ tín hiệu. Trong bài mini-lab, véctơ $$[1.0,\ 0.5,\ 0.02,\ 0.004,\ 0.0]$$ được lượng tử hóa thành các mã $$[127,\ 64,\ 3,\ 1,\ 0]$$. Bin $$0.004$$ bị đẩy lên thành $$1/127 \approx 0.00787$$ — tức gần gấp đôi giá trị thật của một bin yếu — trong khi sai số tuyệt đối lớn nhất trên cả véctơ là khoảng $$0.00394$$, xuất phát từ nửa bước làm tròn ở giá trị $$0.5$$ chứ không phải ở bin đầy thang.
 
-Trong khử nhiễu giọng nói, những giá trị gain nhỏ đó đại diện cho các bin bị nhiễu lấn át và các họa âm yếu. Ép một họa âm về mã \(0\) sẽ khiến nguyên âm nghe mỏng và khô; ngược lại, làm tròn một bin gần im lặng lên 1 mức lượng tử sẽ làm rò rỉ một nền âm đơn điệu (tonal floor) — nguyên nhân phổ biến gây nhiễu nhạc (musical noise). Sai số trọng số trong lớp tích chập còn được các lớp phía sau làm mượt bớt, nhưng sai số ở đầu ra gain lại nhân thẳng vào các bin STFT rồi được cộng dồn ở bước overlap-add. Vì vậy, cần hiệu chuẩn cẩn thận và nghe kiểm tra trực tiếp đầu ra gain, kể cả khi giữ riêng nhánh này ở `float32`.
+Trong khử nhiễu giọng nói, những giá trị gain nhỏ đó đại diện cho các bin bị nhiễu lấn át và các họa âm yếu. Ép một họa âm về mã $$0$$ sẽ khiến nguyên âm nghe mỏng và khô; ngược lại, làm tròn một bin gần im lặng lên 1 mức lượng tử sẽ làm rò rỉ một nền âm đơn điệu (tonal floor) — nguyên nhân phổ biến gây nhiễu nhạc (musical noise). Sai số trọng số trong lớp tích chập còn được các lớp phía sau làm mượt bớt, nhưng sai số ở đầu ra gain lại nhân thẳng vào các bin STFT rồi được cộng dồn ở bước overlap-add. Vì vậy, cần hiệu chuẩn cẩn thận và nghe kiểm tra trực tiếp đầu ra gain, kể cả khi giữ riêng nhánh này ở `float32`.
+
+## Khung giải thích: Tính tay sai số lượng tử hóa theo thang dB và bẫy Per-Tensor (nên đọc chậm)
+
+### Phép tính 1: Quy đổi sai số lượng tử hóa INT8 sang decibel trên 4 bin mẫu
+Với $$s = 1/127 \approx 0{,}007874$$, hãy lập bảng kiểm tra từng phần tử của véctơ $$g = [1{,}0,\; 0{,}5,\; 0{,}02,\; 0{,}004]$$ và tính sai số cảm thụ $$\Delta\text{dB} = 20\log_{10}(\hat{g}/g)$$:
+
+| Gain thật $$g$$ | $$g / s$$ | Mã nguyên $$q$$ | Gain khôi phục $$\hat{g} = s\,q$$ | Sai số tuyệt đối $$\vert \hat{g} - g \vert$$ | Sai số theo dB ($$20\log_{10}(\hat{g}/g)$$) |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| $$1{,}000$$ | $$127{,}00$$ | $$127$$ | $$1{,}0000$$ | $$0{,}0000$$ | $$0{,}00\text{ dB}$$ (chính xác) |
+| $$0{,}500$$ | $$63{,}50$$ | $$64$$ | $$0{,}5039$$ | $$0{,}00394$$ | $$+0{,}07\text{ dB}$$ (không nghe thấy) |
+| $$0{,}020$$ | $$2{,}54$$ | $$3$$ | $$0{,}0236$$ | $$0{,}00362$$ | $$+1{,}45\text{ dB}$$ (bắt đầu nhận ra) |
+| $$0{,}004$$ | $$0{,}508$$ | $$1$$ | $$0{,}00787$$ | $$0{,}00387$$ | **$$+5{,}88\text{ dB}$$** (rò rỉ nhiễu rõ rệt!) |
+
+Hãy nhìn cột cuối cùng: dù sai số tuyệt đối ở $$0{,}500$$ còn *lớn hơn* ở $$0{,}004$$ một chút ($$0{,}00394$$ so với $$0{,}00387$$), nhưng trên thang logarit mà tai người nghe, bin $$0{,}004$$ bị khuếch đại vọt gần **+6 dB** (gấp đôi biên độ, gấp bốn lần công suất nhiễu lọt qua!).
+
+### Phép tính 2: Vì sao Per-Channel thắng áp đảo Per-Tensor trên lớp tích chập?
+Giả sử một lớp `Conv` có 2 kênh: kênh 0 có trọng số cực đại $$4{,}0$$, còn kênh 1 chỉ có trọng số cực đại $$0{,}1$$.
+- **Lượng tử hóa Per-Tensor (dùng chung một $$s$$):** $$s = 4{,}0 / 127 \approx 0{,}0315$$. Toàn bộ kênh 1 bị ép vào chỉ $$\lfloor 0{,}1 / 0{,}0315 \rfloor = 3$$ mức số nguyên $$\{-3, -2, -1, 0, 1, 2, 3\}$$ — mất hơn **5 bit** độ phân giải!
+- **Lượng tử hóa Per-Channel (mỗi kênh một $$s_c$$):** Kênh 0 dùng $$s_0 = 4{,}0/127$$, còn kênh 1 dùng $$s_1 = 0{,}1/127 \approx 0{,}000787$$ — giữ trọn vẹn cả 255 mức INT8 cho kênh 1!
 
 ### Các phương pháp lượng tử hóa
 
@@ -108,8 +145,8 @@ max_abs_error=0.00393701
 
 **Lỗi thường gặp**
 
-- Chia nhầm cho \(128\): biên dương của kiểu INT8 có dấu là \(127\), nên mã đầy thang phải là \(127\) chứ không phải \(128\).
-- Chỉ kiểm tra sai số tương đối trên bin \(1.0\) rồi kết luận bộ lượng tử hóa vô hại, trong khi bin \(0.004\) mới là trường hợp tiêu biểu của khử nhiễu giọng nói.
+- Chia nhầm cho $$128$$: biên dương của kiểu INT8 có dấu là $$127$$, nên mã đầy thang phải là $$127$$ chứ không phải $$128$$.
+- Chỉ kiểm tra sai số tương đối trên bin $$1.0$$ rồi kết luận bộ lượng tử hóa vô hại, trong khi bin $$0.004$$ mới là trường hợp tiêu biểu của khử nhiễu giọng nói.
 - Lượng tử hóa trước khi đồng bộ chuẩn hóa STFT, khiến độ lệch dù chỉ một bin tần số bị đóng cứng vào hệ số tỉ lệ.
 - Nhầm lẫn rằng bài lab minh họa dùng cùng cơ chế zero-point với bộ lượng tử hóa tĩnh của ORT trong sản phẩm; công cụ thực tế có thể dùng lược đồ affine có zero-point, còn bài lab chủ đích dùng lược đồ đối xứng.
 
@@ -122,19 +159,19 @@ max_abs_error=0.00393701
 
 ## Bài tập
 
-1. Tính lại hệ số tỉ lệ đối xứng cho tập trọng số nằm trong khoảng \([-0.8,\ 0.8]\). Giá trị \(s\) bằng bao nhiêu và \(0.8\) ánh xạ sang mã nguyên nào?
+1. Tính lại hệ số tỉ lệ đối xứng cho tập trọng số nằm trong khoảng $$[-0.8,\ 0.8]$$. Giá trị $$s$$ bằng bao nhiêu và $$0.8$$ ánh xạ sang mã nguyên nào?
 2. Liệt kê 8 loại đoạn âm thanh cần có trong một tập hiệu chuẩn sau huấn luyện kiểu Mezon.
 3. Thiết kế một phiếu đánh giá nghe mù so sánh bản `float` với bản INT8, trong đó có ít nhất hai điều kiện kiểm tra vùng gain gần 0 (giọng nói nhỏ và nền nhiễu).
 4. Tra cứu tài liệu chính thức của ONNX Runtime và nêu tên điểm vào (entry point) cho tác vụ lượng tử hóa mà bạn sẽ sử dụng (chưa cần chạy thực tế).
-5. Dựa trên bin \(0.004\) trong bài mini-lab, giải thích vì sao tầng xuất gain là ứng viên kém phù hợp cho lượng tử hóa INT8 mạnh, ngay cả khi các lớp tích chập vẫn lượng tử hóa tốt.
+5. Dựa trên bin $$0.004$$ trong bài mini-lab, giải thích vì sao tầng xuất gain là ứng viên kém phù hợp cho lượng tử hóa INT8 mạnh, ngay cả khi các lớp tích chập vẫn lượng tử hóa tốt.
 
 ### Gợi ý đáp án
 
-1. \(s = 0.8 / 127\). Vì \(0.8\) là giá trị tuyệt đối lớn nhất, nó ánh xạ tới mã \(127\). Không dùng \(255\) trừ khi chuyển sang lược đồ affine không dấu và nêu rõ quy ước.
+1. $$s = 0.8 / 127$$. Vì $$0.8$$ là giá trị tuyệt đối lớn nhất, nó ánh xạ tới mã $$127$$. Không dùng $$255$$ trừ khi chuyển sang lược đồ affine không dấu và nêu rõ quy ước.
 2. Tám loại đoạn âm thanh gồm: khoảng lặng, chỉ có nhiễu, giọng nói âm lượng lớn, tiếng nói thì thầm, tạp âm đám đông ở SNR thấp, tiếng gõ bàn phím không dừng, một âm đơn tần (tone), và đoạn mẫu có tiếng vọng dư.
 3. Sử dụng bài kiểm thử bắt buộc chọn (forced-choice), cân bằng âm lượng giữa hai mẫu, ẩn nhãn thuật toán và bổ sung tiêu chí đánh giá “nhiễu nhạc / giọng bị mỏng”.
 4. Bắt đầu từ mục lượng tử hóa trong tài liệu ONNX Runtime: sử dụng quy trình Static PTQ kèm một `CalibrationDataReader`. Tên lớp cụ thể có thể thay đổi theo phiên bản API, nên cần trích dẫn đúng trang tài liệu đang dùng.
-5. Giá trị \(0.004\) bị làm tròn lên xấp xỉ \(0.00787\), tức sai lệch tương đối gần gấp đôi áp thẳng lên một bin tần số. Khác với sai số trọng số ở các lớp ẩn vốn được các lớp sau lọc bớt, sai số trực tiếp trên mặt nạ gain sẽ đi thẳng ra tín hiệu âm thanh.
+5. Giá trị $$0.004$$ bị làm tròn lên xấp xỉ $$0.00787$$, tức sai lệch tương đối gần gấp đôi áp thẳng lên một bin tần số. Khác với sai số trọng số ở các lớp ẩn vốn được các lớp sau lọc bớt, sai số trực tiếp trên mặt nạ gain sẽ đi thẳng ra tín hiệu âm thanh.
 
 ## Đọc thêm
 

@@ -11,7 +11,11 @@ lesson_type: required
 draft: false
 ---
 
+Trong giới kỹ thuật âm thanh có một câu đùa rất thật: *"Nếu muốn thuật toán mới của bạn thắng trong buổi nghe thử nội bộ, chỉ cần vặn âm lượng của nó to hơn bản cũ đúng 2 decibel!"* Nghe có vẻ khó tin, nhưng đó là một thiên lệch tâm lý–thính giác đã được chứng minh hàng chục năm nay: tai người có xu hướng đánh giá âm thanh to hơn là "rõ hơn, đầy đặn hơn" — ngay cả khi chất lượng xử lý của nó tệ hơn. Nếu không kiểm soát chặt độ lớn âm lượng, không ẩn nhãn và không tách kết quả theo từng điều kiện, buổi nghe thử sẽ chỉ xác nhận lại định kiến sẵn có của chính bạn.
+
 Chỉ số SI-SDR có thể vẫn cao dù giọng nói nghe bị kim loại, còn DNSMOS có thể chấm lệch ngay trên miền dữ liệu người dùng thực tế. Bài kiểm thử lắng nghe (listening test) là trụ cột giúp phát hiện cả hai sai sót đó, với điều kiện bạn kiểm soát chặt độ lớn âm lượng (loudness), thứ tự phát và danh mục mẫu âm thanh. Bạn không cần một phòng lab đạt chứng nhận ITU để áp dụng kỷ luật này; điều quan trọng là có quy trình văn bản rõ ràng, ẩn nhãn hệ thống và bảng kết quả cho phép phương án mới có thể thua. Bài học này trình bày thiết kế bài kiểm thử mù AB (hoặc thang điểm kiểu MUSHRA thu gọn) dành cho nhóm kỹ sư đang cân nhắc thay đổi `setSuppressionLevel` trên `DeepFilterNoiseFilterProcessor`.
+
+**Mạch bài học:** Thiên lệch âm lượng trong nghe thử → Bản đồ kiến thức nền (Thử nghiệm mù & Xáo trộn, Chuẩn hóa độ lớn LUFS/RMS, Thiết kế phân tầng & Kiểm tra tập trung) → Chọn giữa Dogfood, AB, ABC và MUSHRA thu gọn → Ma trận 5 điều kiện nhiễu & bảng kết quả thắng/thua/hòa → Khung giải thích tính tay hệ số chuẩn hóa âm lượng LUFS và bẫy gộp trung bình bảng AB → Mini-lab và Bài tập.
 
 ![Bản đồ đánh giá với cột nghe người]({{ site.imgurl }}/generated/eval-metric-map.png)
 
@@ -20,6 +24,20 @@ Chỉ số SI-SDR có thể vẫn cao dù giọng nói nghe bị kim loại, cò
 ## Mục tiêu học tập
 
 Sau bài học này, bạn sẽ chọn được hình thức đánh giá phù hợp giữa AB và thang kiểu MUSHRA thu gọn, chuẩn hóa độ lớn âm lượng, xáo trộn thứ tự mẫu, soạn hướng dẫn người nghe song ngữ Anh – Việt, báo cáo kết quả thắng/thua/hòa tách riêng theo từng điều kiện, và phân biệt được khi nào chỉ cần dùng thử nội bộ (dogfood) một ngày là đủ.
+
+## Bản đồ kiến thức nền: Kỷ luật khoa học thực nghiệm trong đánh giá thính giác
+
+### 1. Thiết kế mù (Blinding) và Xáo trộn ngẫu nhiên (Randomization)
+- **Là gì:** Ẩn hoàn toàn tên hệ thống ("Hệ 1 / Hệ 2" thay vì "DF3-80 / Cũ") và đảo ngẫu nhiên vị trí A/B trên từng đoạn âm thanh để triệt tiêu hiệu ứng kỳ vọng (confirmation bias) và thói quen bấm một bên.
+- **Nghiên cứu gì:** Biến cảm nhận chủ quan thành dữ liệu thực nghiệm đáng tin cậy ngay cả ở quy mô nhóm 5–10 người trong văn phòng.
+
+### 2. Kiểm soát biến nhiễu vật lý: Chuẩn hóa độ lớn âm lượng (Loudness Normalization)
+- **Là gì:** Đưa tất cả các tệp so sánh về cùng một mức độ lớn tích hợp (integrated loudness, ví dụ $$-23\text{ LUFS}$$ theo chuẩn phát thanh EBU R128) trước khi phát qua cùng một chuỗi thiết bị.
+- **Nghiên cứu gì:** Loại bỏ thiên lệch "to hơn = hay hơn" và đảm bảo người chấm thực sự so sánh độ rõ phụ âm, độ tự nhiên và nhiễu nền chứ không so sánh mức khuếch đại đầu ra.
+
+### 3. Phân tầng điều kiện (Stratified Reporting) và Attention Check
+- **Là gì:** Thiết kế ma trận mẫu có cả mẫu đối chứng phòng yên tĩnh, lặp lại ngẫu nhiên 2 cặp đảo nhãn để sàng lọc người chấm mất tập trung, và báo cáo thắng/thua/hòa riêng cho từng điều kiện.
+- **Nghiên cứu gì:** Ngăn chặn lỗi gộp trung bình che giấu điểm yếu nghiêm trọng (ví dụ thắng ở tiếng gõ phím nhưng lại làm méo giọng ở quán cà phê hay phòng yên tĩnh).
 
 ## Chọn quy trình khớp với quyết định kỹ thuật
 
@@ -42,6 +60,19 @@ Luôn đưa vào các đoạn giọng nói sạch làm mẫu đối chứng. M�
 | Phòng yên tĩnh | Đối chứng | Laptop | Phát hiện hiện tượng khử quá tay |
 
 Một bài kiểm thử nhóm nhỏ thường gồm 8–15 đoạn âm thanh và 5–10 người chấm (luôn ghi rõ số lượng $$N$$ trong bảng). Lặp lại ngẫu nhiên 2 đoạn với nhãn A/B đảo ngược làm bài kiểm tra mức độ tập trung (attention check); nếu người chấm tự mâu thuẫn trên cả hai cặp lặp, loại phiếu đó ra và ghi chú minh bạch. Khi người chấm sử dụng tiếng Việt, hãy dịch tờ hướng dẫn sang tiếng Việt tự nhiên với cùng hệ tiêu chí: ưu tiên phụ âm rõ ràng, giọng nói tự nhiên, ít tạp âm gây xao nhãng; đồng thời chấm trừ các lỗi giọng bị nghẹt, âm sắc robot hoặc mất từ, và dặn người nghe bỏ qua sai khác âm lượng nhỏ nếu còn sót.
+
+## Khung giải thích: Tính tay hệ số chuẩn hóa âm lượng và đọc bảng kết quả AB phân tầng (nên đọc chậm)
+
+### Phép tính 1: Chuẩn hóa hai tệp lệch 3 dB về cùng mức đích $$-23\text{ LUFS}$$
+Giả sử tệp A đo được độ lớn tích hợp $$L_A = -26\text{ LUFS}$$ còn tệp B đo được $$L_B = -23\text{ LUFS}$$. Nếu phát thẳng không chuẩn hóa, tệp B có công suất gấp $$10^{3/10} \approx \mathbf{2{,}0\text{ lần}}$$ tệp A — người nghe sẽ thiên vị B ngay cả khi hai tệp giống hệt nhau!
+Để đưa tệp A về đúng mức đích $$L_{\text{target}} = -23\text{ LUFS}$$, ta nhân toàn bộ mẫu của tệp A với hệ số biên độ:
+$$ g_A = 10^{(L_{\text{target}} - L_A)/20} = 10^{(-23 - (-26))/20} = 10^{3/20} \approx \mathbf{1{,}4125}. $$
+(Trước khi lưu WAV, kiểm tra thêm đỉnh cực đại $$\max_n \vert g_A x_A[n] \vert < 1{,}0$$ để chắc chắn phép nhân không gây cắt ngọn / clipping!).
+
+### Phép tính 2: Vì sao không bao giờ được gộp bảng AB thành một tỉ lệ thắng duy nhất?
+Xét bảng kết quả ngay bên dưới ($$N = 10$$ người chấm cho mỗi điều kiện, tổng $$30$$ lượt chấm):
+- **Nếu gộp chung cả 3 hàng:** Mới thắng $$7 + 4 + 3 = \mathbf{14}$$ lượt, Cũ thắng $$2 + 5 + 2 = \mathbf{9}$$ lượt, Hòa $$1 + 1 + 5 = \mathbf{7}$$ lượt. Nhìn con số tổng `14–9–7` (tỉ lệ thắng ròng 61% không tính hòa), nhiều người sẽ vội vã bấm nút phát hành!
+- **Khi tách riêng từng hàng:** Ở **Quán cà phê**, hệ thống mới **thua 4–5**! Nếu người dùng ứng dụng của bạn họp nhiều ở quán cà phê hoặc không gian mở, việc phát hành cấu hình này sẽ làm tệ đi chính kịch bản quan trọng nhất. Phân tầng giúp bạn quyết định đúng: giữ mặc định cũ hoặc thử một mức khử trung gian (ví dụ 70 thay vì 80).
 
 ## Cách trình bày báo cáo kết quả
 

@@ -13,6 +13,47 @@ draft: false
 
 Khử nhiễu về bản chất là bài toán lọc trong điều kiện không chắc chắn. Đôi khi hệ thống dùng bộ lọc FIR/IIR ở miền thời gian, đôi khi nhân hệ số độ lợi trên từng bin STFT, và đôi khi mạng nơ-ron trực tiếp dự đoán các hệ số lọc đó. Bài học này đối chiếu hai miền xử lý để lựa chọn công cụ đúng mục đích: một đáp ứng xung cố định tương ứng với phép tích chập, còn độ lợi khử nhiễu theo bin là một hệ số thay đổi ở mỗi khung — như minh họa trong hình dưới đây.
 
+
+Muốn lọc bỏ tiếng ù trầm dưới 80 Hz trong một đoạn ghi âm, bạn có hai lựa chọn hoàn toàn khác nhau: hoặc cài một **bộ lọc số FIR/IIR** chạy trực tiếp từng mẫu trong miền thời gian, hoặc biến đổi sang miền tần số bằng **STFT**, hạ hệ số các bin dưới 80 Hz về 0 rồi biến đổi ngược lại! Hai con đường ấy có tương đương nhau không, khi nào nên lọc miền thời gian và khi nào lọc miền tần số thắng thế? Bài học này soi rõ bản chất đại số của phép lọc ở cả hai miền.
+
+---
+
+## Bản đồ kiến thức nền: Lọc Miền thời gian và Miền tần số đứng trên ba trụ cột nào?
+
+### 1. Hệ thống LTI và Đáp ứng xung (FIR vs. IIR)
+Trong miền thời gian, một bộ lọc tuyến tính bất biến theo thời gian (LTI) được đặc trưng bởi đáp ứng xung $$h[n]$$ qua phép tích chập $$y[n] = \sum_k h[k]\,x[n-k]$$:
+- **FIR (Finite Impulse Response):** Chỉ dùng các mẫu đầu vào quá khứ — **luôn ổn định**, dễ thiết kế **pha tuyến tính** (không làm méo dạng sóng), nhưng muốn cắt dốc sắc cần bậc $$M$$ lớn.
+- **IIR (Infinite Impulse Response — như Butterworth, Biquad):** Có hồi tiếp đầu ra quá khứ — cắt dốc cực sắc chỉ với bậc 2–4 (rất ít phép nhân, độ trễ gần như 0 mẫu!), nhưng có pha phi tuyến và cần kiểm tra ổn định (các cực nằm trong vòng tròn đơn vị).
+
+### 2. Lọc Miền tần số (Overlap-Add / Overlap-Save) và Độ phức tạp tính toán
+Với bộ lọc dài $$M$$ (ví dụ mô phỏng tiếng vang phòng dài 2.000 mẫu), tích chập trực tiếp miền thời gian tốn $$O(M)$$ phép nhân cho **mỗi mẫu** (rất chậm), trong khi dùng FFT + nhân phổ + IFFT theo khối chỉ tốn $$O(\log N)$$ phép nhân/mẫu!
+
+### 3. Lọc Thời biến (Time-Varying Filtering) trong Khử nhiễu
+Tiếng nói và nhiễu thay đổi theo từng khung 10 ms, nên hệ thống khử nhiễu thực chất là **bộ lọc thay đổi theo thời gian**: mặt nạ STFT $$M(m, k)$$ (hoặc bộ lọc phức ngắn đa khung của DeepFilterNet) cập nhật hệ số mới ở mỗi khung $$m$$.
+
+---
+
+### Khung giải thích: tự tay kiểm tra bộ lọc thông thấp FIR 3 điểm ở cả hai miền (nên đọc chậm)
+
+Xét bộ lọc trung bình trượt FIR 3 điểm cực đơn giản:
+
+$$
+y[n] = \frac{1}{3}\bigl(x[n] + x[n-1] + x[n-2]\bigr) \qquad \Bigl(h = \bigl[\tfrac{1}{3},\ \tfrac{1}{3},\ \tfrac{1}{3}\bigr]\Bigr).
+$$
+
+1. **Chạy trực tiếp miền thời gian trên 2 tín hiệu cực đoan (từ $$n \ge 2$$):**
+   - Tín hiệu chậm nhất — **DC ($$\omega = 0$$)** $$x = [1, 1, 1, 1, \dots]$$:
+     $$y[n] = \frac{1}{3}(1 + 1 + 1) = \mathbf{1}$$ (đi qua trọn vẹn $$100\%$$, suy giảm $$0\text{ dB}$$).
+   - Tín hiệu nhanh nhất — **Nyquist ($$\omega = \pi$$)** $$x = [1, -1, 1, -1, \dots]$$:
+     $$y[2] = \frac{1}{3}(1 - 1 + 1) = \mathbf{+\frac{1}{3}}, \qquad y[3] = \frac{1}{3}(-1 + 1 - 1) = \mathbf{-\frac{1}{3}}$$
+     (biên độ bị nén còn đúng $$\frac{1}{3}$$, tức giảm $$20\log_{10}(1/3) \approx \mathbf{-9.54\text{ dB}}$$!).
+2. **Kiểm tra chéo bằng đáp ứng tần số $$H(e^{j\omega}) = \frac{1}{3}(1 + e^{-j\omega} + e^{-j2\omega})$$:**
+   - Tại $$\omega = 0$$: $$|H(e^{j0})| = \frac{1}{3}|1 + 1 + 1| = \mathbf{1}$$.
+   - Tại $$\omega = \pi$$: $$|H(e^{j\pi})| = \frac{1}{3}|1 - 1 + 1| = \mathbf{\frac{1}{3}}$$.
+   - Tại $$\omega = \frac{2\pi}{3}$$ (tức $$f = f_s / 3$$): $$1 + e^{-j2\pi/3} + e^{-j4\pi/3} = \mathbf{0}$$ — bộ lọc **triệt tiêu tuyệt đối 100%** đúng tần số $$f_s/3$$!
+
+---
+
 ## Mục tiêu học tập
 
 1. Đối chiếu lọc LTI miền thời gian với phép nhân độ lợi trong miền STFT.

@@ -17,6 +17,23 @@ Some products cannot spend DeepFilterNet2’s notebook budget. The names **GTCRN
 
 *Figure. RTF is wall time divided by audio time. A 128-sample AudioWorklet quantum at 48 kHz lasts about 2.67 ms. An ultra-light model is one whose p95 wall time fits the hop you actually run, on the CPU you actually ship. GTCRN, FastEnhancer, μNet, and Fast-ULCNet are names only on this figure — no paper, year, or URL.*
 
+A noise-suppression model that scores a dazzling 21 dB SI-SDR on an offline benchmark can be completely unusable on a live Zoom or Mezon call. Why? Because offline models peek 500 milliseconds into the future and burn 40 GFLOPs per second on a desktop GPU—whereas a live call inside a laptop browser tab gives you roughly **20–40 milliseconds of total algorithmic latency** and a tiny slice of a single CPU core!
+
+This lecture introduces the engineering art of **ultra-light streaming speech enhancement models**: how strict causality, compact STFT front-ends, depthwise-separable convolutions, and small recurrent bottlenecks squeeze high-quality denoising into a few hundred thousand parameters running smoothly in real time.
+
+---
+
+## Background Knowledge Map: Four Pillars of Ultra-Light Streaming Audio Models
+
+Designing a neural audio model that runs live on CPU/WASM rests on four interlocking constraints:
+
+1. **Strict Causality & Algorithmic Latency:** A streaming model cannot see future audio beyond a tiny budgeted lookahead $$L$$. Total algorithmic latency equals the STFT synthesis window (or frame + overlap-add delay) plus any neural lookahead—typically capped below 30–40 ms so human conversation stays natural.
+2. **Compute Complexity (MACs/sec) vs. Parameter Count:** Parameter count governs *download size* and *RAM*, while **multiply-accumulate operations per second (MACs/s)** govern CPU time. A small 1D convolution run 100 times per second can cost fewer MACs than a tiny dense layer applied to every frequency bin.
+3. **Hybrid DSP + Neural Decomposition:** Instead of forcing a neural network to learn Fourier physics from raw waveforms, ultra-light architectures operate on STFT magnitudes or perceptually spaced filterbanks (ERB/Bark), letting the network predict smooth gain masks or small complex residuals.
+4. **Depthwise-Separable & Grouped Recurrence:** Replacing full 2D convolutions with depthwise + pointwise layers and using grouped GRUs cuts MACs by 5–10× with minimal loss in speech intelligibility.
+
+---
+
 ## Learning objectives
 
 You will explain, with the DeepFilterNet2 table as the worked example, why GMAC and RTF can move in opposite directions; place the four ultra-light names on a selection checklist without inventing their results; and design a long-stream state check that does not depend on any of those papers.
@@ -108,6 +125,32 @@ PY
 **Expected**. `DF ICASSP row: gmac=0.348 rtf=0.11 rtf_per_gmac=0.316` and `DF2 simplified: gmac=0.356 rtf=0.04 rtf_per_gmac=0.112`. Then `lower_p95_rtf modelB`. Model B has more MACs and a lower RTF, which is the selection rule.
 
 **Failure modes**. Treating the fake pair as GTCRN or FastEnhancer results. Quoting 0.04 as a phone RTF. Ranking on `rtf_per_gmac` alone when one model’s p95, not its mean, misses the hop.
+
+---
+
+### Worked Numerical Example: Budgeting Latency and MACs/sec for a 48 kHz Streaming Denoiser
+
+Suppose we design a causal STFT denoiser at sample rate $$f_s = 48{,}000	ext{ Hz}$$ with window length $$N = 960$$ samples, hop size $$H = 480$$ samples (50% overlap), and $$L = 1$$ frame of lookahead in the neural network:
+
+1. **Frame duration & frame rate:**
+   $$T_{	ext{win}} = rac{960}{48{,}000} = 20	ext{ ms}, \qquad T_{	ext{hop}} = rac{480}{48{,}000} = 10	ext{ ms} \implies 100	ext{ frames/s}.$$
+2. **Total algorithmic latency:**
+   $$T_{	ext{alg}} = T_{	ext{win}} + L \cdot T_{	ext{hop}} = 20	ext{ ms} + 1 	imes 10	ext{ ms} = 30	ext{ ms}$$
+   *(still well below the ~150 ms ITU-T G.114 one-way conversational comfort threshold, leaving room for network + jitter buffer!)*.
+3. **Compute rate:** Suppose each forward pass on one STFT frame costs $$1.5	ext{ MMACs}$$ (1.5 million multiply-adds). At 100 frames/s:
+   $$	ext{Compute rate} = 100 	imes 1.5	ext{ MMAC} = 150	ext{ MMAC/s} pprox 300	ext{ MFLOP/s}.$$
+   On a single browser WASM core sustaining ~3 GFLOP/s, the model consumes roughly $$300 / 3000 = 10\%$$ of the frame budget ($$\mathrm{RTF} pprox 0.10$$)!
+
+### Deep-Dive Explanation: Four Rules for Designing Real-Time Streaming Models (Read Slowly)
+
+1. **Always separate *algorithmic* latency from *compute* latency:** Even on an infinitely fast CPU, a 20 ms STFT window plus 2 frames of lookahead (20 ms) still introduces 40 ms of unavoidable delay.
+2. **Halving the hop size doubles your CPU bill:** Dropping $$H$$ from 10 ms to 5 ms cuts latency by 5 ms, but doubles the neural network frame rate from 100 to 200 calls per second!
+3. **Inspect activation memory, not just weight size:** A model with only 200 KB of weights can still stall CPU caches if intermediate feature maps explode across frequency bins.
+4. **Profile end-to-end (STFT + neural net + iSTFT):** On ultra-light models, FFTs, windowing, and data marshaling can easily account for 20–30% of total wall-clock time.
+
+**Quick check.** If we double the neural lookahead from $$L = 1$$ frame to $$L = 3$$ frames (keeping $$T_{	ext{win}} = 20	ext{ ms}$$ and $$T_{	ext{hop}} = 10	ext{ ms}$$), what is the new algorithmic latency—and does the MACs/sec compute cost change?
+
+---
 
 ## Exercises
 

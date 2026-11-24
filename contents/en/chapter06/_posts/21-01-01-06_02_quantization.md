@@ -17,6 +17,23 @@ draft: false
 
 *Figure. Quantization happens before the WASM the browser loads.*
 
+A full-precision `FP32` speech denoiser takes 4 bytes for every single weight. Shrink those weights down to 8-bit integers (`INT8`), and two magical things happen simultaneously: your model download shrinks by **4×** (so it loads in a blink over mobile networks and fits inside CPU L2 cache), and modern SIMD instructions (`VNNI`, `NEON dotprod`, `WASM SIMD`) can crunch **2–4× more multiply-adds per clock cycle**!
+
+Yet naive quantization can wreck a speech model—turning soft background silence into audible buzzing or crushing quiet consonants because audio features span a huge dynamic range in decibels. This lecture walks through the exact math of **symmetric & affine INT8 quantization**, compares **PTQ (Post-Training Quantization)** vs. **QAT (Quantization-Aware Training)**, and shows which sensitive layers (like final gain heads) are best left in `FP32`.
+
+---
+
+## Background Knowledge Map: Fixed-Point Arithmetic and Quantization Noise in Audio
+
+Four mathematical concepts explain when quantization shines and when it breaks speech quality:
+
+1. **Affine & Symmetric Mapping:** Quantization maps a real value $$x \in [x_{\min}, x_{\max}]$$ to an integer $$q \in [-127, 127]$$ via $$q = \operatorname{round}(x / s) + z$$ and reconstructs $$\hat{x} = s(q - z)$$. **Symmetric quantization** sets zero-point $$z = 0$$ (ideal for zero-centered weights, eliminating cross-terms in integer matrix multiplication).
+2. **Quantization Noise & SQNR:** Rounding introduces uniform error $$e = \hat{x} - x \in [-s/2, +s/2]$$ with variance $$s^2/12$$. For 8-bit uniform quantization, peak Signal-to-Quantization-Noise Ratio (SQNR) is roughly $$6.02 	imes 8 pprox 48	ext{ dB}$$—plenty for intermediate weights, but tight if an extreme outlier stretches $$s$$!
+3. **Per-Channel vs. Per-Tensor Scaling:** Giving each output channel its own scale $$s_c$$ prevents one large-magnitude channel from blowing up the quantization step size for 63 quiet channels.
+4. **PTQ vs. QAT & Mixed Precision:** Dynamic/static **PTQ** requires no retraining; **QAT** inserts fake-quantization nodes during fine-tuning so weights adapt to rounding noise. Keeping input/output gain heads in `FP32` while quantizing heavy `Conv`/`GRU` bodies often yields 95% of the speedup with zero audible degradation.
+
+---
+
 ## Learning objectives
 
 You will distinguish dynamic and static INT8 quantization, compute a symmetric scale and the maximum absolute error on a gain vector, explain why bins whose gain is near zero dominate audible damage, and design an A/B listening plus SI-SDR gate before shipping quantized weights.
@@ -117,6 +134,43 @@ max_abs_error=0.00393701
 - Shipping INT8 with no written quality delta for support.
 - Ignoring overflow in state tensors.
 - Treating a smaller `.tar.gz` as proof the AudioWorklet meets its budget.
+
+---
+
+### Worked Numerical Example: Hand-Quantizing a 4-Weight Vector to Symmetric INT8
+
+Take a tiny weight vector from a speech denoiser layer:
+
+$$\mathbf{w} = [-0.80,\; -0.15,\; 0.42,\; 0.95].$$
+
+1. **Compute the symmetric INT8 scale factor $$s$$** (mapping $$\max\lvert w_i
+vert = 0.95$$ to $$127$$):
+   $$s = rac{0.95}{127} pprox 0.0074803.$$
+2. **Quantize each weight** $$q_i = \operatorname{round}(w_i / s)$$ and **dequantize** $$\hat{w}_i = s \cdot q_i$$:
+
+| Original $$w_i$$ | $$w_i / s$$ | Quantized $$q_i$$ (`i8`) | Dequantized $$\hat{w}_i = s q_i$$ | Error $$e_i = \hat{w}_i - w_i$$ |
+| :--- | :--- | :--- | :--- | :--- |
+| $$-0.80$$ | $$-106.95$$ | $$-107$$ | $$-0.8004$$ | $$-0.0004$$ |
+| $$-0.15$$ | $$-20.05$$ | $$-20$$ | $$-0.1496$$ | $$+0.0004$$ |
+| $$+0.42$$ | $$+56.15$$ | $$+56$$ | $$+0.4189$$ | $$-0.0011$$ |
+| $$+0.95$$ | $$+127.00$$ | $$+127$$ | $$+0.9500$$ | $$0.0000$$ |
+
+3. **Compute the exact SQNR in decibels:**
+   - Signal energy: $$\sum w_i^2 = 0.64 + 0.0225 + 0.1764 + 0.9025 = 1.7414$$.
+   - Quantization error energy: $$\sum e_i^2 pprox 1.6	imes 10^{-7} + 1.6	imes 10^{-7} + 1.21	imes 10^{-6} + 0 = 1.53	imes 10^{-6}$$.
+   - $$\mathrm{SQNR} = 10\log_{10}\!\left(rac{1.7414}{1.53	imes 10^{-6}}
+ight) pprox \mathbf{60.6	ext{ dB}}$$ — virtually indistinguishable from `FP32`, while cutting storage by **4×** (from 16 bytes to 4 bytes + 1 scale float)!
+
+### Deep-Dive Explanation: Four Rules for Quantizing Speech Models Safely (Read Slowly)
+
+1. **Always use *per-channel* quantization for Conv/Linear weights:** A single outlier filter in a convolutional layer can degrade SQNR by 15+ dB under per-tensor scaling.
+2. **Calibrate activations on realistic noisy + quiet audio:** If you calibrate static PTQ only on loud clean speech, quiet silence frames and sudden loud transient claps will clip or buzz in production.
+3. **Protect the final sigmoid/mask head in `FP32`:** The final output layer costs less than 2% of total MACs, yet small rounding errors in gains near $$0.01$$ ($$-40	ext{ dB}$$) create audible "musical noise" during speech pauses.
+4. **Verify quantization with both SI-SDR/DNSMOS *and* real headphone listening:** Numbers can stay flat while subtle high-frequency hiss creeps into silence—always listen to quiet-tail segments!
+
+**Quick check.** In our 4-weight vector above, suppose one extra outlier weight $$w_5 = 9.50$$ (10× larger!) were added to the same tensor under *per-tensor* symmetric INT8 quantization. How would the scale factor $$s$$ change, and what would happen to the precision of the small weight $$-0.15$$?
+
+---
 
 ## Exercises
 

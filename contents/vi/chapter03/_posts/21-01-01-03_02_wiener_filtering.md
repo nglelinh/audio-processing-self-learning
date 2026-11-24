@@ -19,6 +19,40 @@ Nếu trừ phổ xử lý theo hướng "trừ rồi kẹp sàn", thì **bộ l
 
 Đây là cầu nối tự nhiên giữa trừ phổ cổ điển và các mô hình tăng cường tiếng nói mạng nơ-ron dựa trên mặt nạ: họ DeepFilterNet có thể được nhìn nhận như phiên bản học sâu của độ lợi Wiener thời gian–tần số với đặc trưng giàu thông tin hơn và bộ lọc đa khung. Bài học này trình bày trực giác MMSE, phân biệt SNR tiên nghiệm và hậu nghiệm, cơ chế theo dõi decision-directed và ứng dụng lọc Wiener trong các hệ thống VoIP.
 
+Nếu trừ phổ giống như cầm chiếc kéo cắt phẳng mọi phần nhô lên khỏi mặt sàn nhiễu, thì **bộ lọc Wiener** lại giống một người thợ chỉnh âm tinh tế vặn chiếc chiết áp liên tục trên từng dải tần: hễ nơi nào tiếng nói áp đảo nhiễu, chiết áp mở gần tối đa; nơi nào nhiễu lấn át tiếng nói, chiết áp hạ êm xuống gần $$0$$ mà không bao giờ tạo ra vết cắt sắc lẹm. Kỳ diệu ở chỗ, công thức độ lợi mượt mà $$G = \frac{\xi}{1+\xi}$$ không phải là một mẹo đặt tay cảm tính, mà là nghiệm tối ưu duy nhất của bài toán bình phương sai số trung bình cực tiểu (MMSE) trong lý thuyết xác suất.
+
+## Bản đồ kiến thức nền: Từ hình học không gian Hilbert đến bộ lọc Wiener thời gian–tần số
+
+### 1. Tiêu chí MMSE và nguyên lý trực giao (Orthogonality Principle)
+Trong lý thuyết ước lượng thống kê, nếu muốn tìm một hệ số thực $$G$$ sao cho tín hiệu ước lượng $$\hat{S} = G \cdot Y$$ gần tín hiệu sạch $$S$$ nhất theo nghĩa sai số bình phương trung bình $$E[\vert S - G Y \vert^2]$$ nhỏ nhất, điều kiện cần và đủ là sai số $$(S - G Y)$$ phải *trực giao* với dữ liệu quan sát $$Y$$: $$E[(S - G Y) Y^*] = 0$$. Khi $$S$$ và $$N$$ không tương quan, phương trình trực giao này rút gọn chỉ trong hai dòng đại số thành $$G = \frac{E[\vert S \vert^2]}{E[\vert S \vert^2] + E[\vert N \vert^2]} = \frac{\xi}{1 + \xi}$$, với $$\xi = \frac{E[\vert S \vert^2]}{E[\vert N \vert^2]}$$ là **SNR tiên nghiệm (a priori SNR)**.
+
+### 2. Phân biệt rạch ròi SNR tiên nghiệm $$\xi$$ và SNR hậu nghiệm $$\gamma$$
+Trong thực tế, ta không bao giờ biết trước công suất tiếng nói sạch $$E[\vert S \vert^2]$$. Thứ duy nhất đo được trực tiếp ở khung hiện tại là **SNR hậu nghiệm (a posteriori SNR)**: $$\gamma(\ell, k) = \frac{\vert Y(\ell, k) \vert^2}{\hat{\lambda}_N(\ell, k)}$$. Nếu vội vàng xấp xỉ $$\hat{\xi} = \max(\gamma - 1, 0)$$, ước lượng sẽ nhảy loạn xạ theo từng đỉnh nhiễu ngẫu nhiên và tái sinh nhiễu nhạc y hệt trừ phổ.
+
+### 3. Cơ chế Decision-Directed của Ephraim–Malah và cầu nối sang Deep Learning
+Năm 1984, Ephraim và Malah đưa ra một công thức đệ quy thiên tài gọi là **decision-directed (DD)**: kết hợp $$98\%$$ ước lượng mượt từ khung trước đó với chỉ $$2\%$$ quan sát tức thời ở khung hiện tại:
+$$\hat{\xi}(\ell, k) = \alpha\,\frac{\vert \hat{S}(\ell-1, k) \vert^2}{\hat{\lambda}_N(\ell, k)} + (1 - \alpha)\,\max(\gamma(\ell, k) - 1,\; 0), \qquad \alpha \approx 0{,}98.$$
+Nhờ bộ nhớ làm mượt này, độ lợi Wiener biến thiên êm ái, gần như triệt tiêu nhiễu nhạc. Và khi bước sang Chương 4, bạn sẽ thấy mặt nạ tỷ số lý tưởng (IRM) hay độ lợi ERB của DeepFilterNet thực chất chính là một mạng nơ-ron học cách dự đoán trực tiếp đường cong $$G(\ell, k)$$ thay vì tự tính $$\hat{\xi}$$ bằng công thức đệ quy.
+
+### Khung giải thích: Cầm tay tính độ lợi Wiener ở 3 mức SNR và kiểm chứng sức mạnh làm mượt của Decision-Directed (nên đọc chậm)
+
+**Phần A — Độ lợi Wiener tại 3 mức SNR tiên nghiệm:** áp dụng $$G = \frac{\xi}{1+\xi}$$ và đổi sang suy hao decibel $$20\log_{10} G$$:
+
+| Trạng thái ô STFT | SNR tiên nghiệm $$\xi$$ | Độ lợi Wiener $$G = \frac{\xi}{1+\xi}$$ | Suy hao biên độ (dB) | Hiệu ứng nghe |
+| :--- | :---: | :---: | :---: | :--- |
+| Tiếng nói mạnh ($$+10\text{ dB}$$) | $$10$$ | $$\frac{10}{11} \approx 0{,}909$$ | $$-0{,}83\text{ dB}$$ | Gần như nguyên vẹn |
+| Tiếng nói ngang nhiễu ($$0\text{ dB}$$) | $$1$$ | $$\frac{1}{2} = 0{,}500$$ | $$-6{,}02\text{ dB}$$ | Hạ đều một nửa biên độ |
+| Nhiễu áp đảo ($$-10\text{ dB}$$) | $$0{,}1$$ | $$\frac{0{,}1}{1{,}1} \approx 0{,}091$$ | $$-20{,}83\text{ dB}$$ | Nén sâu xuống dưới nền |
+
+**Phần B — Chuyện gì xảy ra khi một gai nhiễu bất ngờ xuất hiện trong khoảng lặng?**
+Giả sử khung trước đó đang yên lặng với $$\hat{\xi}_{\text{trước}} = 0{,}20$$. Đột ngột ở khung hiện tại, nhiễu ngẫu nhiên vọt lên khiến SNR hậu nghiệm đo được là $$\gamma = 4{,}0$$ (nên $$\max(\gamma - 1, 0) = 3{,}0$$):
+1. **Nếu tin hoàn toàn khung hiện tại (ML tức thời):**
+   $$\hat{\xi}_{\text{ML}} = 3{,}0 \implies G_{\text{ML}} = \frac{3{,}0}{1 + 3{,}0} = 0{,}750.$$
+   Bộ lọc đột ngột mở toang $$75\%$$ cho gai nhiễu lọt qua — tạo ngay một tiếng "tích" nhiễu nhạc!
+2. **Nếu dùng Decision-Directed với $$\alpha = 0{,}98$$:**
+   $$\hat{\xi}_{\text{DD}} = 0{,}98 \times 0{,}20 + 0{,}02 \times 3{,}0 = 0{,}196 + 0{,}060 = 0{,}256 \implies G_{\text{DD}} = \frac{0{,}256}{1{,}256} \approx 0{,}204.$$
+   Độ lợi chỉ nhích nhẹ lên $$0{,}204$$ (gần như không nghe thấy gai nhiễu). Nhưng nếu đó thực sự là một âm tiết tiếng nói bắt đầu kéo dài nhiều khung liên tiếp, $$\hat{\xi}_{\text{DD}}$$ sẽ tăng dần đều trong vài chục mili-giây — đổi lấy sự êm tai bằng một chút độ trễ đáp ứng ở đầu âm tiết.
+
 ## Mục tiêu học tập
 
 Sau bài học này, bạn sẽ suy ra được độ lợi Wiener miền tần số $$G = \xi/(1+\xi)$$ từ tiêu chí MMSE dưới giả định Gauss, phân biệt rõ SNR tiên nghiệm $$\xi$$ với SNR hậu nghiệm $$\gamma$$, viết được giả mã bộ theo dõi decision-directed và liên hệ độ lợi Wiener với mặt nạ mềm (soft mask) trong mạng nơ-ron tăng cường tiếng nói.

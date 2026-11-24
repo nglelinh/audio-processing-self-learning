@@ -17,6 +17,25 @@ On-device noise suppression almost always **exports** a trained graph to an infe
 
 *Figure. ONNX is the interchange file; tract or ORT executes it; the browser ultimately instantiates WASM.*
 
+Training a speech model in PyTorch is only half the journey—you cannot ship a 2-gigabyte PyTorch + Python installation inside a browser tab or a 5 MB mobile SDK! To cross from research notebook to production device, you export the computational graph to **ONNX (Open Neural Network Exchange)** and execute it with a dedicated inference engine—most commonly **ONNX Runtime (ORT)** in C++/WASM or **tract** in pure Rust.
+
+This lecture compares ONNX, ORT, and `tract` through a systems-engineering lens: how static shapes unlock zero-allocation execution plans, why operator coverage (especially GRUs, FFTs, and custom ops) decides which runtime you can pick, and how binary size trades off against peak SIMD throughput.
+
+---
+
+## Background Knowledge Map: Graph IRs, Static Execution Plans, and Runtime Trade-Offs
+
+Four systems principles guide your choice of inference runtime for real-time audio:
+
+1. **ONNX as a Portable Static Graph IR:** Exporting with `torch.onnx.export` freezes Python control flow into a typed DAG of standard operators (`Conv`, `GRU`, `MatMul`, `Add`) plus serialized constant weights.
+2. **Static Shapes Enable Pre-Allocated Memory Arenas:** For streaming audio, every frame has the *exact same shape* (e.g., `[1, 1, 257]`). Declaring fixed static shapes lets both ORT and `tract` compute an entire memory plan once at startup—achieving near-zero heap allocations inside the audio loop.
+3. **ONNX Runtime (ORT) vs. `tract` (Pure Rust):**
+   - **ORT:** Battle-tested C++ engine with rich hardware Execution Providers (CoreML, DirectML, NNAPI, WASM SIMD), wider op coverage, larger binary footprint (several MB).
+   - **`tract`:** Pure Rust, tiny self-contained binary (ideal for Rust native apps and lean WASM bundles), deterministic static planning (`into_optimized().into_runnable()`), slightly narrower op set.
+4. **Graph Fusion & Constant Folding:** Both runtimes fuse adjacent `Conv + BatchNorm + ReLU` or `MatMul + Add` nodes at load time, eliminating intermediate tensor writes to RAM.
+
+---
+
 ## Learning objectives
 
 You will explain ONNX as a speech-enhancement interchange format, compare ORT and tract for a browser product versus a Rust binary, list export pitfalls that show up only on a one-hop stream, and check whether a tensor shape is an image-style NCHW blob or a DeepFilter-style frame `[1, T, F]` before anyone calls a session.
@@ -107,6 +126,38 @@ for shape in [(1, 3, 224, 224), (1, 1, 96), (96,)]:
 - Assuming tract supports every model ORT accepts.
 - Copying Python ORT real-time factor numbers onto the WASM build.
 - Calling `createAudioWorkletNode` before `initialize()` has compiled the module. The core throws if you do.
+
+---
+
+### Worked Numerical Example: Counting Tensor I/O Overhead vs. Compute on a 10 ms Frame
+
+Suppose a streaming denoiser processes 10 ms frames (100 frames/s) with input `[1, 1, 257]` (`f32`), output `[1, 1, 257]` (`f32`), and state `[1, 128]` (`f32`):
+
+1. **Raw I/O payload per frame:**
+   $$(257 + 257 + 128 + 128)	ext{ floats} 	imes 4	ext{ bytes} = 770 	imes 4 = 3{,}080	ext{ bytes} pprox 3.0	ext{ KB/frame}.$$
+   At 100 frames/s, that is only $$308	ext{ KB/s}$$ of tensor data—tiny!
+2. **Runtime comparison for a 1.2 MB streaming model:**
+
+| Dimension | ONNX Runtime (WASM / Native) | `tract` (Pure Rust) |
+| :--- | :--- | :--- |
+| **WASM / Binary Overhead** | ~3–8 MB (gzipped ~1–2.5 MB) | ~0.5–1.5 MB (lean Rust crate) |
+| **Startup Plan Optimization** | Session graph optimization + arena alloc | `with_input_fact` $$	o$$ `into_optimized()` |
+| **Per-Frame Allocation Risk** | Low with `IOBinding` / reused buffers | Zero-alloc possible with reusable `TVec` |
+| **Best Fit** | Broad ops, GPU/NPU EPs, JS/TS teams | Pure Rust SDKs, tight WASM size budgets |
+
+Notice the trap: even though the tensor payload is only 3 KB, if a JS wrapper allocates *new* `ort.Tensor` objects and copies buffers on every 10 ms frame, you trigger 100 heap allocations/sec—causing GC micro-stutters!
+
+### Deep-Dive Explanation: Four Rules for Painless ONNX Export and Deployment (Read Slowly)
+
+1. **Fix opset version and freeze static frame shapes:** Avoid dynamic sequence axes (`seq_len = "T"`) for streaming inference; locking `seq_len = 1` unlocks stronger operator fusion and simpler memory planning.
+2. **Keep STFT/iSTFT outside the ONNX graph:** Complex FFT operators have uneven support across ORT/tract/WASM backends; run STFT/iSTFT in clean Rust/C++/WASM DSP code and pass real-valued magnitude/complex pairs into ONNX.
+3. **Verify numerical parity immediately after export:** Compare PyTorch output vs. ORT/tract output on the same frame and assert $$\max\lvert y_{	ext{onnx}} - y_{	ext{torch}}
+vert < 10^{-5}$$ before integrating into audio callbacks.
+4. **Measure cold-start load time as well as per-frame RTF:** Downloading a 10 MB WASM runtime + compiling it on a slow mobile connection can delay call join by seconds.
+
+**Quick check.** Why does exporting a streaming denoiser with static input shape `[1, 1, 257]` generally run faster and allocate less memory than exporting with dynamic shape `[batch, time, 257]`?
+
+---
 
 ## Exercises
 

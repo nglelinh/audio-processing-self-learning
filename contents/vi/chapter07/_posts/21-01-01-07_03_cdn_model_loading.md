@@ -11,7 +11,11 @@ lesson_type: required
 draft: false
 ---
 
+Hãy thử nghĩ xem chuyện gì xảy ra nếu bạn có 10.000 người dùng vào họp trực tuyến mỗi ngày và mỗi lần mở trình duyệt, ứng dụng lại đi tải mới 3,4 MB mô hình từ một máy chủ gốc duy nhất đặt ở nửa bên kia địa cầu: vừa tốn hàng chục gigabyte băng thông mỗi ngày, vừa khiến người dùng chờ dài cổ, lại chỉ cần một dòng cấu hình thiếu header CORS hay sai tiền tố `v2/` là toàn bộ tính năng khử nhiễu biến mất không một dấu vết! Đó là lý do tầng **tải tài nguyên qua CDN** là mạch máu thầm lặng của mọi sản phẩm AI chạy trên trình duyệt.
+
 Chạy DeepFilterNet3 trên trình duyệt đòi hỏi hai tệp nhị phân lớn: module **WASM** (WebAssembly — mã nhị phân chạy trong trình duyệt) và gói trọng số `DeepFilterNet3_onnx.tar.gz`. Nếu đóng gói cả hai vào tarball npm, kích thước cài đặt sẽ tăng vọt và mỗi lần cập nhật tệp mô hình đều buộc phải triển khai lại toàn bộ ứng dụng web. Do đó, các hệ thống thực tế tải chúng từ **CDN** (mạng phân phối nội dung) để tận dụng lớp lưu đệm gần người dùng. Gói `deepfilternet3-noise-filter` **1.3.0** tự động phân giải đường dẫn từ `assetConfig.cdnUrl`. Bài học này giúp bạn tính chính xác 4 URL cho hai thế hệ 1.1.2 và 1.3.0, đồng thời đảm bảo một lỗi mạng khi tải tệp không làm gián đoạn cuộc gọi.
+
+**Mạch bài học:** Băng thông & độ trễ khi phân phối mô hình AI trên web → Bản đồ kiến thức nền (Phân phối biên CDN & HTTP Caching bất biến, Hợp đồng CORS & MIME `application/wasm`, Tải song song `Promise.all` & Sẵn sàng tăng dần) → Cặp tệp tài nguyên & quy tắc đường dẫn `v2/` → Khung giải thích tính tay tiết kiệm băng thông từ cache 80% và so sánh tải song song vs. tuần tự → Bảng xử lý 6 lỗi tải một phần, Mini-lab và Bài tập.
 
 ![CDN tải WASM và kho ONNX trước khi AudioWorklet biên dịch]({{ site.imgurl }}/generated/onnx-wasm-path.png)
 
@@ -20,6 +24,20 @@ Chạy DeepFilterNet3 trên trình duyệt đòi hỏi hai tệp nhị phân l�
 ## Mục tiêu học tập
 
 Sau bài học này, bạn sẽ viết chính xác các URL đã phân giải cho phiên bản ≤ 1.1.2 và phiên bản 1.3.0 theo quy tắc README, không đưa `v2` vào `cdnUrl`, thiết lập header cache HTTP an toàn khi nâng cấp phiên bản, và cài đặt cơ chế bypass khử nhiễu khi thao tác tải gặp lỗi.
+
+## Bản đồ kiến thức nền: Ba trụ cột của phân phối mô hình AI qua CDN
+
+### 1. Mạng phân phối biên (CDN) và Lưu đệm bất biến (`immutable`)
+- **Là gì:** Hệ thống máy chủ đặt gần người dùng cuối (edge PoP) phục vụ các tệp tĩnh `df_bg.wasm` và `DeepFilterNet3_onnx.tar.gz` kèm header `Cache-Control: public, max-age=31536000, immutable`.
+- **Nghiên cứu gì:** Biến bài toán tải nhiều megabyte mỗi cuộc gọi thành chi phí một lần duy nhất (0 ms mạng ở mọi lần gọi sau), đồng thời bảo vệ quyền riêng tư tuyệt đối vì CDN chỉ gửi trọng số một chiều xuống máy khách.
+
+### 2. Hợp đồng giao thức trình duyệt: CORS, MIME và Tính nguyên tử cặp tệp
+- **Là gì:** Ba điều kiện hạ tầng bắt buộc khi `fetch` tài nguyên khác tên miền: `Access-Control-Allow-Origin` (CORS), `Content-Type: application/wasm` (MIME) và gom cặp WASM + trọng số vào cùng một thư mục phiên bản (`v2/`).
+- **Nghiên cứu gì:** Chẩn đoán nhanh nguyên nhân thất bại lúc `initialize()` (404 do lặp `/v2/v2/`, chặn CORS, lệch thế hệ WASM–mô hình) mà không đổ lỗi oan cho thuật toán lọc nhiễu.
+
+### 3. Sẵn sàng tăng dần (Progressive Readiness) với `Promise.all`
+- **Là gì:** Tải song song cả hai tệp trên kết nối HTTP/2, tách biệt khỏi `room.connect()`, và chuyển êm về bypass/APM khi tải đứt đoạn thay vì treo giao diện.
+- **Nghiên cứu gì:** Tối ưu hóa thời gian khởi động lạnh và độ tin cậy vận hành trên mạng di động chập chờn hoặc mạng doanh nghiệp có tường lửa (mirror nội bộ VPC).
 
 ## Kế hoạch 60 phút
 
@@ -67,6 +85,24 @@ README quy định rõ cấu trúc đường dẫn phân giải cho từng dải
 | ≥ 1.2.0, gồm 1.3.0 | `{cdnUrl}/v2/pkg/df_bg.wasm` và `{cdnUrl}/v2/models/DeepFilterNet3_onnx.tar.gz` |
 
 Với phiên bản ≥ 1.2.0 (bao gồm 1.3.0), chính thư viện sẽ tự động nối thêm `v2/`; tuyệt đối không tự chèn `v2` vào `cdnUrl`. Đường dẫn gốc ví dụ công khai là `https://cdn.mezon.ai/AI/models/datas/noise_suppression/deepfilternet3`. Cũng theo README, bản dựng SIMD từ 1.2.0 trở lên nhanh hơn khoảng 20–30% (số liệu công bố từ README) và yêu cầu trình duyệt Chrome 91+, Firefox 89+ hoặc Safari 16.4+. Riêng bản 1.3.0 cập nhật `tract` lên 0.23.3 cho đường WASM, nhưng thay đổi này không làm đổi quy tắc tiền tố `v2/`.
+
+## Khung giải thích: Tính tay lợi ích của tải song song `Promise.all` và Cache bất biến (nên đọc chậm)
+
+### Phép tính 1: Tải song song vs. Tải tuần tự trên kết nối độ trễ cao
+Giả sử cặp tệp nén có dung lượng minh họa `df_bg.wasm` = $$1{,}2\text{ MB}$$ ($$9{,}6\text{ Mb}$$) và `DeepFilterNet3_onnx.tar.gz` = $$2{,}2\text{ MB}$$ ($$17{,}6\text{ Mb}$$), tổng $$27{,}2\text{ Mb}$$, trên mạng 4G có băng thông $$10\text{ Mbps}$$ và độ trễ vòng (RTT) $$100\text{ ms}$$:
+- **Tải tuần tự (`await fetch(wasm); await fetch(model)`):** Chịu 2 lần RTT nối tiếp cộng thời gian truyền:
+  $$ T_{\text{seq}} = 2 \times 0{,}10 + \frac{9{,}6 + 17{,}6}{10} = 0{,}20 + 2{,}72 = \mathbf{2{,}92\text{ s}}. $$
+- **Tải song song (`Promise.all` trên HTTP/2):** Chỉ chịu 1 lần RTT chung cho cả hai luồng ghép kênh:
+  $$ T_{\text{par}} = 0{,}10 + \frac{27{,}2}{10} = \mathbf{2{,}82\text{ s}} $$
+  (trên mạng vệ tinh hoặc kết nối xuyên lục địa có $$\text{RTT} = 300\text{ ms}$$, tải song song cắt ngay **300 ms** chờ rỗi!).
+
+### Phép tính 2: Tác động tài chính của một dòng header `Cache-Control: immutable`
+Giả sử hệ thống có **10.000 lượt gọi mỗi ngày**, trong đó **80%** là người dùng quay lại trong tuần:
+- **Quên bật cache (hoặc gắn `?t=Date.now()` phá cache):**
+  $$ 10\,000 \times 3{,}4\text{ MB} = \mathbf{34\,000\text{ MB} \approx 34\text{ GB/ngày}} \approx \mathbf{1{,}02\text{ TB/tháng}}. $$
+- **Bật `Cache-Control: public, max-age=31536000, immutable` trên thư mục phiên bản:** Chỉ 20% lượt gọi đầu (2.000 lượt) cần tải từ CDN:
+  $$ 2\,000 \times 3{,}4\text{ MB} = \mathbf{6{,}8\text{ GB/ngày}} \approx \mathbf{204\text{ GB/tháng}} $$
+  — cắt thẳng **80% chi phí băng thông CDN**, đồng thời giúp 8.000 lượt gọi mỗi ngày khởi động khử nhiễu gần như tức thì!
 
 ## Sẵn sàng tăng dần
 

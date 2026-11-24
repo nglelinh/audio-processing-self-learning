@@ -13,6 +13,54 @@ draft: false
 
 Pipeline STFT chia tín hiệu âm thanh thành các khung chồng lấp, xử lý từng khung rồi ghép lại bằng kỹ thuật cộng chồng lấp (overlap-add, OLA). Cấu hình sai bước nhảy hop hoặc sai OLA sẽ tạo ra tiếng rung giật (warble) mà việc cập nhật trọng số mạng nơ-ron không thể khắc phục. Bài học này chứng minh điều kiện COLA (constant overlap-add: tổng các hàm cửa sổ chồng lấp bằng hằng số) cho cửa sổ Hann tuần hoàn, đồng thời quy đổi \(L\) và \(R\) sang mili giây — vì thông số "chồng lấp 50%" chưa cho biết độ trễ cho tới khi chia cho \(f_s\).
 
+
+Khi bạn cắt một đoạn ghi âm thành từng lát 20 ms, nhân mỗi lát với một đường cong hình chuông (như cửa sổ Hann) để hai đầu lát vuốt êm về 0, rồi biến đổi ngược lại miền thời gian — một câu hỏi sống còn lập tức đặt ra: *làm sao ghép các lát hình chuông ấy lại với nhau để giọng nói phát ra không bị lúc to lúc nhỏ nhấp nhô theo nhịp 10 ms?* Bí mật nằm ở thuật toán **Overlap-Add (OLA)** và một điều kiện toán học đẹp như thơ mang tên **COLA (Constant Overlap-Add)**!
+
+---
+
+## Bản đồ kiến thức nền: Chia khung, Bước nhảy và Overlap-Add đứng trên ba trụ cột nào?
+
+### 1. Bộ ba tham số: Frame Length ($$N$$), Hop Size ($$H$$) và Tỉ lệ chồng lấp
+Mỗi khung thứ $$m$$ bắt đầu tại vị trí $$mH$$ và lấy $$N$$ mẫu: $$x_m[n] = x[mH + n]\cdot w[n]$$. Tỉ lệ chồng lấp là $$1 - H/N$$ (ví dụ $$N = 960,\ H = 480 \implies$$ chồng lấp **50%**; $$H = 240 \implies$$ chồng lấp **75%**). Giảm $$H$$ giúp bám sát biến đổi nhanh của tiếng nói tốt hơn nhưng làm tăng tuyến tính số khung phải chạy FFT mỗi giây.
+
+### 2. Điều kiện Tái tạo Hoàn hảo COLA (Constant Overlap-Add)
+Nếu ta chưa sửa gì trong miền tần số (bộ lọc đồng nhất), tổng các cửa sổ trượt chồng lên nhau phải bằng **đúng một hằng số $$C > 0$$ tại mọi mẫu $$n$$**:
+
+$$
+\sum_{m=-\infty}^{\infty} w[n - mH] = C \qquad \forall n \in \mathbb{Z}.
+$$
+
+Nếu điều kiện COLA bị vi phạm (ví dụ dùng cửa sổ Hann nhưng lại chọn hop $$H = 0.6 N$$), âm thanh đầu ra sẽ bị điều biến biên độ gợn sóng liên tục!
+
+### 3. Hai biến thể thực thi: OLA (Overlap-Add) vs. WOLA (Weighted Overlap-Add)
+Trong **OLA cổ điển**, chỉ nhân cửa sổ ở đầu phân tích (analysis) rồi cộng thẳng ở đầu tổng hợp. Trong **WOLA** (dùng trong DeepFilterNet và hầu hết hệ thống khử nhiễu hiện đại), ta nhân cửa sổ ở *cả hai đầu* phân tích ($$w_a$$) và tổng hợp ($$w_s$$) để làm mượt các bước nhảy do mặt nạ khử nhiễu gây ra — khi đó điều kiện tái tạo hoàn hảo trở thành $$\sum_m w_a[n - mH]\,w_s[n - mH] = C$$!
+
+---
+
+### Khung giải thích: tự tay kiểm chứng điều kiện COLA của cửa sổ Hann với chồng lấp 50% (nên đọc chậm)
+
+Xét cửa sổ **Hann định kỳ (periodic Hann)** độ dài $$N$$ với bước nhảy $$H = N/2$$:
+
+$$
+w[n] = \frac{1}{2}\Bigl(1 - \cos\frac{2\pi n}{N}\Bigr), \qquad n = 0, 1, \dots, N - 1.
+$$
+
+1. **Chứng minh đại số tổng quát cho mọi $$N$$ chẵn:** Tại bất kỳ vị trí $$n \in [0, N/2 - 1]$$ nào, có đúng 2 khung phủ lên nó (nửa sau của khung trước và nửa đầu của khung hiện tại):
+   $$
+   w[n] + w\!\Bigl(n + \frac{N}{2}\Bigr) = \frac{1}{2}\Bigl(1 - \cos\frac{2\pi n}{N}\Bigr) + \frac{1}{2}\Bigl(1 - \cos\!\Bigl(\frac{2\pi n}{N} + \pi\Bigr)\Bigr).
+   $$
+   Nhờ đồng nhất thức lượng giác $$\cos(\theta + \pi) = -\cos\theta$$, hai số hạng cosin **triệt tiêu nhau tuyệt đối**, để lại:
+   $$
+   w[n] + w\!\Bigl(n + \frac{N}{2}\Bigr) = \frac{1}{2} + \frac{1}{2} = \mathbf{1.0}!
+   $$
+2. **Kiểm tra bằng số cụ thể với $$N = 4,\ H = 2$$:** Cửa sổ Hann định kỳ là $$w = [0,\ 0.5,\ 1.0,\ 0.5]$$. Xếp chồng 3 khung liên tiếp lệch nhau $$H = 2$$ mẫu:
+   - Khung 0: `[0.0, 0.5, 1.0, 0.5,  · ,  · ,  · ,  · ]`
+   - Khung 1: `[ · ,  · , 0.0, 0.5, 1.0, 0.5,  · ,  · ]`
+   - Khung 2: `[ · ,  · ,  · ,  · , 0.0, 0.5, 1.0, 0.5]`
+   - **Cộng từng cột (từ vùng ổn định $$n=2..5$$):** `[1.0, 1.0, 1.0, 1.0]` — phẳng lì tuyệt đối, sai số bằng $$0$$! (Lưu ý bẫy hay gặp: cửa sổ Hann *đối xứng* dùng $$N-1$$ ở mẫu số sẽ **không** thỏa COLA chính xác bằng 1 mà bị gợn nhẹ tại ranh giới!)
+
+---
+
 ## Mục tiêu học tập
 
 1. Định nghĩa độ dài khung \(L\), bước nhảy hop \(R\) và tỷ lệ chồng lấp (overlap).

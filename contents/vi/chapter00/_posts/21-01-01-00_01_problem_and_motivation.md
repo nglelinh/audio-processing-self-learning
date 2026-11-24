@@ -17,6 +17,46 @@ Khử nhiễu thời gian thực (real-time noise suppression, NS) là ràng bu�
 
 *Hình. Bộ khử nhiễu thời gian thực chỉ được sử dụng các mẫu tính đến thời điểm hiện tại, cộng thêm một ngân sách nhìn trước (look-ahead) nhỏ; trong khi đó, bộ xử lý ngoại tuyến (offline) có thể quan sát toàn bộ tệp âm thanh.*
 
+
+Bạn đang họp trực tuyến quan trọng từ một quán cà phê đông đúc: tiếng máy pha espresso rít lên, tiếng gõ bàn phím cơ lách cách ngay sát micro, và tiếng quạt điều hòa ù nền đều đều. Nếu đầu dây bên kia vẫn nghe giọng bạn trong trẻo, tự nhiên mà không bị trễ nửa giây, đó là nhờ một **bộ khử nhiễu thời gian thực (Real-Time Noise Suppression)** đang âm thầm xử lý 48.000 mẫu âm thanh mỗi giây ngay trên thiết bị của bạn — chỉ với vài mili giây ngân sách tính toán cho mỗi khung âm thanh!
+
+---
+
+## Bản đồ kiến thức nền: Bài toán Khử nhiễu Thời gian thực đứng trên ba trụ cột nào?
+
+### 1. Xử lý tín hiệu số (DSP) nhân quả
+Một hệ thống **nhân quả (causal)** tại thời điểm $$t$$ chỉ được phép nhìn dữ liệu từ quá khứ đến hiện tại ($$x[\tau]$$ với $$\tau \le t$$), cộng thêm tối đa một cửa sổ nhìn trước (look-ahead) rất nhỏ (10–20 ms). Khác với xử lý ngoại tuyến (offline) được đọc trước cả tệp âm thanh, bài toán thời gian thực là cuộc đánh đổi khắt khe giữa chất lượng âm thanh và độ trễ.
+
+### 2. Tâm âm học (Psychoacoustics) và Ba mục tiêu đánh giá
+Một bộ lọc xóa sạch nhiễu nhưng làm giọng người méo mó như robot là một bộ lọc thất bại. Ngành xử lý tiếng nói tách rạch ròi ba tiêu chí: **Độ rõ (Intelligibility — đo bằng STOI)** để nghe ra từng âm tiết, **Chất lượng cảm thụ (Perceptual Quality — đo bằng PESQ / DNSMOS)** để nghe tự nhiên dễ chịu, và **Độ thân thiện với ASR (WER)** để máy nhận dạng giọng nói không bị nhầm từ.
+
+### 3. Kỹ thuật hệ thống thời gian thực và Hệ số RTF
+Trong sản phẩm thật (như WebRTC hay gói `deepfilternet3-noise-filter` của Mezon), một mô hình dù đạt điểm chuẩn cao đến đâu cũng vô dụng nếu **Hệ số thời gian thực (Real-Time Factor — RTF)** vượt ngưỡng: $$\text{RTF} = \frac{T_{\text{xử lý}}}{T_{\text{khung}}} < 1$$ (trong thực tế thường đòi hỏi $$\text{RTF} \le 0.25$$ để chừa CPU cho video, mạng và hệ điều hành).
+
+---
+
+### Khung giải thích: tự tay tính ngân sách độ trễ và RTF cho một khung thoại 10 ms (nên đọc chậm)
+
+Giả sử bạn triển khai bộ khử nhiễu ở tần số lấy mẫu chuẩn băng rộng đầy đủ $$f_s = 48\,000\text{ Hz}$$ với bước nhảy (hop) $$H = 480\text{ mẫu}$$:
+
+1. **Thời lượng một khung âm thanh:**
+   $$
+   T_{\text{khung}} = \frac{480}{48\,000} = 0.010\text{ giây} = \mathbf{10\text{ ms}}.
+   $$
+   Nghĩa là cứ đúng mỗi 10 ms, hệ thống âm thanh lại ném vào bộ lọc một gói 480 mẫu mới.
+2. **Kiểm tra hệ số thời gian thực (RTF):** Nếu mô hình mạng nơ-ron trên CPU mất $$T_{\text{xử lý}} = 1.8\text{ ms}$$ để lọc xong 1 khung:
+   $$
+   \text{RTF} = \frac{1.8\text{ ms}}{10\text{ ms}} = \mathbf{0.18} \ll 1 \quad (\text{chạy mượt mà, chiếm } 18\% \text{ một nhân CPU}).
+   $$
+   Nếu mô hình nặng hơn tốn $$12\text{ ms/khung}$$, $$\text{RTF} = 1.2 > 1$$: hàng đợi âm thanh sẽ ứ đọng dần rồi **rớt gói, rè tiếng** ngay lập tức!
+3. **Tính tổng độ trễ thuật toán:** Nếu bộ lọc dùng cửa sổ FFT $$20\text{ ms}$$ (chồng lấp 50%) và nhìn trước 2 khung ($$20\text{ ms}$$), thì độ trễ tối thiểu của riêng khối khử nhiễu là:
+   $$
+   L_{\text{NS}} = T_{\text{khung}} + T_{\text{look-ahead}} + T_{\text{xử lý}} = 10 + 20 + 1.8 = \mathbf{31.8\text{ ms}},
+   $$
+   nằm gọn trong ngân sách cuộc gọi hai chiều mượt mà!
+
+---
+
 ## Mục tiêu học tập
 
 Sau khoảng 60 phút, bạn cần nắm được các nội dung sau:

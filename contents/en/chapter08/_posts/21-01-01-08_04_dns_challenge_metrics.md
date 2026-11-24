@@ -17,6 +17,23 @@ A single SI-SDR mean is how enhancement papers get quoted and how products get s
 
 *Figure. A suite is the whole map, not one box. SI-SDR, DNSMOS, listening, and RTF answer different questions. Empty cells are written `n/a`, not imputed.*
 
+One metric is a blindfold. In the Microsoft DNS Challenge and production voice platforms, teams learned the hard way that optimizing a single number always triggers **metric gaming**: chase SI-SDR alone and you get phase-obsessed models with lingering background hiss; chase BAK alone and you chop off soft consonants, causing downstream speech-to-text (ASR) Word Error Rate (WER) to spike!
+
+This lecture integrates everything in Chapter 8 into a unified **DNS Challenge-style evaluation suite**: combining intrusive fidelity (SI-SDRi), perceptual MOS (SIG/BAK/OVRL), intelligibility / downstream ASR (**WER**), clean-speech transparency, and real-time systems health ($$\mathrm{RTF}_{p99}$$) into a disciplined release gate.
+
+---
+
+## Background Knowledge Map: Multi-Objective Evaluation and Release Gates
+
+Four evaluation dimensions prevent any single blind spot from slipping into production:
+
+1. **Acoustic Fidelity (SI-SDRi / PESQ / STOI):** Tracks clean-reference signal reconstruction on synthetic mixtures across SNR buckets.
+2. **Perceptual Naturalness (DNSMOS SIG / BAK / OVRL + Blind A/B):** Measures human-aligned listening quality on real-world blind test sets with no clean reference.
+3. **Downstream Intelligibility (ASR Word Error Rate — WER):** A denoiser that sounds "smooth" to a casual listener can still smear subtle fricatives (`/s/`, `/f/`, `/th/`) and wreck live captions or voice-assistant recognition! Running a frozen Whisper/Conformer ASR model over enhanced clips catches intelligibility regressions automatically.
+4. **Systems & Edge Health ($$\mathrm{RTF}_{p99}$$, Latency, Bundle Size, Clean-Speech Passthrough):** Ensures quality wins don’t blow the 10 ms frame budget or degrade already-clean microphones.
+
+---
+
 ## What you should be able to do
 
 You should be able to lay out a six-column score sheet with one row per clip, run a checker that rejects a missing column, and explain which cells must be `n/a`. You should also separate a lab regression epsilon from any number that appears in a paper.
@@ -107,6 +124,33 @@ Shape example (your six rows must be your own clips; this single row only shows 
 ```
 
 The 13.80 here is the lesson 08-01 lab float, pasted so the column type is obvious. It is not a measurement of DeepFilterNet. Failure modes: a header that says “quality” instead of the six names; five rows; a real recording with a made-up SI-SDR; one RTF number copied onto every row without saying it is a session-level figure; an official-looking threshold such as “DNSMOS must exceed 3.5.”
+
+---
+
+### Worked Numerical Example: A Multi-Metric Release Gate Catching a Hidden Regression
+
+Compare Candidate v2.1 against Production v2.0 on a balanced DNS-style release scorecard:
+
+| Metric | Production v2.0 | Candidate v2.1 | Gate Rule | Pass? |
+| :--- | :--- | :--- | :--- | :--- |
+| **SI-SDRi (synthetic 0–10 dB)** | $$+11.4	ext{ dB}$$ | **$$+12.6	ext{ dB}$$** | $$\ge +11.4	ext{ dB}$$ | Pass ($$+1.2	ext{ dB}$$!) |
+| **DNSMOS BAK (real noisy)** | $$3.72$$ | **$$4.10$$** | $$\ge 3.70$$ | Pass ($$+0.38$$!) |
+| **DNSMOS SIG (real noisy)** | $$3.55$$ | $$3.34$$ | $$\ge 3.50$$ | **FAIL ($$-0.21$$)** |
+| **Downstream ASR WER** | $$4.5\%$$ | $$6.8\%$$ | $$\le 4.8\%$$ | **FAIL ($$+51\%$$ relative WER!)** |
+| **$$\mathrm{RTF}_{p99}$$ (WASM SIMD)** | $$0.38$$ | $$0.42$$ | $$\le 0.50$$ | Pass |
+
+Look at what this scorecard just saved you from: Candidate v2.1 looked like a slam dunk on SI-SDRi ($$+1.2	ext{ dB}$$) and BAK ($$+0.38$$), yet its over-aggressive masking damaged consonants enough to push ASR WER from $$4.5\%$$ to $$6.8\%$$ (a **51% relative increase in transcription errors**)! The multi-metric gate blocks the regression cleanly.
+
+### Deep-Dive Explanation: Four Rules for Building a DNS-Style Evaluation Suite (Read Slowly)
+
+1. **Freeze your test sets and never train or tune hyperparameters on them:** Keep a locked blind test set (synthetic + real + clean) that is touched *only* for release decisions.
+2. **Track both aggregate averages and worst-5% tail clips:** A model that raises mean OVRL by `+0.15` while completely muting 2% of soft-spoken female or child voices is a release blocker!
+3. **Include a clean-speech "do no harm" test:** Verify that on quiet studio speech, the denoiser preserves SIG, WER, and natural timbre without pumping or gating artifacts.
+4. **Automate the full scorecard in one reproducible command:** Making `eval_suite.py` emit one JSON + Markdown table per checkpoint turns release reviews from subjective debates into clear engineering decisions.
+
+**Quick check.** In the release scorecard above, why did Candidate v2.1 achieve a *higher* SI-SDRi and BAK while simultaneously making downstream ASR WER *worse*?
+
+---
 
 ## Exercises
 

@@ -17,6 +17,23 @@ A streaming enhancer is a function of the current hop and of state that survived
 
 *Figure. The unread arc of the ring is state: it has to be the same memory on the next callback. The same rule applies to the GRU vector and to the four past STFT frames a 5-tap deep filter still needs. Wiping any of those at a hop boundary is an impulse. Listeners hear it as a click or a short noise burst.*
 
+You train a causal speech enhancement model in PyTorch, export it to ONNX, run it on a 5-second test clip offline, and it sounds crystal clear. Then you wire it into a live streaming pipeline—feeding one 10 ms frame at a time—and the output turns into a robotic, choppy mess! Almost every time, the culprit is the exact same bug: **forgotten or misaligned streaming state** (GRU hidden states reset to zero, or causal convolution history buffers truncated by one frame).
+
+This lecture makes **streaming model state** completely explicit: how to convert every stateful layer (causal Conv1d, dilated convolutions, GRUs, overlap-add synthesis buffers) into explicit input/output state tensors—and how to write a **bit-equivalence unit test** proving that frame-by-frame streaming matches full-utterance inference to $$10^{-5}$$!
+
+---
+
+## Background Knowledge Map: Turning Time-Domain Networks Into Pure State Machines
+
+A streaming neural network is mathematically a finite-state machine $$(y_t, s_t) = f(x_t, s_{t-1})$$. Four state components must be tracked with exact precision:
+
+1. **Causal Convolution Ring Buffers:** A causal 1D convolution with kernel size $$K$$ and dilation $$d$$ depends on the current frame plus the previous $$(K - 1) \cdot d$$ frames. Streaming inference shifts those $$(K-1)\cdot d$$ historical frames through an explicit state tensor `[B, C, (K-1)*d]`.
+2. **Recurrent Hidden States (GRU / LSTM):** Each recurrent layer carries its previous hidden state $$h_{t-1}$$ (and cell state $$c_{t-1}$$ for LSTM) across frame boundaries, with shape `[num_layers, B, H]`.
+3. **DSP Analysis & Synthesis State:** Don’t forget non-neural state! The STFT input needs the previous $$N - H$$ samples of raw audio, and the inverse STFT overlap-add (OLA) needs an accumulator buffer of $$N - H$$ samples to stitch frames smoothly without clicks.
+4. **Reset & Silence Handling:** When a microphone mutes, a call switches audio devices, or a NaN slips in, the runtime must cleanly zero every state tensor so stale noise history does not bleed into the next utterance.
+
+---
+
 ## Learning objectives
 
 You will list the state a DeepFilterNet-class hop feeds back, compute the overlap tail at the published 20 ms / 10 ms framing, and crossfade on mute instead of zeroing that tail.
@@ -110,6 +127,42 @@ PY
 **Expected**. `continuous [0.8, 0.8] tail [0.1, 0.1]`, `after_zero_tail [0.4, 0.4]`, `step 0.4`. The continuous path adds the previous tail (0.4, 0.4) onto the next frame’s overlap. Zeroing the tail drops that contribution and the output steps by 0.4 on those samples. Scale 0.4 up to a real 480-sample hop and the step is a click. A GRU reset is the same experiment with a vector you cannot plot as easily: the first hop after the zero is an untrained transient, which comes out as a click or a noise burst.
 
 **Failure modes**. Zeroing `tail` “to be safe” on every hop and shipping a click on every hop. Resetting on mute without the crossfade. Sharing `tail` across two streams so each hop adds the other stream’s overlap. Treating the 0.4 step as an RTF problem — the CPU was on time; the state was wrong.
+
+---
+
+### Worked Numerical Example: Exact State Tensor Budget for a Streaming Denoiser
+
+Consider a lightweight streaming model with:
+- STFT front-end: window $$N = 960$$, hop $$H = 480$$ (overlap $$N - H = 480$$ samples).
+- Causal Conv1d Layer 1: $$C = 32$$ channels, kernel $$K = 3$$, dilation $$d = 1$$.
+- Causal Conv1d Layer 2: $$C = 32$$ channels, kernel $$K = 5$$, dilation $$d = 2$$.
+- GRU Layer: hidden width $$H_{	ext{gru}} = 64$$ (1 layer).
+
+Compute the exact number of `f32` floats carried between frames:
+
+| State Component | History Length Formula | Tensor Shape | Floats (`f32`) | Memory (Bytes) |
+| :--- | :--- | :--- | :--- | :--- |
+| STFT input overlap | $$N - H = 960 - 480$$ | `[480]` | 480 | 1,920 B |
+| iSTFT OLA tail | $$N - H = 480$$ | `[480]` | 480 | 1,920 B |
+| Conv1d #1 cache | $$(K-1)\cdot d = (3-1)\cdot 1 = 2$$ | `[1, 32, 2]` | 64 | 256 B |
+| Conv1d #2 cache | $$(K-1)\cdot d = (5-1)\cdot 2 = 8$$ | `[1, 32, 8]` | 256 | 1,024 B |
+| GRU hidden state | 1 step | `[1, 64]` | 64 | 256 B |
+| **Total Streaming State** | — | — | **1,344 floats** | **5,376 B (~5.25 KB)** |
+
+Just **5.25 KB of explicit state**—small enough to sit permanently inside the CPU’s L1 data cache! And notice the golden verification test: run offline forward pass $$Y_{	ext{offline}} = F(X_{0..T-1})$$, then loop $$t = 0\dots T-1$$ passing `(x_t, state)` explicitly, and assert $$\max \lvert Y_{	ext{stream}} - Y_{	ext{offline}} 
+vert < 10^{-5}$$!
+
+### Deep-Dive Explanation: Four Rules for Bug-Free Streaming State (Read Slowly)
+
+1. **Make every state tensor an explicit ONNX input and output:** Never rely on hidden mutable globals inside a runtime; explicit `(x_t, s_in) -> (y_t, s_out)` makes your model pure, testable, and safe for multiple concurrent audio tracks.
+2. **Check causality *before* exporting:** A single non-causal `BatchNorm` running across the time axis or symmetric padding `padding = (K-1)//2` silently leaks future frames and breaks offline-vs-streaming equivalence!
+3. **Never zero-pad inside the streaming conv if you already prepended the cache:** Concatenating `[state_cache, x_t]` along time and running `padding = 0` reproduces exact causal convolution with zero off-by-one shift.
+4. **Automate the streaming-equivalence test in CI:** Every architecture edit should automatically assert $$\max\lvert Y_{	ext{stream}} - Y_{	ext{offline}}
+vert < 10^{-5}$$ on a 50-frame random signal.
+
+**Quick check.** If we add a third causal dilated Conv1d layer with $$C = 32$$ channels, kernel size $$K = 3$$, and dilation $$d = 4$$, how many historical frames must its cache store, and how many `f32` bytes does that add to our state?
+
+---
 
 ## Exercises
 

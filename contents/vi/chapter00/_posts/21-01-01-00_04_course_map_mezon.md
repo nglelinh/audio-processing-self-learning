@@ -17,6 +17,39 @@ Bài học này đóng vai trò như bản đồ và cam kết học tập cho t
 
 *Hình. Sơ đồ chỉ minh họa điểm tích hợp công khai: gắn một TrackProcessor lên media track, không tiết lộ cấu trúc nội bộ chưa công bố của Mezon.*
 
+
+Học lý thuyết xử lý tín hiệu mà không gắn với một đường ống (pipeline) sản phẩm thật rất dễ rơi vào cảnh "thuộc công thức Fourier nhưng không biết ghép vào trình duyệt thế nào". Khóa học này được thiết kế xoay quanh một bài toán kỹ thuật sống động: làm thế nào đưa một mạng khử nhiễu hiện đại (**DeepFilterNet3**, đóng gói trong `deepfilternet3-noise-filter` của Mezon) chạy mượt mà ngay trong trình duyệt web qua **WebAssembly (WASM)** và **Web Audio API (`AudioWorklet`)** ở tốc độ 48 kHz!
+
+---
+
+## Bản đồ kiến thức nền: Đường ống Khử nhiễu trên Trình duyệt kết nối ba tầng kiến thức nào?
+
+### 1. Tầng Toán học – Tín hiệu (Chương 1 & 2)
+Biến đổi Fourier (DFT/FFT), lấy mẫu Nyquist, chia khung (framing), cửa sổ Hann và cặp biến đổi **STFT / ISTFT** biến luồng mẫu PCM 1 chiều thành bản đồ thời gian–tần số 2 chiều mà các bộ lọc và mạng nơ-ron có thể thao tác.
+
+### 2. Tầng Thuật toán Cổ điển & Học sâu (Chương 3 & 4)
+Đi từ các nguyên lý nền tảng — **Spectral Subtraction**, **bộ lọc Wiener**, **Kalman**, **AEC/Beamforming** — lên kiến trúc hai tầng thông minh của **DeepFilterNet** (tầng 1 khử nhiễu thô bằng thang tần số ERB cảm thụ sinh học, tầng 2 lọc sâu đa khung phức để phục hồi cấu trúc hài âm).
+
+### 3. Tầng Triển khai Thời gian thực trên Web (WebRTC + AudioWorklet + WASM)
+Trình duyệt cấp dữ liệu âm thanh theo các khối cứng **128 mẫu** (render quantum) trên luồng ưu tiên cao `AudioWorklet`, trong khi DeepFilterNet3 xử lý theo khung hop **480 mẫu (10 ms ở 48 kHz)**. Việc bắc cầu giữa hai kích thước khung khác nhau đó đòi hỏi kỹ thuật bộ đệm vòng (ring buffer) chính xác đến từng mẫu!
+
+---
+
+### Khung giải thích: tự tay tính bộ đệm vòng (Ring Buffer) nối `AudioWorklet` (128 mẫu) với DeepFilterNet3 (480 mẫu) (nên đọc chậm)
+
+Tại sao không thể gọi trực tiếp DeepFilterNet3 trong mỗi lần `AudioWorklet.process()`? Hãy tính bằng số nguyên sơ cấp ở $$f_s = 48\,000\text{ Hz}$$:
+
+1. **Nhịp vào của trình duyệt:** Mỗi lần gọi `process()`, Web Audio API cung cấp đúng **128 mẫu** ($$\frac{128}{48\,000} \approx \mathbf{2.67\text{ ms}}$$).
+2. **Nhịp xử lý của DeepFilterNet3:** Mô hình đòi hỏi đúng **480 mẫu** ($$\mathbf{10\text{ ms}}$$) cho mỗi bước nhảy hop.
+3. **Theo dõi bộ đệm vòng qua 4 lần gọi liên tiếp:**
+   - Gọi lần 1: đệm có $$128$$ mẫu ($$< 480$$ → chưa đủ, phát khung cũ từ bộ đệm ra).
+   - Gọi lần 2: đệm có $$256$$ mẫu ($$< 480$$).
+   - Gọi lần 3: đệm có $$384$$ mẫu ($$< 480$$).
+   - Gọi lần 4: đệm có $$512$$ mẫu ($$\ge 480$$ → **rút đúng 480 mẫu** chạy DeepFilterNet3, còn dư $$512 - 480 = \mathbf{32\text{ mẫu}}$$ giữ lại cho chu kỳ kế tiếp!).
+4. **Chu kỳ lặp chính xác:** Tìm bội chung nhỏ nhất $$\operatorname{lcm}(128, 480) = \mathbf{1\,920\text{ mẫu}}$$ (đúng $$40\text{ ms}$$): cứ sau đúng **15 lần gọi `AudioWorklet`** ($$15 \times 128 = 1\,920$$), mô hình chạy chẵn **4 khung DeepFilterNet3** ($$4 \times 480 = 1\,920$$) và số dư bộ đệm quay tròn về đúng $$0$$!
+
+---
+
 ## Mục tiêu học tập
 
 1. Nắm được lộ trình xuyên suốt các chương: từ DSP → khử nhiễu cổ điển → DeepFilterNet → thời gian thực và suy luận trên thiết bị → tích hợp sản phẩm → đánh giá → bài tập tổng kết.

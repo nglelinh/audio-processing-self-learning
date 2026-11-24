@@ -17,6 +17,58 @@ Gỡ lỗi các hệ thống khử nhiễu đòi hỏi nhìn nhận DFT như m�
 
 *Hình. Mỗi hàng của ma trận DFT là một thành phần tần số phức như minh họa; mỗi bin phổ là tích trong giữa khung tín hiệu và hàng tương ứng.*
 
+
+Rất nhiều lập trình viên dùng hàm `np.fft.rfft(x)` hằng ngày như một chiếc hộp đen bí ẩn, để rồi bối rối khi thấy năng lượng tín hiệu trước và sau khi biến đổi lệch nhau đúng hệ số $$N$$, hoặc không hiểu tại sao sóng sin lệch nửa bin lại bị nhòe sang cả chục bin xung quanh! Khoảnh khắc mọi sương mù tan biến là khi bạn nhìn **DFT dưới con mắt đại số tuyến tính năm nhất**: DFT không có gì huyền bí — nó đơn giản là **phép nhân một vectơ $$\mathbf{x} \in \mathbb{C}^N$$ với một ma trận quay unita $$\mathbf{F}$$ cỡ $$N \times N$$**!
+
+---
+
+## Bản đồ kiến thức nền: Góc nhìn Đại số tuyến tính của DFT đứng trên ba trụ cột nào?
+
+### 1. Ma trận DFT $$\mathbf{F}$$ và Hệ cơ sở Trực chuẩn
+Phần tử ở hàng $$k$$, cột $$n$$ của ma trận DFT chuẩn hóa (unitary) là $$\frac{1}{\sqrt{N}} e^{-j 2\pi k n / N}$$. Mỗi hàng là một vectơ sóng đơn sắc có độ dài bằng $$1$$, và **hai hàng khác nhau bất kỳ luôn vuông góc tuyệt đối với nhau** ($$\langle \mathbf{f}_k, \mathbf{f}_m\rangle = \delta_{km}$$). Vì vậy, ma trận $$\mathbf{F}_{\text{unitary}}$$ thỏa mãn $$\mathbf{F}^{-1} = \mathbf{F}^H$$ (nghịch đảo chính là chuyển vị liên hợp!).
+
+### 2. Định lý Parseval — Phép bảo toàn năng lượng dùng để kiểm lỗi (Debug)
+Trong không gian Euclid, quay một mũi tên quanh gốc tọa độ không bao giờ làm thay đổi chiều dài của nó. Tương tự, vì DFT là phép quay trong $$\mathbb{C}^N$$, tổng bình phương năng lượng được bảo toàn tuyệt đối (với quy ước phổ biến không chia $$\sqrt{N}$$ của NumPy/SciPy):
+
+$$
+\sum_{n=0}^{N-1} |x[n]|^2 \;=\; \frac{1}{N} \sum_{k=0}^{N-1} |X[k]|^2.
+$$
+
+Mọi kỹ sư âm thanh chuyên nghiệp đều viết unit test kiểm tra đẳng thức Parseval này để bắt ngay lỗi quên hệ số chuẩn hóa `1/N` trong pipeline STFT/ISTFT!
+
+### 3. Quy đổi Bin ↔ Tần số Hz và Đối xứng Liên hợp cho Tín hiệu Thực
+Với tốc độ mẫu $$f_s$$ và kích thước $$N$$, bin thứ $$k$$ ứng với tần số $$f_k = k \cdot \frac{f_s}{N}$$ (ví dụ $$f_s = 48\text{ kHz},\ N = 960 \implies$$ mỗi bin cách nhau đúng $$50\text{ Hz}$$). Khi đầu vào $$x[n]$$ là **số thực** (mọi âm thanh micro đều là số thực!), phổ DFT luôn có tính đối xứng liên hợp $$X[N - k] = \overline{X[k]}$$, nên ta chỉ cần tính và lưu nửa đầu $$N/2 + 1$$ bin (`rfft`) là đủ khôi phục 100%!
+
+---
+
+### Khung giải thích: tự tay nhân ma trận DFT $$4\times 4$$ và kiểm chứng Định lý Parseval (nên đọc chậm)
+
+Với $$N = 4$$, đặt $$W_4 = e^{-j2\pi/4} = -j$$. Ma trận DFT (quy ước chuẩn NumPy chưa chia $$\sqrt{4}$$) chỉ chứa 4 số cực đơn giản $$\{1, -1, j, -j\}$$:
+
+$$
+\mathbf{F}_4 = \begin{pmatrix}
+1 & 1 & 1 & 1 \\
+1 & -j & -1 & j \\
+1 & -1 & 1 & -1 \\
+1 & j & -1 & -j
+\end{pmatrix}.
+$$
+
+Hãy tự tay nhân $$\mathbf{F}_4$$ với tín hiệu cosin thực $$\mathbf{x} = [1,\ 0,\ -1,\ 0]^T$$ (tức $$x[n] = \cos(\frac{\pi}{2}n)$$, đúng 1 chu kỳ trọn vẹn trong 4 mẫu):
+
+1. **Nhân từng hàng của $$\mathbf{F}_4$$ với $$\mathbf{x}$$:**
+   - $$X[0] = 1(1) + 1(0) + 1(-1) + 1(0) = \mathbf{0}$$ (không có thành phần DC).
+   - $$X[1] = 1(1) + (-j)(0) + (-1)(-1) + j(0) = 1 + 1 = \mathbf{2}$$ (đỉnh tần số dương $$k = 1$$!).
+   - $$X[2] = 1(1) + (-1)(0) + 1(-1) + (-1)(0) = \mathbf{0}$$ (không có thành phần Nyquist).
+   - $$X[3] = 1(1) + j(0) + (-1)(-1) + (-j)(0) = 1 + 1 = \mathbf{2}$$ (đỉnh tần số âm đối xứng $$k = 3 = N - 1$$!).
+   Vậy $$\mathbf{X} = [0,\ 2,\ 0,\ 2]^T$$ — thấy ngay tính đối xứng liên hợp $$X[3] = \overline{X[1]} = 2$$!
+2. **Kiểm tra Định lý Parseval:**
+   - Năng lượng miền thời gian: $$E_t = 1^2 + 0^2 + (-1)^2 + 0^2 = \mathbf{2}$$.
+   - Năng lượng miền tần số (chia $$N = 4$$): $$E_f = \frac{1}{4}\bigl(0^2 + 2^2 + 0^2 + 2^2\bigr) = \frac{8}{4} = \mathbf{2}$$!
+   Khớp tuyệt đối $$E_t = E_f = 2$$!
+
+---
+
 ## Mục tiêu học tập
 
 1. Hiểu DFT dưới góc nhìn phép chiếu lên hệ cơ sở hàm mũ phức.

@@ -17,6 +17,38 @@ Việc triển khai thành công một bộ khử nhiễu (NS) vào sản phẩm
 
 *Hình. Độ trễ nhìn trước (look-ahead) ở chế độ ngoại tuyến và bước nhảy hop ở chế độ thời gian thực là hai khoản trễ khác nhau; sơ đồ dùng để lập ngân sách độ trễ, không đại diện cho hai thuật toán riêng biệt.*
 
+
+Nếu bạn tải một tập podcast lên phần mềm xử lý âm thanh để làm sạch trước khi đăng YouTube, phần mềm có thể đọc trọn cả 60 phút ghi âm, phân tích trước những đoạn im lặng ở phút thứ 40 để đoán chính xác tiếng ồn nền của căn phòng, rồi chạy một mạng Transformer khổng lồ mất 5 phút mới xong. Nhưng trong một **cuộc gọi thoại trực tiếp**, bạn không có đặc quyền biết trước người kia sẽ nói gì sau 1 giây nữa! Ranh giới giữa **xử lý thời gian thực (real-time / streaming)** và **xử lý ngoại tuyến (offline / batch)** không chỉ là chuyện tốc độ chạy nhanh hay chậm — nó thay đổi hoàn toàn kiến trúc toán học của thuật toán.
+
+---
+
+## Bản đồ kiến thức nền: Bốn ràng buộc kỹ thuật tách biệt Thời gian thực với Ngoại tuyến là gì?
+
+### 1. Tính nhân quả (Causality) và Cửa sổ nhìn trước (Look-Ahead)
+Bộ lọc ngoại tuyến dùng **tích chập hai phía** và mạng hai chiều (Bi-LSTM / Transformer toàn cục) nhìn thấy cả quá khứ lẫn tương lai. Bộ lọc thời gian thực phải dùng **tích chập nhân quả** và mạng một chiều (GRU / Uni-LSTM / Causal Conv) với bộ đệm trạng thái ẩn (hidden state) truyền từ khung $$t-1$$ sang khung $$t$$, chỉ được nhìn trước tối đa 1–2 khung (10–20 ms).
+
+### 2. Ngân sách độ trễ đầu–cuối (End-to-End Latency Budget)
+Theo khuyến nghị **ITU-T G.114** cho thoại tương tác hai chiều, tổng độ trễ một chiều (từ miệng người nói đến tai người nghe) nên giữ **dưới 150 ms** để hai người không nói đè lên nhau. Trong 150 ms đó, mạng internet, bộ đệm chống rung (jitter buffer), codec (Opus) và phần cứng loa/micro đã ngốn phần lớn — bộ khử nhiễu thường chỉ được cấp **20–40 ms**!
+
+### 3. Bố trí bộ nhớ và Quản lý trạng thái (Streaming State)
+Trong chế độ streaming, thuật toán không được cấp phát bộ nhớ động tùy tiện trên luồng âm thanh (tránh giật do Garbage Collection trên trình duyệt/WASM), mà phải dùng **bộ đệm vòng (ring buffer)** cố định và lưu giữ chính xác trạng thái chồng lấp (overlap-add buffer) giữa các khung liên tiếp.
+
+---
+
+### Khung giải thích: tự tay lập bảng ngân sách độ trễ cho một cuộc gọi WebRTC 150 ms (nên đọc chậm)
+
+Hãy cộng từng thành phần độ trễ trên một đường truyền thoại thực tế (một chiều) để thấy tại sao từng khung 10 ms lại quý giá đến thế:
+
+1. **Thu âm phần cứng + hệ điều hành (Capture & AudioWorklet):** $$\approx 15\text{ ms}$$.
+2. **Khối khử nhiễu thời gian thực (khung hop 10 ms + look-ahead 20 ms + suy luận 2 ms):** $$10 + 20 + 2 = \mathbf{32\text{ ms}}$$.
+3. **Nén & giải nén Codec Opus:** $$\approx 22.5\text{ ms}$$.
+4. **Truyền mạng Internet (một chiều) + Jitter Buffer:** $$40 + 25 = 65\text{ ms}$$.
+5. **Phát ra loa (Playout):** $$\approx 10\text{ ms}$$.
+- **Tổng độ trễ một chiều:** $$15 + 32 + 22.5 + 65 + 10 = \mathbf{144.5\text{ ms}} < 150\text{ ms}$$ (đạt chuẩn trò chuyện tự nhiên!).
+- **Nếu thay bằng một mô hình bán-offline có look-ahead 300 ms:** tổng độ trễ vọt lên **$$424.5\text{ ms}$$** (khứ hồi gần 1 giây!) — dù chất lượng âm thanh sạch hơn vài phần trăm, cuộc gọi lập tức trở nên khó chịu vì hai đầu liên tục ngắt lời nhau!
+
+---
+
 ## Mục tiêu học tập
 
 1. Định nghĩa chính xác độ trễ thuật toán, độ trễ đệm và hệ số thời gian thực (RTF).

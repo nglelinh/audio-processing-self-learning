@@ -17,6 +17,24 @@ The capstone is a written design, a measured demo on a small clip set, and a pub
 
 *Figure. The report uses the evaluation map: SI-SDR only with a clean reference, DNSMOS or `n/a`, a listening note, and a systems line for RTF. The ship box is a decision, not a slogan.*
 
+Real audio engineering is never just a Jupyter notebook with a pretty spectrogram—it is shipping a **working, measured, glitch-free system** that survives real microphones, real background noise, and real CPU budgets. This **Capstone Project Brief** challenges you to synthesize every chapter of the course into one end-to-end deliverable: a real-time streaming noise-suppression prototype (browser `AudioWorklet` + WASM/ONNX, or native Rust/Python streaming) backed by an honest quantitative evaluation report.
+
+Think of this brief as an industry RFC (Request for Comments): clear scope, hard numerical acceptance criteria, and zero hand-waving.
+
+---
+
+## Background Knowledge Map: The Four Pillars of an Industry-Grade Audio Capstone
+
+A portfolio-worthy audio engineering capstone demonstrates mastery across four integrated dimensions:
+
+1. **Signal & Model Architecture:** Clean causal STFT/iSTFT framing, explicit streaming state management, and verified offline-vs-streaming numerical equivalence ($$\max\lvert\Delta
+vert < 10^{-5}$$).
+2. **Real-Time Systems Engineering:** Glitch-free streaming under a fixed latency and compute budget (zero allocations in the audio callback, ring-buffer underrun instrumentation, and click-free bypass toggle).
+3. **Quantitative & Perceptual Evaluation:** Multi-metric benchmarking combining intrusive **SI-SDRi** (by SNR bucket), non-intrusive **DNSMOS (SIG/BAK/OVRL)** on real field clips, clean-speech transparency, and **$$\mathrm{RTF}_{	ext{mean}} / \mathrm{RTF}_{p99}$$** histograms.
+4. **Reproducible Engineering Craft:** One-command setup, pinned dependencies, automated unit + streaming-equivalence tests, and a concise technical write-up honestly analyzing both wins and failure modes.
+
+---
+
 ## What you should be able to do
 
 You should be able to create the capstone directories, mix a four-sample signal at a known SNR, pick one primary track, and list the artifacts a grader will open. You should also state the failure mode of each milestone so a slip does not become a silent skip.
@@ -86,6 +104,35 @@ The mixer builds a 10 dB mixture of the lesson 08-01 reference `s` with a four-p
 Failure modes: running `mkdir` inside the shared product clone; a different SNR because the formula used amplitude ratios twice; forgetting `np.save` and then claiming the directory listing is the whole lab; treating `[1.237, -0.237, -0.763, 0.263]` as a DeepFilterNet output. It is the noisy mixture.
 
 After the commands, add a milestone checklist to `capstone/design/sketch.md` with M0–M4 marked `todo` or `done`. A grader should see the directories even if every milestone is still `todo`.
+
+---
+
+### Worked Numerical Example: A Concrete Capstone Acceptance Scorecard (Target Spec)
+
+Before writing code, lock your capstone’s quantitative engineering targets into a single verifiable table:
+
+| Acceptance Criterion | Target Threshold | How You Measure & Prove It |
+| :--- | :--- | :--- |
+| **Algorithmic + Buffer Latency** | $$\le 40	ext{ ms}$$ | $$T_{	ext{win}} + L\cdot T_{	ext{hop}} + T_{	ext{prefill}}$$ + impulse-response test |
+| **Streaming Parity** | $$\max\lvert y_{	ext{stream}} - y_{	ext{offline}}
+vert < 10^{-5}$$ | Automated unit test on 5 s random/speech audio |
+| **Real-Time Headroom ($$\mathrm{RTF}_{p99}$$)** | $$\le 0.50$$ (on target laptop/browser) | Histogram over 5-minute soak (30,000 frames) |
+| **Audio Glitches (Underruns)** | $$0$$ over 5 minutes | Atomic underrun counter in `AudioWorklet` / callback |
+| **Enhancement Quality (5 dB SNR)** | $$\mathrm{SI	ext{-}SDRi} \ge +8.0	ext{ dB}$$, $$\mathrm{SIG} \ge 3.4$$ | Frozen synthetic + real café test set |
+| **Clean-Speech Transparency** | $$\Delta\mathrm{SIG} \ge -0.10$$ vs. clean input | Run denoiser on studio clean speech clips |
+
+Notice why locking these six numbers *before* coding transforms your project: every architectural trade-off (INT8 vs FP32, hop 10 ms vs 20 ms, lookahead 0 vs 1) immediately becomes an objective engineering decision!
+
+### Deep-Dive Explanation: Four Traps That Derail Audio Capstones (Read Slowly)
+
+1. **Building a giant custom model before wiring the end-to-end streaming pipe:** Always get a trivial **passthrough or gain-only** streaming pipeline working end-to-end on Day 1, then drop in a pre-trained RNNoise/DeepFilterNet/ONNX model, and *only then* iterate on custom models.
+2. **Forgetting impulse-response latency measurement:** Don’t just guess your pipeline latency on paper—feed a 1-sample unit impulse `1.0` into the input and measure the exact sample index where the peak exits!
+3. **Cherry-picking one flattering demo clip:** Record at least one brutally hard clip (loud café babble + keyboard clatter + soft speech) and show both where your system shines and where it struggles.
+4. **Skipping the clean-speech check:** Reviewers immediately test a denoiser on quiet speech—if it muffles a clean voice, the project loses credibility regardless of how well it kills fan noise.
+
+**Quick check.** If your streaming pipeline processes 48 kHz audio and a unit impulse injected at input sample `t = 0` emerges at output sample `t = 1920`, what is the exact measured end-to-end pipeline latency in milliseconds?
+
+---
 
 ## Exercises
 

@@ -17,6 +17,23 @@ Where you insert noise suppression in a WebRTC call decides latency, echo, and w
 
 *Figure. Insertion point A is a TrackProcessor on the local mic track, before the sender encodes.*
 
+You finally have a fast, crystal-clear WASM noise suppressor—so you drop it into a live WebRTC call, put on your headphones, and something sounds eerily thin and underwater! What happened? You forgot to turn off the browser’s *built-in* `noiseSuppression: true` constraint, so your speech is being aggressively denoised **twice in a row**—and even worse, if you placed your denoiser *before* Acoustic Echo Cancellation (AEC), your nonlinear neural mask just destroyed the linear echo path that AEC depends on!
+
+This lecture maps the exact **WebRTC audio pipeline insertion points**: `getUserMedia` constraints (`echoCancellation`, `noiseSuppression`, `autoGainControl`), Web Audio `AudioWorklet` vs. Insertable Streams / `MediaStreamTrackProcessor`, and how to budget end-to-end conversational latency.
+
+---
+
+## Background Knowledge Map: The WebRTC Audio Processing Chain
+
+Inserting custom ML audio processing into WebRTC requires respecting four strict signal-chain realities:
+
+1. **AEC Must Run *Before* Nonlinear Neural Denoising:** Acoustic Echo Cancellation models the room’s speaker-to-mic transfer function as a *linear* adaptive filter. Running a nonlinear neural denoiser ahead of AEC warps the echo waveform and causes loud howling or double-talk echo leakage!
+2. **Preventing Double Noise Suppression:** Always request `getUserMedia({ audio: { echoCancellation: true, autoGainControl: true, noiseSuppression: false } })` when activating your own neural denoiser so the browser’s native NS does not stack on top of yours.
+3. **Web Audio Graph vs. Track Processing (`MediaStreamTrackProcessor`):** Routing a mic track through `AudioContext` $$	o$$ `AudioWorkletNode` $$	o$$ `MediaStreamAudioDestinationNode` works universally across browsers; `MediaStreamTrackProcessor` / `Generator` (Breakout Box) offers a stream-based alternative where supported.
+4. **End-to-End Mouth-to-Ear Latency Budget:** ITU-T G.114 recommends keeping one-way interactive voice latency under **150 ms**. Every extra 10 ms buffer you add in WebRTC directly eats into conversational turn-taking comfort.
+
+---
+
 ## Learning objectives
 
 You will place neural noise suppression on the uplink before encode, keep browser echo cancellation while turning browser noise suppression off, and describe what `setProcessor` changes in the published `MediaStreamTrack` without moving inference off the device.
@@ -146,6 +163,35 @@ browser_ns=False
 3. A surprise resample away from 48 kHz before this model.
 4. Leaking `AudioContext`s on leave, which holds the microphone and the battery.
 5. Assuming constraints were honored because you requested them.
+
+---
+
+### Worked Numerical Example: End-to-End WebRTC Mouth-to-Ear Latency Budget
+
+Trace every millisecond from the speaker’s mouth to the listener’s ear on a real-time WebRTC call with a custom 48 kHz streaming denoiser:
+
+| Pipeline Stage | Typical Delay (ms) | Notes |
+| :--- | :--- | :--- |
+| OS Mic Capture + Browser AEC | $$15	ext{ ms}$$ | Linear AEC runs first! |
+| Custom NS Algorithmic Latency | $$30	ext{ ms}$$ | 20 ms STFT window + 10 ms lookahead |
+| AudioWorklet $$\leftrightarrow$$ Worker Ring Buffer | $$10	ext{ ms}$$ | 1-hop prefill absorbing bursty compute |
+| Opus Encoder Frame + Packetization | $$20	ext{ ms}$$ | Standard WebRTC 20 ms Opus packet |
+| Network One-Way Transit (RTT / 2) | $$40	ext{ ms}$$ | Regional fiber/4G link |
+| Receiver Jitter Buffer + Playback | $$30	ext{ ms}$$ | NetEQ adaptive playout buffer |
+| **Total Mouth-to-Ear Latency** | **$$145	ext{ ms}$$** | **Under 150 ms ITU-T G.114 target!** |
+
+Look how tight that margin is: just **5 ms of headroom**! If an engineer carelessly adds a 40 ms ring buffer or 3 extra frames of lookahead (30 ms), total latency jumps to $$175	ext{–}185	ext{ ms}$$—right where callers start accidentally talking over each other!
+
+### Deep-Dive Explanation: Four Rules for Clean WebRTC NS Integration (Read Slowly)
+
+1. **Disable browser `noiseSuppression` whenever your custom NS is enabled—and re-enable it on fallback:** If your WASM denoiser fails to load, flip native `noiseSuppression: true` via `track.applyConstraints(...)` so the user is never left unprotected.
+2. **Never leak `AudioContext` or `MediaStreamTrack` handles on mute/unmute:** Stopping a call without calling `track.stop()` and `audioCtx.close()` leaves the browser’s red microphone recording indicator stuck on!
+3. **Preserve stereo/mono channel counts explicitly:** Most speech denoisers expect mono (1 channel); explicitly configure `channelCount: 1` or downmix cleanly so stereo USB mics don’t feed silence into channel 0.
+4. **Test on real Bluetooth headsets (HFP 16 kHz):** Bluetooth hands-free mode drops sample rates to 16 kHz and introduces high hardware latency—verify your resampling or native 16 kHz path handles it gracefully.
+
+**Quick check.** Why does placing a nonlinear neural noise suppressor *before* WebRTC’s Acoustic Echo Canceller (AEC) degrade echo cancellation performance?
+
+---
 
 ## Exercises
 

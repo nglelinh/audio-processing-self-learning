@@ -13,6 +13,43 @@ draft: false
 
 Khử tiếng vọng âm học (Acoustic Echo Cancellation, AEC) là bài toán đi liền với khử nhiễu: ở đây, thành phần gây nhiễu là bản sao đã qua lọc của **tín hiệu đầu xa (far-end)** phát ra từ loa rồi dội ngược vào micro. Các hệ thống VoIP trên trình duyệt và ứng dụng native hầu như luôn chạy AEC **trước** hoặc **song song** với NS bên trong khối xử lý âm thanh. Bài học này đặt AEC vào đúng vị trí trong đồ thị cuộc gọi, phác thảo nguyên lý triệt vọng bằng bộ lọc thích nghi và giới thiệu **WebRTC Audio Processing Module (APM)** như tiêu chuẩn công nghiệp bạn sẽ gặp khi tích hợp Mezon, LiveKit hoặc trình duyệt (Chương 07).
 
+Trong một cuộc gọi video không dùng tai nghe, không có gì gây ức chế bằng việc vừa nói xong nửa câu thì nghe chính giọng mình dội ngược lại sau nửa giây. Nếu khử nhiễu (NS) là bài toán "mù" — bạn không hề có bản ghi riêng của tiếng quạt hay tiếng xe cộ — thì **khử tiếng vọng âm học (AEC)** lại có một lợi thế vàng: thiết bị của bạn *biết chính xác* tín hiệu đầu xa $$x[t]$$ mà nó vừa đẩy ra loa! Nhiệm vụ của AEC vì thế trở thành bài toán nhận dạng hệ thống theo thời gian thực: học bản sao đường truyền phòng $$\hat{\mathbf{h}}$$, tự tổng hợp tiếng vọng dự đoán rồi trừ thẳng trước khi giọng nói đi vào tầng khử nhiễu.
+
+## Bản đồ kiến thức nền: Nhận dạng hệ thống thích nghi và kiến trúc đường ống WebRTC APM
+
+### 1. Tích chập đường vọng và bộ lọc thích nghi NLMS
+Âm thanh phát từ loa dội qua bàn, tường, trần nhà rồi mới tới micro; chuỗi phản xạ đó được mô tả bằng đáp ứng xung phòng $$\mathbf{h}$$ (tích chập tuyến tính $$d[n] = (\mathbf{h} * \mathbf{x})[n]$$). Bộ lọc thích nghi kinh điển **NLMS (Normalized Least Mean Squares)** cập nhật vector trọng số $$\mathbf{w}[n]$$ bằng cách đi ngược hướng gradient của sai số tức thời $$e[n] = y[n] - \mathbf{w}[n]^T \mathbf{x}[n]$$, có chuẩn hóa theo năng lượng đầu vào $$\|\mathbf{x}[n]\|^2$$ để tốc độ hội tụ không bị bùng nổ khi loa phát to hay ì ạch khi loa phát nhỏ.
+
+### 2. Bài toán nói đè (Double-Talk) và lý do bộ lọc thích nghi dễ "phát điên"
+Khi cả hai đầu cùng nói cùng lúc (*double-talk*), tín hiệu micro $$y[n] = s[n] + d[n] + n[n]$$ chứa giọng nói đầu gần $$s[n]$$ rất lớn. Nếu bộ lọc thích nghi không biết mà vẫn cập nhật $$\mathbf{w}[n]$$ theo sai số $$e[n]$$ (vốn đang chứa đầy $$s[n]$$), nó sẽ phá hỏng hoàn toàn ước lượng đường phòng $$\mathbf{w}$$ vừa học được! Do đó mọi bộ AEC thực tế (như WebRTC AEC3) đều cần cơ chế phát hiện nói đè (Double-Talk Detector) hoặc bước học thích nghi theo tỷ lệ năng lượng.
+
+### 3. Vai trò của WebRTC APM và phần vọng dư phi tuyến
+Trong các ứng dụng gọi điện hiện đại (trình duyệt, Mezon, LiveKit), **WebRTC APM** xếp các khối theo thứ tự có chủ đích: lọc thông cao (HPF) bỏ rung ù tần số cực thấp → **AEC** dùng tham chiếu loa để triệt vọng tuyến tính → **NS** dọn nhiễu nền và **vọng dư phi tuyến** (do loa laptop nhỏ bị bão hòa/rè, thứ mà bộ lọc tuyến tính $$\mathbf{h} * \mathbf{x}$$ không bao giờ mô hình hóa hết được) → **AGC** cân bằng âm lượng.
+
+### Khung giải thích: Cầm tay cập nhật 1 bước bộ lọc thích nghi NLMS và tính chỉ số ERLE (nên đọc chậm)
+
+Giả sử đường vọng thực của phòng được mô hình gọn bằng 2 tap $$\mathbf{h} = [0{,}5,\; -0{,}2]^T$$. Tại thời điểm $$n$$, loa đang phát vector tham chiếu $$\mathbf{x}[n] = [1{,}0,\; 0{,}5]^T$$ và người dùng đầu gần đang im lặng ($$s[n] = 0$$, bỏ qua nhiễu nhỏ):
+- Tiếng vọng thực tế micro thu được:
+  $$d[n] = \mathbf{h}^T \mathbf{x}[n] = 0{,}5 \times 1{,}0 + (-0{,}2) \times 0{,}5 = 0{,}50 - 0{,}10 = 0{,}40.$$
+- Hiện tại, bộ lọc thích nghi mới ước lượng được $$\mathbf{w}[n] = [0{,}2,\; 0{,}0]^T$$, nên tiếng vọng dự đoán là:
+  $$\hat{d}[n] = \mathbf{w}[n]^T \mathbf{x}[n] = 0{,}2 \times 1{,}0 + 0{,}0 \times 0{,}5 = 0{,}20.$$
+- Sai số dư (residual echo) còn sót lại:
+  $$e[n] = d[n] - \hat{d}[n] = 0{,}40 - 0{,}20 = +0{,}20.$$
+
+**Bước cập nhật NLMS** với tốc độ học $$\mu = 0{,}5$$ (bỏ qua hằng số ổn định $$\epsilon \approx 0$$):
+1. Tính năng lượng tín hiệu tham chiếu:
+   $$\|\mathbf{x}[n]\|^2 = 1{,}0^2 + 0{,}5^2 = 1{,}00 + 0{,}25 = 1{,}25.$$
+2. Tính lượng hiệu chỉnh trọng số:
+   $$\Delta \mathbf{w} = \frac{\mu}{\|\mathbf{x}[n]\|^2}\, e[n]\, \mathbf{x}[n] = \frac{0{,}5}{1{,}25} \times 0{,}20 \times \begin{bmatrix} 1{,}0 \\ 0{,}5 \end{bmatrix} = 0{,}08 \times \begin{bmatrix} 1{,}0 \\ 0{,}5 \end{bmatrix} = \begin{bmatrix} 0{,}08 \\ 0{,}04 \end{bmatrix}.$$
+3. Trọng số mới:
+   $$\mathbf{w}[n+1] = \begin{bmatrix} 0{,}20 \\ 0{,}00 \end{bmatrix} + \begin{bmatrix} 0{,}08 \\ 0{,}04 \end{bmatrix} = \begin{bmatrix} 0{,}28 \\ 0{,}04 \end{bmatrix}.$$
+   Kiểm tra nhanh: nếu cùng vector $$\mathbf{x}$$ lặp lại ngay sau đó, tiếng vọng dự đoán tăng lên $$0{,}28(1{,}0) + 0{,}04(0{,}5) = 0{,}30$$, kéo sai số từ $$0{,}20$$ giảm ngay một nửa xuống $$0{,}10$$!
+
+**Đo chất lượng triệt vọng bằng ERLE (Echo Return Loss Enhancement):**
+Sau khi hội tụ, giả sử công suất tiếng vọng thu vào là $$P_d = 0{,}16$$ còn công suất vọng dư sau AEC chỉ còn $$P_e = 0{,}0016$$:
+$$\mathrm{ERLE} = 10\log_{10}\!\left(\frac{P_d}{P_e}\right) = 10\log_{10}\!\left(\frac{0{,}16}{0{,}0016}\right) = 10\log_{10}(100) = 20\text{ dB}.$$
+Trong thực tế, một bộ AEC tuyến tính tốt đạt ERLE khoảng $$15\text{–}25\text{ dB}$$; phần vọng dư phi tuyến còn lại sẽ được tầng hậu lọc NS (hoặc DeepFilterNet) dọn nốt.
+
 ## Mục tiêu học tập
 
 Sau bài học này, bạn sẽ vẽ được luồng tín hiệu đầu gần (near-end) và đầu xa (far-end) với đường vọng $$\mathbf{h}$$, giải thích được vì sao bộ lọc thích nghi có tín hiệu tham chiếu khác biệt với khử nhiễu mù, liệt kê các khối chính trong WebRTC APM (AEC, NS, AGC, HPF, VAD), và phân tích các ràng buộc thực tế (độ trễ, lệch đồng hồ, méo phi tuyến) khiến tiếng vọng dư tràn sang tầng NS.

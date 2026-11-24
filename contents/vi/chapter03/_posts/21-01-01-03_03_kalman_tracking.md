@@ -13,6 +13,45 @@ draft: false
 
 Bộ lọc Kalman không phải là "một dạng mặt nạ phổ khác" mà là một **bộ theo dõi Bayes đệ quy**: ở mỗi bước, nó dự đoán trạng thái tiếng nói tiếp theo rồi hiệu chỉnh lại dựa trên phép đo có nhiễu mới nhận được. Trong tăng cường tiếng nói (SE) và khử vọng (AEC), tư duy Kalman xuất hiện ở các bộ lọc thích nghi, bộ theo dõi tiếng vọng dư và các kiến trúc lai AEC+NS (ví dụ AEC Kalman cổ điển nối tiếp bộ hậu lọc mạng nơ-ron gọn nhẹ). Bài học này dừng ở mức **trực giác và sơ đồ khối** — đủ để đọc bài báo và gỡ lỗi hệ thống lai — mà không đi sâu vào lý thuyết điều khiển tổng quát.
 
+Hãy tưởng tượng bạn đang theo dõi vị trí một con tàu giữa biển sương mù bằng chiếc radar bị nhiễu nặng. Nếu chỉ tin hoàn toàn vào chấm sáng nhảy nhót trên màn hình radar ở giây hiện tại, con tàu trông như đang dịch chuyển tức thời; nhưng nếu bạn nhớ vận tốc con tàu ở giây trước để *dự đoán* nó sẽ ở đâu, rồi chỉ *kéo nhẹ* dự đoán đó về phía chấm radar mới theo mức độ tin cậy của radar, quỹ đạo ước lượng sẽ mượt mà đến kinh ngạc. Đó chính là linh hồn của **bộ lọc Kalman** — không phải một chiếc mặt nạ cắt phổ độc lập từng khung, mà là một cỗ máy suy luận Bayes đệ quy biết cân đo đong đếm giữa *niềm tin vào mô hình quá khứ* và *bằng chứng từ phép đo nhiễu hiện tại*.
+
+## Bản đồ kiến thức nền: Không gian trạng thái và suy luận Bayes đệ quy
+
+### 1. Mô hình không gian trạng thái (State-Space Model)
+Thay vì coi mỗi khung âm thanh là một ốc đảo tách biệt, bộ lọc Kalman mô tả tín hiệu ẩn $$x_k$$ (có thể là mẫu tiếng nói theo mô hình tự hồi quy AR, hoặc vector đáp ứng xung đường vọng $$\mathbf{h}_k$$) tiến hóa theo thời gian qua hai phương trình:
+- **Phương trình trạng thái (động học):** $$x_k = A x_{k-1} + w_k$$, với nhiễu quá trình $$w_k \sim \mathcal{N}(0, Q)$$ đo mức độ "thay đổi bất ngờ" của trạng thái.
+- **Phương trình quan sát (phép đo):** $$y_k = H x_k + v_k$$, với nhiễu đo $$v_k \sim \mathcal{N}(0, R)$$ đo độ ồn của micro.
+
+### 2. Độ lợi Kalman (Kalman Gain) — chiếc cân tự động giữa mô hình và dữ liệu
+Ở mỗi bước, thuật toán chạy đúng hai pha: **Dự đoán (Predict)** đẩy ước lượng cũ và độ bất định $$P$$ về phía trước; sau đó **Cập nhật (Update)** tính sai lệch bất ngờ (*innovation*) $$e_k = y_k - H \hat{x}_{k\vert k-1}$$ và nhân với **độ lợi Kalman** $$K_k$$. Khi phép đo rất ồn ($$R \gg P$$), $$K_k \to 0$$ (tin vào dự đoán hơn); ngược lại khi trạng thái biến đổi mạnh còn phép đo sạch ($$P \gg R$$), $$K_k \to 1$$ (bám sát phép đo mới).
+
+### 3. Vì sao Kalman sống khỏe trong các hệ thống AEC+NS lai hiện đại?
+Khử vọng tuyến tính (AEC) có cấu trúc vật lý rõ ràng: đáp ứng xung phòng thay đổi chậm theo thời gian (trừ khi có người di chuyển hoặc đổi vị trí loa), cực kỳ hợp với bộ lọc Kalman miền tần số (như trong kiến trúc của Enzner & Vary). Một tầng Kalman gọn nhẹ có thể triệt sạch phần vọng tuyến tính ổn định mà không cần học lại từ đầu, để phần việc khó còn lại (vọng phi tuyến do loa rè, nhiễu nền không dừng) cho một mạng nơ-ron nhỏ gọn phía sau xử lý.
+
+### Khung giải thích: Cầm tay chạy 1 chu kỳ Dự đoán – Cập nhật của bộ lọc Kalman vô hướng (nên đọc chậm)
+
+Xét một bài toán 1 chiều theo dõi biên độ trạng thái tiếng nói $$x_k$$ với mô hình tự hồi quy bậc 1:
+- Động học: $$x_k = 0{,}9\,x_{k-1} + w_k$$, phương sai nhiễu quá trình $$Q = 0{,}09$$.
+- Phép đo có nhiễu: $$y_k = x_k + v_k$$ ($$H = 1$$), phương sai nhiễu đo $$R = 0{,}50$$.
+
+Giả sử ở bước trước ($$k-1$$), ta đã có ước lượng hậu nghiệm $$\hat{x}_{k-1\vert k-1} = 2{,}00$$ với phương sai sai số $$P_{k-1\vert k-1} = 0{,}20$$. Nay micro thu được mẫu nhiễu mới $$y_k = 2{,}60$$. Hãy tính tay từng bước:
+
+1. **Bước 1 — Dự đoán (Predict):**
+   - Trạng thái dự đoán: $$\hat{x}_{k\vert k-1} = 0{,}9 \times 2{,}00 = 1{,}80$$.
+   - Phương sai bất định dự đoán: $$P_{k\vert k-1} = 0{,}9^2 \times 0{,}20 + Q = 0{,}81 \times 0{,}20 + 0{,}09 = 0{,}162 + 0{,}09 = 0{,}252$$.
+   *(Lưu ý: sau bước dự đoán, độ bất định tăng từ $$0{,}20$$ lên $$0{,}252$$ vì ta chưa nhìn thấy phép đo mới.)*
+
+2. **Bước 2 — Tính độ lợi Kalman (Kalman Gain):**
+   $$K_k = \frac{P_{k\vert k-1}}{P_{k\vert k-1} + R} = \frac{0{,}252}{0{,}252 + 0{,}50} = \frac{0{,}252}{0{,}752} \approx 0{,}335.$$
+   Vì nhiễu đo $$R = 0{,}50$$ lớn gần gấp đôi bất định dự đoán $$P^- = 0{,}252$$, bộ lọc chỉ đặt niềm tin khoảng $$33{,}5\%$$ vào phép đo mới.
+
+3. **Bước 3 — Cập nhật trạng thái và thu hẹp độ bất định (Update):**
+   - Phần bất ngờ (innovation): $$y_k - \hat{x}_{k\vert k-1} = 2{,}60 - 1{,}80 = +0{,}80$$.
+   - Ước lượng hậu nghiệm mới: $$\hat{x}_{k\vert k} = 1{,}80 + 0{,}335 \times 0{,}80 = 1{,}80 + 0{,}268 = 2{,}068$$.
+   - Phương sai hậu nghiệm mới: $$P_{k\vert k} = (1 - K_k)\,P_{k\vert k-1} = 0{,}665 \times 0{,}252 \approx 0{,}168$$.
+
+Kiểm chứng trực giác: kết quả $$2{,}068$$ nằm gọn giữa dự đoán $$1{,}80$$ và phép đo ồn $$2{,}60$$ (nghiêng về phía dự đoán vì radar đang ồn), đồng thời độ bất định giảm từ $$0{,}252$$ xuống $$0{,}168$$ — mỗi phép đo mới, dù ồn, vẫn cung cấp thêm thông tin để làm sắc nét ước lượng!
+
 ## Mục tiêu học tập
 
 Sau bài học này, bạn sẽ giải thích được vòng lặp dự đoán–cập nhật (predict–update) cùng vai trò của hiệp phương sai nhiễu quá trình và nhiễu đo, ánh xạ bài toán SE sang mô hình không gian trạng thái, so sánh Kalman với độ lợi Wiener theo từng khung, và nhận diện mô hình triển khai thực tế: dùng Kalman/LMS/RLS làm tầng tiền xử lý cho bộ khử phần dư bằng mạng nơ-ron.

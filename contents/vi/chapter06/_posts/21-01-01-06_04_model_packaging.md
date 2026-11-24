@@ -11,7 +11,11 @@ lesson_type: required
 draft: false
 ---
 
+Bạn vừa hoàn thành một đồ thị ONNX chuẩn chỉnh, lượng tử hóa cẩn thận và biên dịch WASM SIMD chạy mượt trên máy cá nhân. Thế nhưng ngày ra mắt sản phẩm, hàng loạt người dùng lại báo khử nhiễu không bật lên được vì lỗi **404 `.../v2/v2/pkg/df_bg.wasm`**, hoặc phải chờ 5 giây mới vào được cuộc gọi vì trình duyệt cứ tải lại mô hình từ đầu mỗi lần tải trang! Đưa một mô hình học sâu vào sản phẩm không dừng lại ở thuật toán — nó còn là bài toán **đóng gói, phân phối và quản trị phiên bản**.
+
 Một đồ thị ONNX (định dạng trao đổi đồ thị) chuẩn xác vẫn có thể thất bại khi đưa vào sản phẩm nếu khâu **đóng gói** sai sót: dung lượng tải lần đầu quá lớn, URL không được lưu đệm (cache), tệp WASM và gói mô hình lệch phiên bản, hoặc vướng rào cản giấy phép phân phối. Gói `deepfilternet3-noise-filter` **1.3.0** tách bạch hai lớp này: gói npm chỉ chứa mã kết nối JavaScript, AudioWorklet (callback xử lý âm thanh trên luồng thời gian thực) được nhúng nội tuyến và bộ nạp; còn hai tệp dung lượng lớn là `df_bg.wasm` và `DeepFilterNet3_onnx.tar.gz` được tải từ CDN (mạng phân phối nội dung) thông qua `assetConfig.cdnUrl`. Bài học này trình bày bố cục tệp, quy tắc tiền tố phiên bản, kiểm tra tính toàn vẹn và phương án khôi phục (rollback). Chi tiết ghép nối URL đầy đủ sẽ được trình bày ở bài 07-03.
+
+**Mạch bài học:** Vì sao mô hình tốt vẫn hỏng ở khâu phát hành → Bản đồ kiến thức nền (Tách mã điều khiển vs. Tài nguyên nhị phân CDN, Cache bất biến & Mã băm SHA-256, Ma trận tương thích & Rollback không ghi đè) → Bố cục thư mục sidecar & quy tắc đường dẫn `v2/` → Khung giải thích tính tay thời gian khởi động lạnh theo băng thông mạng và dò lỗi lặp tiền tố `/v2/v2/` → Giấy phép, Staged rollout, Mini-lab và Bài tập.
 
 ![WASM và kho ONNX đã đóng gói ở phía CDN của đường vào trình duyệt]({{ site.imgurl }}/generated/onnx-wasm-path.png)
 
@@ -20,6 +24,20 @@ Một đồ thị ONNX (định dạng trao đổi đồ thị) chuẩn xác v�
 ## Mục tiêu học tập
 
 Sau bài học này, bạn sẽ tách bạch được gói npm khỏi các tệp tài nguyên trên CDN, áp dụng đúng quy tắc đường dẫn cho các phiên bản ≤ 1.1.2 và ≥ 1.2.0 (bao gồm bản 1.3.0 vốn tự động nối tiền tố `v2/`), phát hiện và loại bỏ các `cdnUrl` đã chứa sẵn `v2`, đồng thời liệt kê đầy đủ các hạng mục kiểm tra giấy phép và cache trước khi phát hành.
+
+## Bản đồ kiến thức nền: Ba trụ cột của kỹ thuật đóng gói mô hình âm thanh web
+
+### 1. Phân tách Gói điều khiển (npm) và Tài nguyên nhị phân lớn (CDN Assets)
+- **Là gì:** Gói npm chỉ giữ mã JavaScript/TypeScript gọn nhẹ và mã AudioWorklet nội tuyến, còn các tệp nặng hàng megabyte (`df_bg.wasm`, `DeepFilterNet3_onnx.tar.gz`) được tải bất đồng bộ từ CDN biên (edge cache).
+- **Nghiên cứu gì:** Tránh làm phình kích thước bundle chính của ứng dụng web (giúp trang web tải nhanh), đồng thời cho phép tải trễ mô hình khử nhiễu mà không chặn thao tác bấm "Tham gia cuộc gọi".
+
+### 2. Đường dẫn bất biến (Immutable Versioned URLs) và Toàn vẹn SHA-256
+- **Là gì:** Gắn mỗi đợt phát hành vào một thư mục phiên bản cố định kèm header `Cache-Control: public, max-age=31536000, immutable` và khóa cặp tệp WASM + mô hình bằng bảng băm `SHA256SUMS`.
+- **Nghiên cứu gì:** Đưa thời gian tải mạng về **0 ms** từ lần gọi thứ hai trở đi, đồng thời ngăn chặn lỗi lệch phiên bản (module SIMD mới chạy với gói trọng số cũ) và cho phép rollback tức thì bằng cách đổi con trỏ đường dẫn mà không bao giờ ghi đè URL cũ.
+
+### 3. Quản trị hợp đồng phiên bản (Compatibility Matrix) và Pháp lý trọng số
+- **Là gì:** Hồ sơ đi kèm (`config.json`, `LICENSE_WEIGHTS.txt`, `CHANGELOG.md`) ràng buộc chặt phiên bản gói JS, opset ONNX, phiên bản `tract`/ORT, cờ SIMD và điều khoản bản quyền trọng số.
+- **Nghiên cứu gì:** Đảm bảo tính tái lập trong CI/CD và tuân thủ pháp lý khi phân phối lại trọng số mã nguồn mở trong sản phẩm thương mại.
 
 ## Kế hoạch 60 phút
 
@@ -61,6 +79,23 @@ README của gói quy định cấu trúc đường dẫn theo phiên bản như
 | ≥ 1.2.0, gồm 1.3.0 | `{cdnUrl}/v2/pkg/df_bg.wasm` | `{cdnUrl}/v2/models/DeepFilterNet3_onnx.tar.gz` |
 
 Với các phiên bản từ 1.2.0 trở lên, client sẽ tự động thêm tiền tố `v2/`; người cấu hình không được tự thêm vào `cdnUrl`. Nếu đường dẫn gốc đã kết thúc bằng `/v2`, URL sinh ra sẽ trở thành `.../v2/v2/...` và gặp lỗi 404. Đường dẫn gốc minh họa trong README là `https://cdn.mezon.ai/AI/models/datas/noise_suppression/deepfilternet3`. Tên gói mô hình là `DeepFilterNet3_onnx.tar.gz` (từ kho DeepFilterNet gốc của Rikorose), còn tên tệp WASM là `df_bg.wasm`.
+
+## Khung giải thích: Tính tay ngân sách tải lạnh (Cold Start) và kiểm chứng ghép URL (nên đọc chậm)
+
+### Phép tính 1: Thời gian khởi động lạnh từ dung lượng nén và tốc độ mạng
+Giả sử cặp tệp sau khi nén trên CDN có tổng dung lượng minh họa là $$3{,}4\text{ MB}$$ (gồm `df_bg.wasm` $$1{,}2\text{ MB}$$ và `DeepFilterNet3_onnx.tar.gz` $$2{,}2\text{ MB}$$), tương đương $$3{,}4 \times 8 = \mathbf{27{,}2\text{ Mb}}$$ (megabit). Cộng thêm thời gian biên dịch WASM khoảng $$0{,}20\text{ s}$$:
+
+| Kịch bản mạng | Băng thông hiệu dụng | Thời gian tải + RTT | Biên dịch WASM | Tổng khởi động lạnh |
+| :--- | :--- | :--- | :--- | :--- |
+| **4G di động (lần đầu)** | $$10\text{ Mbps}$$, RTT $$80\text{ ms}$$ | $$\frac{27{,}2}{10} + 0{,}08 = 2{,}80\text{ s}$$ | $$0{,}20\text{ s}$$ | **$$3{,}00\text{ s}$$** |
+| **Wi-Fi laptop (lần đầu)** | $$50\text{ Mbps}$$, RTT $$20\text{ ms}$$ | $$\frac{27{,}2}{50} + 0{,}02 = 0{,}56\text{ s}$$ | $$0{,}20\text{ s}$$ | **$$0{,}76\text{ s}$$** |
+| **Lần gọi thứ 2 (`immutable`)** | Cache cục bộ trình duyệt | **$$0{,}00\text{ s}$$** | $$0{,}20\text{ s}$$ (hoặc cache mã máy) | **$$\le 0{,}20\text{ s}$$** |
+
+Nhìn vào dòng 4G di động (3 giây): nếu bạn chặn nút "Vào phòng họp" cho tới khi `initialize()` xong, người dùng di động sẽ tưởng ứng dụng bị treo! Thay vào đó, hãy vào cuộc gọi ngay ở chế độ bypass rồi bật khử nhiễu mượt (crossfade) ngay khi cặp tệp tải xong.
+
+### Phép tính 2: Dò lỗi nối đường dẫn `v2/` bằng mắt thường
+- Cấu hình đúng: `cdnUrl = "https://cdn.example.com/df3"` $$\xrightarrow{\text{client 1.3.0 nối } \texttt{/v2/}}$$ `https://cdn.example.com/df3/v2/pkg/df_bg.wasm` (**200 OK**).
+- Cấu hình sai: `cdnUrl = "https://cdn.example.com/df3/v2"` $$\xrightarrow{\text{client 1.3.0 nối } \texttt{/v2/}}$$ `https://cdn.example.com/df3/v2/v2/pkg/df_bg.wasm` (**404 Not Found**!).
 
 ### Cache, nén dữ liệu và kiểm tra toàn vẹn
 

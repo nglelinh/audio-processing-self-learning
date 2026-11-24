@@ -17,6 +17,53 @@ Tính DFT trực tiếp có độ phức tạp \(O(N^2)\), quá nặng để ch�
 
 *Hình. Thuật toán radix-2 vẫn tính tích trong với chính các thành phần tần số cơ sở này; nó chỉ sắp xếp lại thứ tự phép tính nên kết quả khớp với DFT trực tiếp trong giới hạn sai số làm tròn.*
 
+
+Năm 1965, James Cooley và John Tukey công bố một bài báo dài chưa tới 5 trang giấy nhưng đã làm thay đổi vĩnh viễn lịch sử xử lý tín hiệu, viễn thông, hình ảnh y khoa và cả âm thanh thời gian thực: **thuật toán Biến đổi Fourier Nhanh (FFT)**. (Thú vị thay, các nhà sử học sau này phát hiện Carl Friedrich Gauss đã tự nghĩ ra đúng thuật toán chia để trị này từ năm 1805 khi tính quỹ đạo tiểu hành tinh bằng tay!)
+
+Nếu nhân trực tiếp ma trận DFT cỡ $$N \times N$$ tốn $$O(N^2)$$ phép tính, thì FFT tận dụng tính đối xứng tuần hoàn của các căn đơn vị $$W_N^k = e^{-j2\pi k/N}$$ để hạ độ phức tạp xuống **$$O(N \log_2 N)$$**. Khác biệt đó không phải là tối ưu vài phần trăm — ở kích thước khung âm thanh tiêu chuẩn $$N = 1\,024$$, nó là ranh giới giữa một thuật toán chạy mượt mà trên chiếc đồng hồ thông minh với một thuật toán chậm hơn gấp **200 lần**!
+
+---
+
+## Bản đồ kiến thức nền: Thuật toán FFT Radix-2 hoạt động nhờ ba ý tưởng thuật toán nào?
+
+### 1. Chia để trị (Divide and Conquer) theo chỉ số Chẵn – Lẻ
+Tách tổng DFT độ dài $$N$$ thành hai nửa: nửa các mẫu ở chỉ số **chẵn** $$x[2m]$$ (DFT là $$E[k]$$) và nửa ở chỉ số **lẻ** $$x[2m+1]$$ (DFT là $$O[k]$$). Nhờ tính chất $$W_N^{2mk} = W_{N/2}^{mk}$$, bài toán cỡ $$N$$ lập tức tách thành **hai bài toán DFT giống hệt nhau cỡ $$N/2$$**!
+
+### 2. Phép ghép Cánh bướm (Butterfly) và Tận dụng đối xứng $$W_N^{k + N/2} = -W_N^k$$
+Điều kỳ diệu nằm ở khâu ghép: chỉ cần tính tích $$T_k = W_N^k O[k]$$ **đúng một lần**, ta thu ngay **cả hai** đầu ra đối diện nhau chỉ bằng 1 phép cộng và 1 phép trừ:
+
+$$
+X[k] = E[k] + W_N^k O[k], \qquad X[k + N/2] = E[k] - W_N^k O[k].
+$$
+
+Cấu trúc cộng–trừ đan chéo ấy trông giống đôi cánh bướm, tạo nên tên gọi **sơ đồ cánh bướm (butterfly diagram)** kinh điển.
+
+### 3. Phương trình đệ quy độ phức tạp và Hiệu năng phần cứng thực tế
+Phương trình đệ quy $$T(N) = 2T(N/2) + O(N)$$ có nghiệm $$T(N) = O(N \log_2 N)$$ (chính xác là $$\frac{N}{2}\log_2 N$$ phép nhân phức). Trong triển khai thực chiến (FFTW, RustFFT trong DeepFilterNet), tốc độ còn phụ thuộc mạnh vào kích thước không phải lũy thừa 2 (như $$N = 960 = 2^6 \cdot 3 \cdot 5$$ dùng FFT hỗn hợp *mixed-radix*), căn chỉnh bộ nhớ cache và tập lệnh vector SIMD!
+
+---
+
+### Khung giải thích: tự tay chạy trọn vẹn FFT Radix-2 cho $$N = 4$$ và so sánh tốc độ tại $$N = 1\,024$$ (nên đọc chậm)
+
+Hãy tự tay tính FFT cho tín hiệu 4 mẫu $$x = [1,\ 2,\ 3,\ 4]$$ (với $$W_4^0 = 1,\ W_4^1 = -j$$):
+
+1. **Bước 1 — Tách chẵn / lẻ và tính hai DFT độ dài 2 (chỉ cộng và trừ!):**
+   - Nhánh chẵn $$x_{\text{chẵn}} = [x[0], x[2]] = [1, 3]$$:
+     $$E[0] = 1 + 3 = 4, \qquad E[1] = 1 - 3 = -2.$$
+   - Nhánh lẻ $$x_{\text{lẻ}} = [x[1], x[3]] = [2, 4]$$:
+     $$O[0] = 2 + 4 = 6, \qquad O[1] = 2 - 4 = -2.$$
+2. **Bước 2 — Ghép 2 cánh bướm ($$k = 0$$ và $$k = 1$$):**
+   - Cánh bướm $$k = 0$$ (hệ số $$W_4^0 = 1$$):
+     $$X[0] = E[0] + 1\cdot O[0] = 4 + 6 = \mathbf{10}, \qquad X[2] = E[0] - 1\cdot O[0] = 4 - 6 = \mathbf{-2}.$$
+   - Cánh bướm $$k = 1$$ (hệ số $$W_4^1 = -j$$):
+     $$X[1] = E[1] + (-j)O[1] = -2 + 2j, \qquad X[3] = E[1] - (-j)O[1] = -2 - 2j.$$
+   - Kết quả: $$X = [10,\ -2+2j,\ -2,\ -2-2j]$$ — khớp 100% với tính DFT trực tiếp!
+3. **So sánh số phép nhân phức ở kích thước khung âm thanh $$N = 1\,024$$ ($$2^{10}$$):**
+   - **DFT trực tiếp:** $$N^2 = 1\,024^2 = \mathbf{1\,048\,576}$$ phép nhân phức.
+   - **FFT Radix-2:** $$\frac{N}{2}\log_2 N = 512 \times 10 = \mathbf{5\,120}$$ phép nhân phức — **nhanh hơn đúng 204.8 lần**! Ở $$N = 4\,096$$, khoảng cách vọt lên gần **700 lần**!
+
+---
+
 ## Mục tiêu học tập
 
 1. So sánh độ phức tạp \(O(N\log N)\) của FFT với \(O(N^2)\) của DFT trực tiếp.

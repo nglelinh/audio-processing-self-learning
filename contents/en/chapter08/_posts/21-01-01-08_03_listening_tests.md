@@ -17,6 +17,26 @@ SI-SDR can stay high while the voice turns metallic, and DNSMOS can miss a domai
 
 *Figure. Listening tests are the slow, high-value column. They arbitrate when SI-SDR and DNSMOS disagree, which is a normal outcome on real microphones.*
 
+Every audio team eventually learns a humbling lesson: you listen to your brand-new model on your own desk, convinced it sounds "way cleaner" than production—only to run a **blind randomized A/B test** where listeners can’t see which clip is which, and discover your new model actually lost 60–40! Confirmation bias in human hearing is astonishingly powerful; the moment you know which clip is "Model B," your brain hears what it *wants* to hear.
+
+This lecture teaches how to run rigorous, lightweight **subjective listening tests** (blind A/B preference, **CCR**, **ACR / P.835**, and **MUSHRA**) and how to compute exact sample-size confidence intervals so you never mistake 10 noisy votes for a real perceptual win.
+
+---
+
+## Background Knowledge Map: Psychophysics and Statistical Rigor in Listening Tests
+
+Four experimental principles separate trustworthy listening tests from wishful thinking:
+
+1. **Double-Blind Randomization & Loudness Normalization:** Listeners must never see system labels, clip order must be randomized per trial, and all systems must be loudness-matched (e.g., $$-24	ext{ LUFS}$$)—because human ears reflexively rate a 1.5 dB louder clip as "better"!
+2. **Choosing the Right Protocol:**
+   - **Blind A/B (or ABX):** Fastest for comparing 2 candidate models (e.g., current prod vs. new candidate).
+   - **P.835 (SIG/BAK/OVRL):** Separates speech distortion from background suppression on 1–5 scales.
+   - **MUSHRA (0–100):** Gold standard for subtle differences among 3–6 systems, calibrated with a hidden reference (100) and a low-quality anchor (e.g., 3.5 kHz low-pass).
+3. **Anchor Traps & Listener Screening:** Including hidden reference and degraded anchor clips immediately detects distracted raters clicking randomly.
+4. **Binomial Confidence Intervals & Statistical Power:** With only $$N = 10$$ votes, a 7–3 split (70%) is still completely compatible with a 50/50 coin flip; you need enough independent clips and listeners to separate signal from sampling variance.
+
+---
+
 ## What you should be able to do
 
 You should be able to pick AB versus a light MUSHRA-like scale, loudness-normalize the stimuli, randomize order, write rater instructions in English and Vietnamese, and report wins, losses, and ties per condition. You should also know when a day of dogfooding is enough and when it is not.
@@ -84,6 +104,31 @@ chars <some integer above 400>
 The character count will be your own. The checker’s `missing none` line is the pass signal. Failure modes: unblinded filenames in the rater UI; no tie option, which forces a preference when the clips match; no quiet control; instructions only in English for a Vietnamese-speaking panel; judging a level change on one talker’s voice.
 
 A minimal protocol body that satisfies the checker will state the task in both languages, name `setSuppressionLevel`, and list the three conditions. Expand it with the rater paragraph from this lesson rather than keyword-stuffing.
+
+---
+
+### Worked Numerical Example: How Many Votes Do You Need for a Confident Blind A/B Win?
+
+Suppose you run a blind A/B preference test comparing New Model B against Prod Model A (excluding ties), and **70%** of ratings prefer Model B ($$\hat{p} = 0.70$$). Compute the 95% Wald confidence interval $$\hat{p} \pm 1.96\sqrt{rac{\hat{p}(1-\hat{p})}{N}}$$ for two test sizes:
+
+| Test Size $$N$$ | Votes for B | Observed $$\hat{p}$$ | Standard Error $$\mathrm{SE}$$ | 95% Confidence Interval | Statistically Significant (excludes 0.50)? |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **$$N = 10$$** | 7 / 10 | $$0.70$$ | $$\sqrt{rac{0.21}{10}} = 0.145$$ | $$[0.416,\; 0.984]$$ | **NO** (contains 0.50—could be luck!) |
+| **$$N = 40$$** | 28 / 40 | $$0.70$$ | $$\sqrt{rac{0.21}{40}} = 0.0725$$ | $$[0.558,\; 0.842]$$ | **YES** (cleanly above 0.50!) |
+| **$$N = 100$$** | 70 / 100 | $$0.70$$ | $$\sqrt{rac{0.21}{100}} = 0.0458$$ | $$[0.610,\; 0.790]$$ | **YES** (tight estimate!) |
+
+That simple calculation explains why "I asked 5 teammates to listen to 2 clips" is never enough—even a 70% win rate needs roughly **35–40 independent ratings** (e.g., 8 listeners × 5 diverse clips, or 10 listeners × 4 clips) to clear 95% confidence!
+
+### Deep-Dive Explanation: Four Rules for Running Fast, Honest Listening Tests (Read Slowly)
+
+1. **Loudness-normalize every clip before anyone presses play:** A 2 dB louder output wins blind A/B tests almost automatically—normalize all systems to the same active speech LUFS first.
+2. **Stratify your test playlist across failure modes:** Include (a) steady fan/AC noise, (b) babble/café voices, (c) sudden keyboard clicks, (d) double-talk/echo, and (e) **clean quiet speech** to catch clean-speech degradation.
+3. **Require headphones and keep sessions under 15 minutes:** Listener fatigue sets in fast; 15–20 short 6-second clips yield far sharper judgments than 60 clips in one sitting.
+4. **Always inspect the clips where your new model *lost*:** Aggregate win rate tells you *whether* to ship; the 3 clips where your model lost tell you *what to fix next*.
+
+**Quick check.** Why does a MUSHRA listening test include both a **hidden clean reference** and a **hidden low-quality anchor** alongside the candidate denoisers?
+
+---
 
 ## Exercises
 

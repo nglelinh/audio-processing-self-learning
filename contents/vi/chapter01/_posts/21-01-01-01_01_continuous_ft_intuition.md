@@ -17,6 +17,49 @@ Các kỹ thuật tăng cường tiếng nói chủ yếu hoạt động trên m
 
 *Hình. Tần số là một hệ tọa độ: mỗi hình sin là một thành phần cơ sở, và phép biến đổi đo lượng đóng góp của từng thành phần đó trong tín hiệu.*
 
+
+Khi bạn nhìn vào dạng sóng (waveform) của một đoạn ghi âm trên màn hình, bạn chỉ thấy một đường ngoằn ngoèo lên xuống theo thời gian — rất khó nói trong đó có giọng nam trầm, tiếng còi chói tai hay tiếng ù điện 50 Hz. Thế nhưng ngay khi bạn bật **biến đổi Fourier**, đám rối ngoằn ngoèo ấy bỗng tách bạch ngay lập tức thành những cột năng lượng gọn gàng trên trục tần số: tiếng ù điện đứng đúng ở vạch 50 Hz, giọng nói nằm gọn trong dải 100 Hz–4 kHz, còn tiếng rít cao tần đứng riêng một góc! Biến đổi Fourier chính là "lăng kính toán học" tách ánh sáng trắng của âm thanh thành cầu vồng các tần số đơn sắc.
+
+---
+
+## Bản đồ kiến thức nền: Biến đổi Fourier liên tục đứng trên ba trụ cột toán học nào?
+
+### 1. Phép chiếu trực giao lên họ sóng sin phức $$e^{j 2\pi f t}$$
+Trong đại số tuyến tính, muốn biết vectơ $$\mathbf{v}$$ chứa bao nhiêu thành phần theo hướng $$\mathbf{u}$$, ta lấy tích vô hướng $$\langle \mathbf{v}, \mathbf{u}\rangle$$. **Biến đổi Fourier liên tục (CFT)** làm đúng điều đó cho hàm số $$x(t)$$:
+
+$$
+X(f) = \int_{-\infty}^{\infty} x(t)\,e^{-j 2\pi f t}\,dt.
+$$
+
+Tích phân này "quấn" tín hiệu $$x(t)$$ quanh đường tròn đơn vị với tốc độ quay $$f$$ vòng/giây rồi tìm trọng tâm: nếu $$x(t)$$ thực sự chứa sóng ở tần số $$f$$, các vectơ cộng hưởng cùng hướng tạo ra $$|X(f)|$$ lớn; nếu không, chúng xoay đều quanh gốc và tự triệt tiêu về $$0$$!
+
+### 2. Biên độ (Magnitude) và Pha (Phase)
+Kết quả $$X(f) = |X(f)|\,e^{j\angle X(f)}$$ là một **số phức**: môđun $$|X(f)|$$ cho biết *mạnh yếu* của tần số $$f$$, còn góc pha $$\angle X(f)$$ cho biết *thời điểm dịch chuyển* của sóng đó. Trong xử lý tiếng nói, biên độ quyết định âm sắc và cấu trúc formant, còn pha quyết định độ sắc nét của các phụ âm nổ (như /p/, /t/, /k/) và tính tự nhiên của giọng nói.
+
+### 3. Đối ngẫu Thời gian – Tần số (Co giãn và Tích chập)
+Hai tính chất vàng của CFT điều khiển toàn bộ thiết kế bộ lọc âm thanh: (1) **Định lý co giãn**: ép hẹp tín hiệu theo thời gian $$a$$ lần thì phổ tần số lập tức phình rộng ra đúng $$a$$ lần; (2) **Định lý tích chập**: phép lọc tích chập nặng nề $$y(t) = (h * x)(t)$$ trong miền thời gian biến thành phép nhân đơn giản $$Y(f) = H(f)\,X(f)$$ trong miền tần số!
+
+---
+
+### Khung giải thích: tự tay tính biến đổi Fourier của một xung chữ nhật rộng $$T$$ (nên đọc chậm)
+
+Hãy tính tích phân Fourier của một xung chữ nhật bật trong khoảng $$[-T/2,\ +T/2]$$ (biên độ 1 bên trong, 0 bên ngoài — mô hình đơn giản nhất của việc "cắt một khung âm thanh dài $$T$$"):
+
+1. **Thiết lập tích phân:**
+   $$
+   X(f) = \int_{-T/2}^{T/2} 1 \cdot e^{-j 2\pi f t}\,dt = \left[\frac{e^{-j 2\pi f t}}{-j 2\pi f}\right]_{-T/2}^{T/2} = \frac{e^{j \pi f T} - e^{-j \pi f T}}{j 2\pi f}.
+   $$
+2. **Dùng công thức Euler $$\sin\theta = \frac{e^{j\theta} - e^{-j\theta}}{2j}$$:**
+   $$
+   X(f) = \frac{\sin(\pi f T)}{\pi f} = T\,\frac{\sin(\pi f T)}{\pi f T} = T\,\operatorname{sinc}(f T).
+   $$
+3. **Đọc ra quy luật vàng với con số cụ thể của khung tiếng nói $$T = 20\text{ ms} = 0.02\text{ s}$$:**
+   - Tại $$f = 0$$: $$X(0) = T = 0.02$$ (đỉnh búp chính).
+   - **Không điểm đầu tiên** xảy ra khi $$\pi f T = \pi \iff f = \frac{1}{T} = \frac{1}{0.02} = \mathbf{50\text{ Hz}}$$!
+   - Như vậy, chỉ riêng việc cắt đoạn âm thanh dài $$20\text{ ms}$$ đã làm mỗi tần số thuần bị "nhòe" thành một búp chính rộng $$\pm 50\text{ Hz}$$ (tổng $$100\text{ Hz}$$) kèm các búp phụ dao động giảm chậm theo $$1/f$$! Nếu cắt ngắn hơn nữa xuống $$T = 5\text{ ms}$$, búp chính lập tức phình to gấp 4 lần lên $$\pm 200\text{ Hz}$$ — đó chính là giới hạn độ phân giải thời gian–tần số mà mọi kỹ sư STFT phải sống chung!
+
+---
+
 ## Mục tiêu học tập
 
 1. Hiểu tần số như tốc độ dao động và như một tọa độ trong hệ cơ sở tín hiệu.

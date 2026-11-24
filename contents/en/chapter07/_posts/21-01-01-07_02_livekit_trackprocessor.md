@@ -17,6 +17,23 @@ LiveKit’s client SDK exposes a **TrackProcessor** so a local audio track can b
 
 *Figure. TrackProcessor sits on the local audio track: init builds the worklet graph, publish sends processedTrack.*
 
+In a real video-conferencing app like LiveKit or Mezon, users don’t just join a call once and sit still: they plug in AirPods mid-sentence, switch from laptop mic to USB Yeti, toggle noise suppression on and off, and bounce between voice channels. If your audio processor doesn’t implement a rock-solid **TrackProcessor lifecycle (`init`, `restart`, `destroy`)**, every microphone switch leaks megabytes of WASM linear memory and leaves zombie `AudioWorklet` nodes burning CPU in the background!
+
+This lecture breaks down the **LiveKit `TrackProcessor` pattern**: how LiveKit hands your processor a raw `MediaStreamTrack` and expects a `processedTrack` back, how to cleanly reset streaming state on `restart()`, and how to guarantee deterministic teardown on `destroy()`.
+
+---
+
+## Background Knowledge Map: Track Lifecycle, Resource Ownership, and Zero-Leak Teardown
+
+Building a production-grade `TrackProcessor` rests on four lifecycle guarantees:
+
+1. **The `TrackProcessor` Interface Contract:** LiveKit calls `init(opts)` when attaching to a `LocalAudioTrack`, `restart(opts)` when the underlying hardware microphone or constraints change, and `destroy()` when the track unpublishes or the user leaves the room.
+2. **Deterministic Resource Ownership (No Zombie AudioContexts):** Each `AudioContext`, `AudioWorkletNode`, Web Worker, and WASM instance holds native OS threads and heap buffers that JavaScript’s garbage collector will *not* reclaim until explicitly `.disconnect()`, `.terminate()`, and `.close()`d!
+3. **State Reset vs. Engine Reuse on `restart()`:** Switching from a 48 kHz built-in mic to a 16 kHz Bluetooth headset changes the source track—you should keep the compiled WASM module cached, reconnect the new `MediaStreamAudioSourceNode`, and zero out all GRU/conv streaming states so old audio doesn’t bleed into the new mic.
+4. **Seamless Bypass Without Re-Negotiating WebRTC:** Toggling NS off/on should route audio around the denoiser *inside* the same `processedTrack` rather than replacing the WebRTC sender track (avoiding SDP renegotiation hiccups).
+
+---
+
 ## Learning objectives
 
 You will order `new DeepFilterNoiseFilterProcessor`, `setProcessor`, `publishTrack`, and `setSuppressionLevel`, name the processor methods LiveKit calls for you, and keep `connect()` independent of the model download.
@@ -138,6 +155,37 @@ print("\n".join(f"{i}. {step}" for i, step in enumerate(order, 1)))
 2. Navigation without `destroy`, leaving a zombie worklet.
 3. Treating the README fragment as the whole API. `init`, `restart`, `suspend`, `resume`, `destroy`, and `isSupported` are real.
 4. Using the obsolete class name that is not the 1.3.0 export. Construct `DeepFilterNoiseFilterProcessor` or `DeepFilterNet3Core`.
+
+---
+
+### Worked Numerical Example: Quantifying Memory & CPU Leaks Across 5 Device Switches
+
+Suppose one instance of your WASM denoiser + Worker + `AudioContext` allocates:
+- WASM linear memory + model weights: **8.0 MB**
+- Worker thread + ring buffers: **2.5 MB**
+- Idle audio callback overhead: **1.5% CPU**
+
+Compare a buggy `restart()` (that forgets to close old nodes/workers) against a disciplined lifecycle across 5 mic switches during a long meeting:
+
+| Lifecycle Metric | Buggy `restart()` (No Cleanup) | Clean `restart()` (Reuse Engine + Reset State) |
+| :--- | :--- | :--- |
+| Live WASM/Worker Memory | $$6 	imes 10.5 = \mathbf{63.0	ext{ MB}}$$ (leaked!) | **$$10.5	ext{ MB}$$** (constant $$O(1)$$) |
+| Active `AudioContext`s | 6 (hits browser limit of ~6!) | **1** |
+| Background CPU Overhead | $$6 	imes 1.5\% = 9.0\%$$ wasted | **$$1.5\%$$** |
+| Switch Glitch Duration | 400–800 ms (re-downloading/compiling) | **< 20 ms** (instant state reset) |
+
+Notice that Chrome enforces a hard cap on simultaneous active `AudioContext` instances per tab—forgetting `.close()` on `destroy()` doesn’t just leak RAM; after 6 channel switches it literally **throws an exception and kills the user’s mic**!
+
+### Deep-Dive Explanation: Four Rules for Rock-Solid LiveKit TrackProcessors (Read Slowly)
+
+1. **Make `destroy()` idempotent:** LiveKit or React strict-mode hooks may invoke `destroy()` twice; guarding with `if (this.destroyed) return;` prevents double-free errors on WASM pointers.
+2. **Disconnect audio graph nodes in strict reverse order:** Disconnect source $$	o$$ worklet $$	o$$ destination, notify the Worker to free its WASM heap, call `worker.terminate()`, and finally `await audioCtx.close()`.
+3. **Zero streaming state on every `restart()` and unmute:** Calling `wasm.reset_state()` clears stale STFT overlap-add tails and GRU hidden states so the first word on the new mic is never clipped.
+4. **Expose an instant runtime `setEnabled(bool)` toggle:** Switching between denoised and raw audio inside the worklet (with a 5 ms crossfade) gives users zero-click A/B toggling during a call.
+
+**Quick check.** When a user switches microphones mid-call and LiveKit triggers `restart(opts)`, why is it better to call `reset_state()` and rewire the audio graph than to re-fetch and re-compile the `.wasm` module from scratch?
+
+---
 
 ## Exercises
 

@@ -11,7 +11,11 @@ lesson_type: required
 draft: false
 ---
 
+Hầu hết lập trình viên web đều quen với một phản xạ gỡ lỗi quen thuộc: thấy chương trình có vấn đề là chèn ngay một dòng `console.log(...)` vào bên trong hàm đang chạy. Thế nhưng trên luồng xử lý âm thanh thời gian thực của trình duyệt, chính dòng `console.log` vô hại đó lại là **thủ phạm** biến một cuộc gọi đang mượt mà thành một chuỗi tiếng tách và mất tiếng liên tục! Tại sao một dòng lệnh in ra màn hình lại nguy hiểm đến thế?
+
 Âm thanh trên trình duyệt được xử lý trên một luồng thời gian thực chuyên biệt. **AudioWorklet** (luồng render của Web Audio API) là giao diện cho phép đưa mã xử lý của bạn chạy trực tiếp trên luồng đó theo trình tự: gọi `audioWorklet.addModule`, khởi tạo `AudioWorkletNode`, và nhận lệnh gọi `process(inputs, outputs, parameters)` một lần cho mỗi render quantum. Mỗi quantum thường dài **128 mẫu**, tương ứng $$128/48000\approx 2{,}67$$ ms ở tần số lấy mẫu 48 kHz. Bên trong `process`, bạn tuyệt đối không được cấp phát bộ nhớ, chờ khóa (lock) hay gọi mạng. Một lệnh `console.log` vi phạm cả ba nguyên tắc này và không thể dùng để gỡ lỗi mất tiếng (dropout).
+
+**Mạch bài học:** Cú sốc `console.log` trên luồng âm thanh → Bản đồ kiến thức nền (Tách luồng Main vs. Audio Render, Ba lệnh cấm thời gian thực, Độ lệch nhịp 128 vs. 480 mẫu) → Vòng đời AudioWorklet & hợp đồng bypass → Vì sao `console.log` bị cấm → Khung giải thích theo dõi từng callback trong chu kỳ 15 quantum = 4 hop (40 ms) → Mini-lab và Bài tập.
 
 ![Quantum AudioWorklet như ngân sách thời gian tường cạnh RTF]({{ site.imgurl }}/generated/rtf-audioworklet.png)
 
@@ -20,6 +24,20 @@ draft: false
 ## Mục tiêu học tập
 
 Sau bài học này, bạn sẽ nắm được vòng đời của AudioWorklet, viết được hàm `process` sao chép thẳng tín hiệu đầu vào sang đầu ra khi bật cờ bypass, giải thích được vì sao `console.log` bị cấm trên luồng render âm thanh, và biết cách ghép hop 480 mẫu của DeepFilterNet lên chuỗi quantum 128 mẫu mà không giả định chúng chia hết cho nhau.
+
+## Bản đồ kiến thức nền: Kiến trúc luồng âm thanh thời gian thực trong trình duyệt
+
+### 1. Tách biệt Luồng chính (Main Thread) và Luồng Render âm thanh (AudioWorklet Thread)
+- **Là gì:** Trong trình duyệt, luồng chính bận vẽ giao diện (DOM layout, cuộn trang, phân tích JSON) và có thể bị treo hàng chục mili giây. `AudioWorklet` đẩy toàn bộ hàm `process()` sang một luồng ưu tiên thời gian thực riêng biệt, giao tiếp với luồng chính bất đồng bộ qua `MessagePort` (hoặc `SharedArrayBuffer`).
+- **Nghiên cứu gì:** Bảo vệ nhịp phát/thu âm thanh khỏi những cú giật của giao diện người dùng (điều mà API cũ `ScriptProcessorNode` không làm được).
+
+### 2. Tính an toàn thời gian thực (Real-Time Safety: No-Alloc, No-Lock, No-I/O)
+- **Là gì:** Quy tắc thép chung cho mọi hệ thống âm thanh từ CoreAudio, WASAPI, AAudio đến AudioWorklet: thời gian chạy xấu nhất (worst-case execution time) bên trong callback phải bị chặn chặt.
+- **Nghiên cứu gì:** Mọi thao tác có thời gian thực thi không xác định — cấp phát heap (có thể kích hoạt GC), chờ mutex (gây đảo ưu tiên), hay gọi mạng/ổ đĩa — đều bị cấm tuyệt đối; toàn bộ bộ đệm nháp (scratch buffer) phải cấp phát sẵn một lần duy nhất trong `constructor`.
+
+### 3. Hợp đồng Bypass và Độ lệch pha kích thước khối (Block-Size Mismatch)
+- **Là gì:** Trình duyệt cấp dữ liệu theo quantum $$Q = 128$$ mẫu, còn mạng DeepFilterNet xử lý theo hop $$H = 480$$ mẫu; đồng thời trong lúc WASM đang tải hoặc khi hop bị trễ, luồng âm thanh vẫn phải trả về đúng 128 mẫu mà không được đứng chờ.
+- **Nghiên cứu gì:** Thiết kế đường dự phòng `bypass` sao chép không cấp phát (`output.set(input)`) kết hợp bộ đệm gom mẫu ở ranh giới giữa hai nhịp đồng hồ không chia hết cho nhau.
 
 ## Kế hoạch 60 phút
 
@@ -91,6 +109,25 @@ Việc viết một script Node.js import `wrtc` hoặc chạy bản dựng WASM
 Bước nhảy đã công bố của DeepFilterNet là 10 ms, tương đương **480 mẫu** ở tần số lấy mẫu 48 kHz (bài 04-02, 04-03). Tỉ số $$480/128=3{,}75$$ cho thấy hai kích thước này không chia hết cho nhau: 3 callback chỉ tích lũy được 384 mẫu, còn 4 callback tích lũy được 512 mẫu. Do đó, cần đưa dữ liệu vào một ring buffer (bài 05-03) cho đến khi đủ 480 mẫu để chạy một hop, sau đó cắt phần đầu ra overlap-add trở lại thành từng quantum 128 mẫu. Giả định cứng `input.length === 480` sẽ dẫn đến mất mẫu hoặc lặp âm thanh.
 
 Biến `sampleRate` luôn có sẵn trong phạm vi toàn cục của worklet, vì vậy hãy đọc trực tiếp giá trị này. Ở tần số 44,1 kHz, cùng khối 128 mẫu kéo dài $$128/44100\approx 2{,}90$$ ms, đồng thời hop 480 mẫu sẽ không còn tương ứng 10 ms cho một mô hình huấn luyện ở 48 kHz. Các API âm thanh native như CoreAudio, WASAPI và AAudio đều tuân theo nguyên tắc tương tự dưới những tên gọi khác: phải hoàn thành trước kỳ kế tiếp và chuyển sang bypass nếu mô hình xử lý bị trễ.
+
+## Khung giải thích: Dò tay chu kỳ ghép 128 mẫu và 480 mẫu (nên đọc chậm)
+
+Tại sao ta nói không bao giờ được giả định "cứ đúng 4 callback là chạy 1 hop"? Hãy tính **bội chung nhỏ nhất** của $$Q = 128 = 2^7$$ và $$H = 480 = 2^5 \cdot 3 \cdot 5$$:
+$$ \operatorname{LCM}(128, 480) = 2^7 \cdot 3 \cdot 5 = \mathbf{1920\text{ mẫu}}. $$
+Ở 48 kHz, $$1920$$ mẫu đúng bằng $$40\text{ ms}$$, tương ứng **15 callback** ($$15 \times 128 = 1920$$) và **4 hop** ($$4 \times 480 = 1920$$). Bây giờ hãy dò từng callback để thấy số dư mẫu trong bộ đệm biến thiên tuần hoàn ra sao:
+
+| Callback thứ | Mẫu tích lũy trước khi chạy hop | Chạy hop 480? | Mẫu còn dư trong ring A |
+| :--- | :--- | :--- | :--- |
+| 1, 2, 3 | $$128 \to 256 \to 384$$ | Chưa | $$384$$ |
+| **4** | $$384 + 128 = 512$$ | **Có (Hop #1)** | $$512 - 480 = \mathbf{32}$$ |
+| 5, 6, 7 | $$160 \to 288 \to 416$$ | Chưa | $$416$$ |
+| **8** | $$416 + 128 = 544$$ | **Có (Hop #2)** | $$544 - 480 = \mathbf{64}$$ |
+| 9, 10, 11 | $$192 \to 320 \to 448$$ | Chưa | $$448$$ |
+| **12** | $$448 + 128 = 576$$ | **Có (Hop #3)** | $$576 - 480 = \mathbf{96}$$ |
+| 13, 14 | $$224 \to 352$$ | Chưa | $$352$$ |
+| **15** | $$352 + 128 = 480$$ | **Có (Hop #4)** | $$480 - 480 = \mathbf{0}$$ |
+
+**Bài học rút ra từ bảng trên:** Hop #1, #2, #3 chạy sau mỗi **4 callback**, nhưng Hop #4 lại rơi vào đúng **3 callback** sau Hop #3 (tại callback 15)! Nếu một lập trình viên ngây thơ viết `if (callbackCount % 4 === 0) runHop()`, mỗi chu kỳ 40 ms sẽ bị rò rỉ đúng 128 mẫu — chỉ sau 1 giây đã trượt mất 3.200 mẫu (66,7 ms âm thanh)! Ring buffer ở bài 05-03 chính là cấu trúc loại bỏ hoàn toàn kiểu đếm tay sai lầm này.
 
 ## Bẫy thường gặp
 

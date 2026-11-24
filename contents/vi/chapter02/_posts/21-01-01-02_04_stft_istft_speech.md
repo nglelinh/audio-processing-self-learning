@@ -13,6 +13,49 @@ draft: false
 
 Biến đổi Fourier thời gian ngắn (STFT) là biểu diễn cốt lõi của cả khử nhiễu cổ điển lẫn họ mô hình DeepFilterNet. Trong bài học này, phép biến đổi thuận dùng cửa sổ phân tích, còn phép biến đổi nghịch chỉ rõ cửa sổ tổng hợp riêng biệt để áp dụng chính xác điều kiện COLA từ bài 02-02 mà không bị ẩn đi bước nhân cửa sổ nào.
 
+
+Nếu biến đổi Fourier thông thường giống như việc ép cả một bản giao hưởng dài 5 phút thành một danh sách thống kê duy nhất xem nốt Đô, Rê, Mi xuất hiện bao nhiêu lần (mất sạch thứ tự thời gian!), thì **Biến đổi Fourier Thời gian Ngắn (STFT)** chính là **bản khuông nhạc sống**: trục ngang ghi thời gian theo từng khung 10 ms, trục dọc ghi tần số theo từng bin 50 Hz, còn mỗi ô $$(t, f)$$ chứa biên độ và pha tức thời của âm thanh tại đúng khoảnh khắc đó. Hầu hết các hệ thống tăng cường tiếng nói hiện đại — từ bộ lọc Wiener cổ điển đến **DeepFilterNet** — đều làm việc trực tiếp trên "bản khuông nhạc số" STFT rồi dịch ngược về sóng âm bằng **ISTFT**.
+
+---
+
+## Bản đồ kiến thức nền: Cặp biến đổi STFT / ISTFT đứng trên ba trụ cột nào?
+
+### 1. Biểu diễn Thời gian – Tần số phức $$X(m, k)$$
+STFT áp dụng cửa sổ phân tích $$w_a[n]$$ rồi chạy FFT trên từng khung trượt cách nhau $$H$$ mẫu:
+
+$$
+X(m, k) = \sum_{n=0}^{N-1} x[mH + n]\,w_a[n]\,e^{-j\frac{2\pi k n}{N}}.
+$$
+
+Ta thu được một ma trận số phức 2 chiều kích thước $$(T_{\text{frames}} \times (N/2 + 1))$$: độ lớn $$|X(m,k)|$$ cho biết năng lượng, còn $$\angle X(m,k)$$ chứa pha — đặc biệt quan trọng trong **Deep Filtering** (lọc phức đa khung trên cả phần thực và phần ảo).
+
+### 2. Tổng hợp WOLA và Cặp cửa sổ Phân tích – Tổng hợp (Vorbis / sqrt-Hann)
+Khi khôi phục tín hiệu bằng **ISTFT**, mỗi khung phổ đã lọc $$\hat{X}(m, k)$$ được biến đổi IFFT về miền thời gian, nhân thêm **cửa sổ tổng hợp $$w_s[n]$$** rồi cộng chồng lấp (WOLA). Để tái tạo hoàn hảo khi không lọc ($$\hat{X} = X$$), ta cần điều kiện Princen–Bradley / WOLA: $$\sum_m w_a[n - mH]\,w_s[n - mH] = 1$$ — đạt được tự nhiên bằng cách chọn $$w_a[n] = w_s[n] = \sqrt{w_{\text{Hann}}[n]}$$ (hoặc cửa sổ Vorbis $$w[n] = \sin\bigl(\frac{\pi}{2}\sin^2\frac{\pi(n+0.5)}{N}\bigr)$$ mà DeepFilterNet sử dụng!).
+
+### 3. Tính không nhất quán của STFT (STFT Inconsistency) sau khi áp mặt nạ
+Một tinh tế toán học rất quan trọng: không phải mọi ma trận số phức $$Y(m, k)$$ bất kỳ đều là STFT hợp lệ của một tín hiệu 1 chiều nào đó (vì các khung chồng lấp chia sẻ chung mẫu thời gian!). Khi ta nhân $$X(m, k)$$ với một mặt nạ khử nhiễu $$M(m, k)$$ thay đổi đột ngột, $$\hat{X} = M \cdot X$$ thường bị **không nhất quán**; phép ISTFT WOLA thực chất thực hiện **phép chiếu bình phương tối thiểu** tìm tín hiệu 1 chiều có STFT gần $$\hat{X}$$ nhất!
+
+---
+
+### Khung giải thích: tự tay kiểm tra cửa sổ căn Hann (sqrt-Hann) trong WOLA với $$N = 4,\ H = 2$$ (nên đọc chậm)
+
+Giả sử hệ thống dùng **cùng một cửa sổ** $$w_a[n] = w_s[n] = \sqrt{w_{\text{Hann}}[n]}$$ ở cả đầu phân tích STFT và đầu tổng hợp ISTFT (tại $$N = 4,\ H = 2$$):
+
+1. **Tính giá trị cửa sổ căn Hann:** Từ $$w_{\text{Hann}} = [0,\ 0.5,\ 1.0,\ 0.5]$$, lấy căn bậc hai từng phần tử:
+   $$
+   w_a = w_s = \bigl[0,\ \tfrac{1}{\sqrt{2}},\ 1,\ \tfrac{1}{\sqrt{2}}\bigr] \approx [0,\ 0.7071,\ 1.0,\ 0.7071].
+   $$
+2. **Chạy qua STFT → (không đổi phổ) → ISTFT:** Mỗi khung đi qua STFT bị nhân $$w_a$$, rồi đi qua ISTFT bị nhân thêm $$w_s$$, nên trọng số tổng trên từng khung là:
+   $$
+   w_a[n] \cdot w_s[n] = w_a[n]^2 = [0,\ 0.5,\ 1.0,\ 0.5] = w_{\text{Hann}}[n]!
+   $$
+3. **Cộng chồng lấp 50% ($$H = 2$$):**
+   - Tại mẫu chẵn: $$0 + 1.0 = \mathbf{1.0}$$.
+   - Tại mẫu lẻ: $$0.5 + 0.5 = \mathbf{1.0}$$.
+4. **Lợi ích kép khi khử nhiễu:** Nếu bạn đặt mặt nạ $$M = 0$$ ở khung 0 và $$M = 1$$ ở khung 1 (chuyển đột ngột từ im lặng sang nói), nhờ cửa sổ tổng hợp $$w_s$$ vuốt mượt từ $$0 \to 0.707 \to 1$$, biên độ âm thanh tăng lên êm ái thay vì nhảy bậc gây tiếng "tách"!
+
+---
+
 ## Mục tiêu học tập
 
 1. Hình dung rõ cấu trúc lưới STFT (thời gian × tần số).

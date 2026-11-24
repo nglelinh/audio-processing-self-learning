@@ -11,11 +11,30 @@ lesson_type: required
 draft: false
 ---
 
-Every WebRTC track and every DeepFilterNet forward pass assumes a sample rate. Wrong rates create silent aliasing bugs that look like “model quality regressions.” This lesson makes the sampling theorem operational for speech NS engineers.
+Here is a classic production postmortem: an engineer drops a crisp 16 kHz speech-enhancement ONNX model into a 48 kHz browser WebRTC graph—skipping the resampler “because 48 kHz has more detail.” The call immediately sounds like a haunted robot, yet no exception is thrown and every tensor shape matches. What went wrong? **Sampling rate is not metadata; it defines the entire frequency axis.**
+
+Every WebRTC track and every DeepFilterNet forward pass assumes a specific sample rate $$f_s$$. Getting $$f_s$$ wrong—or decimating without an anti-alias filter—folds high-frequency energy irreversibly on top of speech, creating phantom interference that no neural network can undo. This lesson makes the Nyquist–Shannon sampling theorem concrete and operational for audio engineers.
 
 ![A spectrum copied at every sample rate, with copies overlapping when the signal is too wide]({{ site.imgurl }}/generated/sampling-nyquist.png)
 
-*Figure. Sampling repeats the spectrum every \(f_s\) hertz; overlap of those copies is aliasing, and it is not undone by a neural suppressor.*
+*Figure. Sampling repeats the spectrum every $$f_s$$ hertz; overlap of those copies is aliasing, and it is not undone by a neural suppressor.*
+
+**Lesson roadmap:** Background Knowledge Map (impulse-train sampling, spectral replicas & aliasing, normalized digital frequency $$\omega$$) → Nyquist criterion, product rates (8/16/48 kHz), and anti-alias filters → Worked examples: 7 kHz cosine sampled at 8 kHz collapsing identically to 1 kHz, broadband fold, and 20 ms frame sizes across rates → Deep-Dive Explanation (Read Slowly): 3 steps explaining why aliasing is irreversible and how decimation must be ordered → Pitfalls, Mini-lab, Exercises & Videos.
+
+---
+
+## Background Knowledge Map: Sampling Theory and Multirate Audio
+
+### 1. Multiplying in Time = Replicating in Frequency
+Ideal sampling multiplies a continuous waveform $$x_c(t)$$ by a periodic impulse train spaced by $$T = 1/f_s$$. Because the Fourier transform of a pulse train is another pulse train spaced by $$f_s$$ Hz, sampling **copies the original spectrum every $$f_s$$ Hz** across the entire frequency axis.
+
+### 2. Nyquist Frequency and Aliasing Fold-Back
+As long as the original signal contains no energy above the **Nyquist frequency** $$f_s / 2$$, the spectral copies stay cleanly separated and an ideal low-pass filter recovers $$x_c(t)$$ with zero loss. If energy exceeds $$f_s / 2$$, neighboring copies **overlap and add**—a permanent collision called **aliasing** where high frequencies impersonate low ones.
+
+### 3. Normalized Digital Frequency $$\omega = 2\pi f / f_s$$
+Once audio is a sequence of numbers $$x[n]$$, the array itself has no idea what $$f_s$$ was. Digital filters and FFT bins live on normalized frequency $$\omega \in [-\pi, \pi]$$, where $$\omega = \pi$$ always maps to $$f_s / 2$$. Running a 16 kHz filter on 48 kHz PCM stretches every frequency cutoff by $$3\times$$!
+
+---
 
 ## Learning objectives
 
@@ -39,53 +58,53 @@ Every WebRTC track and every DeepFilterNet forward pass assumes a sample rate. W
 
 ### Sampling replicates spectra
 
-Ideal impulse-train sampling with period \(T=1/f_s\):
+Ideal impulse-train sampling with period $$T=1/f_s$$:
 
 $$
 x_s(t)=x_c(t)\sum_{n=-\infty}^{\infty}\delta(t-nT)
 $$
 
-yields spectrum copies every \(f_s\) Hz:
+yields spectrum copies every $$f_s$$ Hz:
 
 $$
 X_s(j2\pi f)=f_s\sum_{k} X_c\!\big(j2\pi(f-kf_s)\big)
 $$
 
-If the support of \(X_c\) is wider than \(f_s/2\), replicas **overlap**. The overlap region is irreversibly confused — **aliasing**.
+If the support of $$X_c$$ is wider than $$f_s/2$$, replicas **overlap**. The overlap region is irreversibly confused — **aliasing**.
 
-The identity you will use in the lab is one line of the replica sum. On the sample grid \(t=n/f_s\),
+The identity you will use in the lab is one line of the replica sum. On the sample grid $$t=n/f_s$$,
 
 $$
 \cos\!\left(2\pi\frac{f}{f_s}n\right)
 =\cos\!\left(2\pi\frac{f-mf_s}{f_s}n\right)
 $$
 
-because \(2\pi m n\) is an integer number of turns. Fold the representative into \([0,f_s/2]\) by reflecting at Nyquist if needed. For a 7 kHz cosine sampled at 8 kHz, take \(m=1\): \(|7000-8000|=1000\,\mathrm{Hz}\). The 7 kHz cosine and the 1 kHz cosine are the same sequence. A sine picks up a minus sign, \(\sin(2\pi\cdot 7n/8)=-\sin(2\pi\cdot 1n/8)\), because sine is odd under that full-turn shift. “Matches” means identical samples, not “sounds close.”
+because $$2\pi m n$$ is an integer number of turns. Fold the representative into $$[0,f_s/2]$$ by reflecting at Nyquist if needed. For a 7 kHz cosine sampled at 8 kHz, take $$m=1$$: $$\vert 7000-8000\vert=1000\,\mathrm{Hz}$$. The 7 kHz cosine and the 1 kHz cosine are the same sequence. A sine picks up a minus sign, $$\sin(2\pi\cdot 7n/8)=-\sin(2\pi\cdot 1n/8)$$, because sine is odd under that full-turn shift. “Matches” means identical samples, not “sounds close.”
 
 ### Nyquist criterion
 
-If \(x_c\) is bandlimited with highest frequency \(B\) Hz, choose
+If $$x_c$$ is bandlimited with highest frequency $$B$$ Hz, choose
 
 $$
 f_s > 2B
 $$
 
-Then an ideal low-pass (sinc interpolator) reconstructs \(x_c\) from samples \(x[n]=x_c(nT)\). Real systems approximate this with analog anti-alias filters + practical interpolators.
+Then an ideal low-pass (sinc interpolator) reconstructs $$x_c$$ from samples $$x[n]=x_c(nT)$$. Real systems approximate this with analog anti-alias filters + practical interpolators.
 
 Definitions:
 
-- **Nyquist rate** \(= 2B\) for a bandlimit \(B\).
-- **Nyquist frequency** \(= f_s/2\) for a given sampler.
+- **Nyquist rate** $$= 2B$$ for a bandlimit $$B$$.
+- **Nyquist frequency** $$= f_s/2$$ for a given sampler.
 
 ### Discrete-time frequency mapping
 
-After sampling, digital frequency \(\omega\) (rad/sample) relates to Hz by
+After sampling, digital frequency $$\omega$$ (rad/sample) relates to Hz by
 
 $$
 \omega = 2\pi\frac{f}{f_s},\qquad f = \frac{\omega}{2\pi}f_s
 $$
 
-\(\omega=\pi\) always means Nyquist (Hz value depends on \(f_s\)). This is why the same FIR coefficients implement different Hz cutoffs at 16 vs 48 kHz.
+$$\omega=\pi$$ always means Nyquist (Hz value depends on $$f_s$$). This is why the same FIR coefficients implement different Hz cutoffs at 16 vs 48 kHz.
 
 ### Audio bandwidth vs product rates
 
@@ -99,9 +118,9 @@ Speech intelligibility energy is not uniform: vowels live lower; consonants need
 
 ### Anti-alias filters
 
-**Analog (before ADC):** attenuate above \(f_s/2\). Cheap products with weak filters alias ultrasonic energy into the band.
+**Analog (before ADC):** attenuate above $$f_s/2$$. Cheap products with weak filters alias ultrasonic energy into the band.
 
-**Digital (before decimation):** when going 48→16 kHz (factor \(M=3\)), low-pass near 8 kHz, *then* keep every third sample. Decimate-first is a bug.
+**Digital (before decimation):** when going 48→16 kHz (factor $$M=3$$), low-pass near 8 kHz, *then* keep every third sample. Decimate-first is a bug.
 
 ### Resampling quality tiers
 
@@ -115,7 +134,7 @@ Neural NS is sensitive: aliasing tones become “extra noise” the model never 
 
 ### Tone alias
 
-\(f=5\,\mathrm{kHz}\), \(f_s=8\,\mathrm{kHz}\). Nyquist 4 kHz. Fold: \(f_{\mathrm{alias}}=f_s-f=3\,\mathrm{kHz}\) (first folding). You perceive 3 kHz.
+$$f=5\,\mathrm{kHz}$$, $$f_s=8\,\mathrm{kHz}$$. Nyquist 4 kHz. Fold: $$f_{\mathrm{alias}}=f_s-f=3\,\mathrm{kHz}$$ (first folding). You perceive 3 kHz.
 
 ### Broadband fold
 
@@ -127,11 +146,42 @@ $$
 L = T\cdot f_s \Rightarrow L_{16k}=320,\quad L_{48k}=960
 $$
 
-Same latency budget, different FFT sizes and bin widths \(\Delta f=f_s/N\).
+Same latency budget, different FFT sizes and bin widths $$\Delta f=f_s/N$$.
 
 ### RTF impact of rate
 
 If compute scales roughly with samples/s (FFT + hop rate), jumping 16→48 kHz without changing hop *seconds* can cost ~3× STFT throughput. Measure; don’t guess.
+
+---
+
+### Deep-Dive Explanation: Why Aliasing Cannot Be Filtered Out After Sampling (Read Slowly)
+
+#### Step 1: Check the exact sample values at $$n = 0, 1, 2, 3$$
+Sample both $$x_1(t) = \cos(2\pi \cdot 7000\,t)$$ and $$x_2(t) = \cos(2\pi \cdot 1000\,t)$$ at $$f_s = 8000\,\mathrm{Hz}$$:
+- At $$n = 0$$: $$\cos(0) = 1$$ for both.
+- At $$n = 1$$: $$\cos(7\pi/4) = +\frac{\sqrt{2}}{2}$$ and $$\cos(\pi/4) = +\frac{\sqrt{2}}{2}$$.
+- At $$n = 2$$: $$\cos(14\pi/4) = 0$$ and $$\cos(2\pi/4) = 0$$.
+- At $$n = 3$$: $$\cos(21\pi/4) = -\frac{\sqrt{2}}{2}$$ and $$\cos(3\pi/4) = -\frac{\sqrt{2}}{2}$$.
+
+Every single sample is **mathematically identical** to machine precision! Once those numbers are written to memory, no filter in the universe can tell whether the original wave was 7 kHz or 1 kHz.
+
+#### Step 2: Why decimation must ALWAYS be “Low-Pass FIRST, Drop Samples SECOND”
+Suppose you have 48 kHz PCM containing a 12 kHz cymbal hiss and you want 16 kHz PCM ($$M = 3$$):
+- **Wrong order (drop 2 of every 3 samples first):** the 12 kHz tone exceeds the new 8 kHz Nyquist and immediately folds to $$\vert 12 - 16\vert = 4\,\mathrm{kHz}$$—smack inside the human voice band!
+- **Right order (low-pass below 8 kHz first, then keep every 3rd sample):** the 12 kHz energy is erased *before* the sample grid coarsens, so nothing folds into 0–8 kHz.
+
+#### Step 3: Guard the rate boundary in every audio graph
+Whenever a 48 kHz browser graph talks to a 16 kHz model—or when an evaluation script computes SI-SDR—explicitly assert `fs_in == fs_model` or insert a proper polyphase resampler. Never trust “it sounds okay on one voice note.”
+
+Summary of safe multirate downsampling:
+
+$$
+x_{48\text{k}}[n]
+\;\xrightarrow{\text{LPF } < 8\,\mathrm{kHz}}\;
+\tilde{x}_{48\text{k}}[n]
+\;\xrightarrow{\downarrow 3}\;
+x_{16\text{k}}[m]\ (\text{alias-free}).
+$$
 
 ## Common pitfalls
 
@@ -164,18 +214,18 @@ print(np.round(high[:8], 6).tolist())
 ## Mini exercises
 
 1. Nyquist frequency at 48 kHz and 16 kHz?
-2. Alias of 10 kHz tone when \(f_s=16\,\mathrm{kHz}\) (express in \([0,f_s/2]\)).
+2. Alias of 10 kHz tone when $$f_s=16\,\mathrm{kHz}$$ (express in $$[0,f_s/2]$$).
 3. Samples in 10 ms at 8/16/48 kHz.
 4. Write a 4-step checklist to convert a 48 kHz mono Float32 track to a 16 kHz model input safely.
-5. Why does \(\omega=\pi\) mean different Hz at different \(f_s\)?
+5. Why does $$\omega=\pi$$ mean different Hz at different $$f_s$$?
 
 ### Answer hints
 
-1. Nyquist frequency is \(f_s/2\): 24 kHz at 48 kHz, 8 kHz at 16 kHz.
-2. \(10\,\mathrm{kHz}\) at \(16\,\mathrm{kHz}\) folds once: \(16-10=6\,\mathrm{kHz}\).
-3. \(10\,\mathrm{ms}\) is 80, 160, and 480 samples.
+1. Nyquist frequency is $$f_s/2$$: 24 kHz at 48 kHz, 8 kHz at 16 kHz.
+2. $$10\,\mathrm{kHz}$$ at $$16\,\mathrm{kHz}$$ folds once: $$16-10=6\,\mathrm{kHz}$$.
+3. $$10\,\mathrm{ms}$$ is 80, 160, and 480 samples.
 4. Confirm 48 kHz mono float; low-pass near 8 kHz; decimate by 3; check a 1 kHz sine is still 1 kHz and that energy above 8 kHz is gone.
-5. \(\omega=\pi\) is half a cycle per sample, which is \(f_s/2\) hertz. The digital frequency is normalized; the physical frequency is not.
+5. $$\omega=\pi$$ is half a cycle per sample, which is $$f_s/2$$ hertz. The digital frequency is normalized; the physical frequency is not.
 
 ## Further reading
 

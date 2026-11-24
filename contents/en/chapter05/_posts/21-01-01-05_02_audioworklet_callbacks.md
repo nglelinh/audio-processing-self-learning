@@ -17,6 +17,23 @@ Browser audio is rendered on a real-time thread. **AudioWorklet** is the API tha
 
 *Figure. Each callback owns a short block — commonly 128 samples, about 2.67 ms at 48 kHz — and must return before the next one. RTF is measured on whatever block you chose to time (one quantum, or one 10 ms model hop gathered from several quanta). The picture is the deadline, not a license to run a DeepFilterNet forward pass inside a single `process` call.*
 
+If you try to run real-time audio processing on JavaScript’s main UI thread, every time the user scrolls a page or opens a dropdown menu, the audio stutters horribly. The Web Audio API solved this with **`AudioWorkletProcessor`**: a dedicated, high-priority real-time audio thread that wakes up like clockwork every **128 audio samples** and demands your next buffer of clean audio—no excuses, no waiting for network requests, and no garbage-collection pauses!
+
+This lecture demystifies the real-time audio callback contract in browsers (and its native cousins CoreAudio, ALSA, and WASAPI): why 128 samples equals just **2.67 milliseconds** at 48 kHz, why allocating memory or taking locks inside `process()` is forbidden, and how to bridge a 128-sample callback with a 480-sample neural network hop.
+
+---
+
+## Background Knowledge Map: Real-Time Audio Thread Contracts
+
+Audio callbacks obey the strictest execution rules in application software:
+
+1. **Fixed Render Quantum (128 Samples):** Web Audio invokes `process(inputs, outputs)` with exactly 128 samples per channel. At 48 kHz, the hard deadline is $$128 / 48{,}000 = 2.667	ext{ ms}$$; at 44.1 kHz, it is $$2.902	ext{ ms}$$.
+2. **Real-Time Safety (No Allocation, No Locks, No I/O):** Calling `new Float32Array(...)`, `malloc()`, `console.log()`, or acquiring a mutex inside `process()` can block the audio thread unpredictably, causing instant audible pops. Pre-allocate every buffer once in the constructor!
+3. **Quantum-to-Hop Rate Adaptation:** Neural speech models typically prefer 10 ms hops (480 samples at 48 kHz), which is *not* an integer multiple of 128. You must buffer incoming 128-sample chunks in a pre-allocated ring buffer and trigger inference whenever $$\ge 480$$ samples accumulate.
+4. **Heavy Inference Offloading (Optional Worker):** If a single ML forward pass takes 4 ms (longer than the 2.67 ms quantum!), running it directly inside `process()` will miss deadlines even if its average RTF is 0.40—requiring either a faster model or offloading inference to a dedicated Worker via `SharedArrayBuffer`.
+
+---
+
 ## Learning objectives
 
 You will trace the AudioWorklet lifecycle, write a `process` that copies input to output when a bypass flag is set, explain why `console.log` is illegal on that thread, and place a 480-sample DeepFilterNet hop across several 128-sample quanta without assuming the counts divide.
@@ -129,6 +146,39 @@ PY
 **Expected**. `True [0.1, -0.2, 0.3, -0.4]`. The output buffer object is the one the caller allocated. Nothing in `process` constructs a list, prints, or waits.
 
 **Failure modes**. Allocating `out = frame.copy()` inside the function and calling it real-time safe. Inserting a print “just for the lab” and leaving it in the worklet. Requiring `npm install` or a running browser for a pass. Treating a successful copy as evidence that the DF3 graph meets the 2.67 ms budget — the copy is a few loads and stores, the graph is not.
+
+---
+
+### Worked Numerical Example: Reconciling a 128-Sample AudioWorklet with a 480-Sample ML Hop
+
+At $$f_s = 48{,}000	ext{ Hz}$$, trace how samples accumulate across consecutive `AudioWorklet` callbacks (128 samples = $$2.667	ext{ ms}$$ each) feeding a 480-sample (10 ms) denoiser:
+
+| Callback # | Elapsed Time | Samples Pushed | Buffered Samples Before ML | ML Hop Triggered (480)? | Remaining Samples |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | $$2.67	ext{ ms}$$ | +128 | 128 | No | 128 |
+| 2 | $$5.33	ext{ ms}$$ | +128 | 256 | No | 256 |
+| 3 | $$8.00	ext{ ms}$$ | +128 | 384 | No | 384 |
+| 4 | $$10.67	ext{ ms}$$ | +128 | 512 | **YES (-480)** | 32 |
+| 5 | $$13.33	ext{ ms}$$ | +128 | 160 | No | 160 |
+| 6 | $$16.00	ext{ ms}$$ | +128 | 288 | No | 288 |
+| 7 | $$18.67	ext{ ms}$$ | +128 | 416 | No | 416 |
+| 8 | $$21.33	ext{ ms}$$ | +128 | 544 | **YES (-480)** | 64 |
+
+Look at the crucial systems insight revealed by this table:
+- Because $$128 
+mid 480$$, inference fires on callbacks #4, #8, #12, #15 (since $$\mathrm{lcm}(128, 480) = 1920$$ samples = 15 callbacks = 4 ML hops = 40 ms!).
+- On callback #4, if inference runs **inline** inside `process()`, it must finish in **under 2.67 ms** (not 10 ms!), otherwise callback #4 overruns! That is why offloading to a Worker + ring buffer smooths the bursty 10 ms compute across all 4 callbacks!
+
+### Deep-Dive Explanation: Four Rules for Glitch-Free AudioWorklet Engineering (Read Slowly)
+
+1. **Zero allocations inside `process()`:** Create all `Float32Array` scratch buffers, FFT workspaces, and ring buffers once during initialization so JavaScript’s garbage collector stays asleep during calls.
+2. **Never confuse hop deadline (10 ms) with callback deadline (2.67 ms):** Running a 3.5 ms ML inference synchronously inside a 2.67 ms `AudioWorklet` callback guarantees underruns even though $$\mathrm{RTF} = 0.35$$!
+3. **Handle silence and bypass cleanly:** Always return `true` from `process()` while the node is active, and implement a zero-glitch bypass toggle that preserves latency alignment or crossfades smoothly.
+4. **Watch sample-rate mismatches:** Always read the runtime `sampleRate` global inside `AudioWorkletGlobalScope` (some Bluetooth headsets force 16 kHz or 44.1 kHz instead of 48 kHz!).
+
+**Quick check.** At $$44{,}100	ext{ Hz}$$, how many milliseconds long is a 128-sample Web Audio render quantum?
+
+---
 
 ## Exercises
 

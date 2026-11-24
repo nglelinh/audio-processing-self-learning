@@ -13,6 +13,44 @@ draft: false
 
 Bộ khử nhiễu mạng nơ-ron nhận đầu vào là tensor, trong khi micro cung cấp luồng PCM. Định dạng bộ đệm, tần số lấy mẫu và cách bố trí kênh là những điểm tích hợp dễ gặp lỗi nhất ngay cả trước khi mô hình chạy. Sai \(f_s\) không chỉ làm âm thanh "tối" đi mà còn khiến năng lượng bị gập qua tần số Nyquist: một âm đơn 7 kHz lấy mẫu ở 8 kHz sẽ trùng khớp hoàn toàn về giá trị mẫu với âm 1 kHz, và không mặt nạ STFT nào có thể gỡ ngược phép gập đó.
 
+
+Trước khi bất kỳ thuật toán FFT hay mạng nơ-ron nào chạm tới giọng nói của bạn, micro và mạch chuyển đổi tương tự–số (ADC) đã phải biến sóng áp suất không khí liên tục thành một dòng các con số rời rạc gọi là **PCM (Pulse-Code Modulation)**. Nếu bạn chọn sai định dạng PCM — chẳng hạn gộp sai kênh stereo, quên chuẩn hóa số nguyên 16-bit `int16` về số thực `float32` trong đoạn $$[-1, 1]$$, hoặc trộn nhầm tệp 16 kHz vào mô hình 48 kHz — toàn bộ hệ thống khử nhiễu phía sau sẽ phát ra tiếng ré chói tai hoặc giọng trầm chậm đi đúng 3 lần!
+
+---
+
+## Bản đồ kiến thức nền: Biểu diễn Âm thanh số PCM đứng trên ba trụ cột nào?
+
+### 1. Rời rạc hóa thời gian (Sample Rate) và Rời rạc hóa biên độ (Bit Depth)
+PCM thực hiện hai phép rời rạc hóa độc lập: **lấy mẫu theo thời gian** ở tần số $$f_s$$ (8 kHz điện thoại cổ điển, 16 kHz chuẩn ASR băng rộng, 48 kHz chuẩn WebRTC/Video) và **lượng tử hóa biên độ** bằng $$B$$ bit (phổ biến là `int16` có $$2^{16} = 65\,536$$ mức từ $$-32\,768$$ đến $$+32\,767$$, hoặc `float32` chuẩn hóa trong $$[-1.0,\ +1.0]$$).
+
+### 2. Nhiễu lượng tử hóa và Quy tắc vàng 6 dB/bit (SQNR)
+Làm tròn biên độ thực về mức lượng tử gần nhất sinh ra sai số nhỏ gọi là **nhiễu lượng tử hóa**. Với mô hình sai số phân bố đều trong bước nhảy $$\Delta = 2 / 2^B$$, tỉ số tín hiệu trên nhiễu lượng tử hóa cho sóng sin toàn thang đạt công thức kinh điển:
+
+$$
+\text{SQNR}_{\text{dB}} \approx 6.02\,B + 1.76\text{ dB}.
+$$
+
+Mỗi khi tăng thêm **1 bit** độ sâu, dải động sạch của bản ghi tăng thêm khoảng **6 dB**!
+
+### 3. Bố cục đa kênh (Mono vs. Stereo Interleaved/Planar) và Clipping
+Âm thanh đa kênh có thể lưu kiểu **xen kẽ (interleaved: `L0, R0, L1, R1, ...`)** hoặc **tách mảng (planar: `[L0, L1, ...], [R0, R1, ...]`)**. Nếu vượt biên $$[-1.0, +1.0]$$ trước khi xuất ra DAC, tín hiệu bị **cắt ngọn (clipping)** tạo ra sóng vuông đầy hài bậc lẻ cực kỳ chói tai!
+
+---
+
+### Khung giải thích: tự tay tính Bitrate, dung lượng và SQNR của chuẩn PCM 48 kHz / 16-bit (nên đọc chậm)
+
+1. **Tính tốc độ bit (Bitrate) và dung lượng file WAV không nén** cho âm thanh Stereo ($$C = 2$$ kênh), $$f_s = 48\,000\text{ Hz}$$, độ sâu $$B = 16\text{ bit}$$:
+   $$
+   \text{Bitrate} = f_s \times B \times C = 48\,000 \times 16 \times 2 = 1\,536\,000\text{ bit/giây} = \mathbf{1.536\text{ Mbps}}.
+   $$
+   Đổi ra byte mỗi phút: $$\frac{1\,536\,000}{8} \times 60 = 11\,520\,000\text{ byte} \approx \mathbf{11.0\text{ MiB/phút}}$$!
+2. **So sánh dải động SQNR giữa 8-bit và 16-bit:**
+   - **8-bit:** $$\text{SQNR} \approx 6.02(8) + 1.76 = \mathbf{49.9\text{ dB}}$$ (nền nhiễu lượng tử nghe rất rõ trong đoạn im lặng).
+   - **16-bit (chuẩn CD/WebRTC):** $$\text{SQNR} \approx 6.02(16) + 1.76 = \mathbf{98.1\text{ dB}}$$ (vượt xa độ động của hầu hết micro và phòng thu thông thường!).
+3. **Chuẩn hóa `int16` ↔ `float32` không lệch trục:** Chuyển `int16` sang `float32` phải chia cho $$32\,768.0$$ ($$2^{15}$$), không chia cho $$32\,767$$, để giá trị nhỏ nhất $$-32\,768$$ ánh xạ đúng về $$-1.0$$ mà không gây tràn số!
+
+---
+
 ## Mục tiêu học tập
 
 1. Mô tả các định dạng mã hóa PCM phổ biến trên trình duyệt và hệ thống native (`s16`, `f32`, bố cục planar và interleaved).

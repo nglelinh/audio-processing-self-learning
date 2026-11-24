@@ -11,7 +11,11 @@ lesson_type: required
 draft: false
 ---
 
+Hãy thử đặt mình vào vị trí người dùng đang vội vào một cuộc họp quan trọng: họ bấm "Tham gia ngay", thế nhưng màn hình cứ xoay vòng suốt 4 giây rồi báo lỗi vì tệp mô hình khử nhiễu trên CDN bị chậm mạng! Một tính năng phụ trợ (lọc nhiễu) tuyệt đối không bao giờ được phép trở thành **điểm chết duy nhất (single point of failure)** chặn đứng thao tác vào phòng họp. Để tách bạch hoàn hảo giữa "kết nối cuộc gọi" và "biến đổi âm thanh cục bộ", LiveKit thiết kế một mẫu kiến trúc rất thanh lịch mang tên **TrackProcessor**.
+
 SDK máy khách của LiveKit cung cấp giao diện **TrackProcessor** (móc biến đổi track) cho phép xử lý track âm thanh cục bộ trước khi mã hóa và phát hành (publish). Lớp `DeepFilterNoiseFilterProcessor` trong gói `deepfilternet3-noise-filter` **1.3.0** chính là cài đặt của giao diện đó cho DeepFilterNet3, đi kèm các phương thức `init`, `restart`, `suspend`, `resume`, `destroy` và phương thức tĩnh `isSupported()`. Bài học này trình bày vòng đời hoạt động, thứ tự gọi hàm khi tham gia phòng họp và cơ chế xử lý lỗi giúp cuộc gọi vẫn duy trì ổn định khi CDN hoặc worklet gặp sự cố.
+
+**Mạch bài học:** Nguyên tắc không chặn cuộc gọi vì tải mô hình → Bản đồ kiến thức nền (Giao diện TrackProcessor, Máy trạng thái bất đồng bộ & Suy giảm êm, Tách biệt Signaling và Media Pipeline) → Phân định trách nhiệm & Mã tích hợp chuẩn bản 1.3.0 → Máy trạng thái & xử lý backpressure → Khung giải thích so sánh dòng thời gian Blocking vs. Non-Blocking Join → Thiết bị di động, telemetry, Mini-lab và Bài tập.
 
 ![Vòng đời TrackProcessor từ lúc dựng tới lúc publish trên track audio local của LiveKit]({{ site.imgurl }}/generated/livekit-trackprocessor.png)
 
@@ -20,6 +24,20 @@ SDK máy khách của LiveKit cung cấp giao diện **TrackProcessor** (móc bi
 ## Mục tiêu học tập
 
 Sau bài học này, bạn sẽ sắp xếp chính xác thứ tự gọi `new DeepFilterNoiseFilterProcessor`, `setProcessor`, `publishTrack` và `setSuppressionLevel`, chỉ ra được các phương thức vòng đời mà LiveKit tự động kích hoạt, và thiết kế luồng kết nối giữ `connect()` độc lập hoàn toàn với quá trình tải mô hình.
+
+## Bản đồ kiến thức nền: Ba trụ cột của mẫu tích hợp TrackProcessor
+
+### 1. Giao diện biến đổi dòng (TrackProcessor Interface)
+- **Là gì:** Một hợp đồng vòng đời chuẩn (`init`, `restart`, `destroy`) cho phép gắn một đồ thị xử lý Web Audio vào `LocalAudioTrack` mà không phá vỡ tầng truyền tải WebRTC bên dưới.
+- **Nghiên cứu gì:** Cho phép LiveKit tự động quản lý việc tạo lại đồ thị khi người dùng cắm micro mới (`restart`), đồng thời giữ nguyên khe phát hành (sender) khi bật/tắt bypass (`setEnabled(false)`).
+
+### 2. Máy trạng thái bất đồng bộ và Suy giảm êm (Graceful Degradation)
+- **Là gì:** Vòng đời 7 trạng thái `Created → LoadingAssets → Ready → Active ↔ Bypassed / Failed → Disposed` tách bạch lỗi tải tài nguyên/biên dịch WASM khỏi trạng thái kết nối phòng họp.
+- **Nghiên cứu gì:** Đảm bảo khi CDN trả lỗi 404 hay Safari < 16.4 từ chối SIMD, hệ thống vẫn tự động phát hành âm thanh gốc (hoặc APM trình duyệt) và báo toast nhẹ thay vì làm sập cuộc gọi.
+
+### 3. Tách đường găng Báo hiệu (Signaling) khỏi đường tải Tài nguyên (Asset Loading)
+- **Là gì:** `room.connect()` (WebSocket + ICE/DTLS) chạy song song hoặc trước khi `setProcessor()` hoàn tất tải WASM + mô hình từ CDN.
+- **Nghiên cứu gì:** Giảm thời gian vào phòng (Time-to-Join) từ vài giây xuống dưới nửa giây trên mạng di động, đồng thời thu thập telemetry (`ns_init_ms`, tỉ lệ trúng cache, lý do fallback) mà không chạm vào âm thanh thô.
 
 ## Kế hoạch 60 phút
 
@@ -79,6 +97,22 @@ Created
 ```
 
 Khi rơi vào trạng thái `Failed`, ứng dụng vẫn cần phát hành âm thanh gốc (hoặc chỉ dùng APM trình duyệt) và hiển thị một thông báo dạng toast không chặn thao tác. Tuyệt đối không từ chối `connect()` chỉ vì gói mô hình bị lỗi 404; hãy tách bạch trạng thái “khử nhiễu sẵn sàng” khỏi trạng thái “đã kết nối phòng”.
+
+## Khung giải thích: So sánh dòng thời gian vào phòng (Blocking vs. Non-Blocking Join) (nên đọc chậm)
+
+Giả sử trên mạng 4G lần đầu truy cập (chưa có cache):
+- Kết nối phòng LiveKit (`room.connect`): $$T_{\text{conn}} = 450\text{ ms}$$.
+- Xin quyền & mở micro (`getUserMedia`): $$T_{\text{mic}} = 200\text{ ms}$$.
+- Tải WASM + mô hình từ CDN và biên dịch (`init()` trong `setProcessor`): $$T_{\text{init}} = 2\,800\text{ ms}$$.
+
+Hãy tính trực tiếp thời điểm người dùng **thấy mặt đồng nghiệp trong phòng** (Time-to-Join) và thời điểm **khử nhiễu bắt đầu hoạt động**:
+
+| Kiến trúc luồng vào phòng | Time-to-Join | Nếu CDN trả lỗi 404 | Thời điểm NS sẵn sàng |
+| :--- | :--- | :--- | :--- |
+| **Chặn tuần tự (Sai):** `await setProcessor` rồi mới `room.connect` | $$200 + 2800 + 450 = \mathbf{3\,450\text{ ms}}$$ | **Không vào được phòng!** | $$3\,450\text{ ms}$$ |
+| **Song song không chặn (Chuẩn):** `room.connect` độc lập, tải NS nền | **$$450\text{ ms}$$** (nhanh hơn **$$7{,}7\times$$**) | Vẫn vào phòng & phát tiếng gốc bình thường | $$2\,800\text{ ms}$$ (chuyển êm không đứt cuộc gọi) |
+
+Chú ý chi tiết kỹ thuật tinh tế: khi `room.connect` chạy song song với `setProcessor`, tổng thời gian chờ không phải là tổng ($$450 + 2800$$) mà là $$\max(450,\, 200 + 2800)$$ — đồng thời người dùng nghe được ngay âm thanh từ phòng họp chỉ sau **0,45 giây**!
 
 ### Xử lý nghẽn (backpressure)
 

@@ -17,6 +17,24 @@ Read three primary sources carefully rather than bookmarking twenty abstracts. E
 
 *Figure. The picture you should be able to redraw after reading Schröter et al.: STFT in, ERB gains and a deep filter, ISTFT and overlap-add out. The card template below is how you prove you read it.*
 
+The speech-enhancement and audio-ML literature publishes hundreds of papers every year at ICASSP, INTERSPEECH, and NeurIPS—and trying to read them chronologically or randomly is a fast track to burnout. The secret to reading audio research like a senior engineer is **triangulation**: anchor yourself on a small canon of landmark papers that each unlocked a genuinely new architectural paradigm (classical Wiener/MMSE $$	o$$ RNNoise hybrid $$	o$$ Conv-TasNet time-domain $$	o$$ DeepFilterNet complex deep filtering $$	o$$ modern neural codecs and generative diffusion).
+
+This curated reading map organizes the essential papers, textbooks, and open-source repositories by *what exact engineering bottleneck each one solved*.
+
+---
+
+## Background Knowledge Map: Five Paradigms Across the Speech-Enhancement Canon
+
+Every paper on the reading list sits cleanly inside one of five intellectual lineages:
+
+1. **Classical Statistical DSP (Ephraim–Malah, Boll, Loizou):** Wiener filtering, spectral subtraction, and MMSE-STSA—teaching you noise-floor tracking, musical noise, and why phase matters.
+2. **Psychoacoustic Hybrids (RNNoise, PercepNet, DeepFilterNet):** Combining ERB/Bark critical bands and pitch/deep filtering with tiny GRUs to achieve sub-millisecond CPU inference at 48 kHz.
+3. **End-to-End Time-Domain Separation (Conv-TasNet, Demucs):** Replacing fixed STFTs with learned filterbanks and dilated TCNs/U-Nets—great for source separation, revealing the latency-vs-compute trade-offs of raw waveforms.
+4. **Perceptual Evaluation & Challenges (DNS Challenge, DNSMOS, SI-SDR / Le Roux et al.):** Defining how the field measures progress honestly without metric gaming.
+5. **Generative Speech Restoration (Score/Diffusion & Flow Matching, Neural Audio Codecs):** Moving beyond masking (which cannot regenerate destroyed harmonics) to synthesizing clean speech from severely degraded inputs.
+
+---
+
 ## What you should be able to do
 
 You should be able to pick three links from the list, fill a four-bullet card for each, and match one filled example closely enough that a grader can see the shape. You should also keep SI-SDR, DNSMOS, RTF, and TrackProcessor as the English terms in your notes even when you write the surrounding prose in Vietnamese.
@@ -100,6 +118,32 @@ has_url True
 ```
 
 Twelve bullets is three cards times four bullets. Failure modes: a card whose claim contradicts the title you did not open; a fabricated URL for GTCRN or DeepFilterGAN; using the filled example as all three cards; translating SI-SDR or DNSMOS into a different acronym.
+
+---
+
+### Worked Numerical Example: Comparing Four Landmark Architectures Side by Side
+
+Use this concrete scale table to orient yourself whenever you open a new speech-enhancement paper:
+
+| Landmark Architecture | Domain / Front-End | Approx. Params | Typical Latency | Core Engineering Breakthrough |
+| :--- | :--- | :--- | :--- | :--- |
+| **RNNoise (2017)** | 22 Bark bands + pitch | $$\sim 88	ext{ K}$$ | $$20	ext{ ms}$$ | Ultra-tiny hybrid DSP + GRU in pure C |
+| **DeepFilterNet (2022–23)** | 32 ERB + 96 complex DF bins | $$\sim 1.8	ext{ M}$$ | $$20	ext{–}40	ext{ ms}$$ | Two-stage ERB gain + complex deep filtering |
+| **Conv-TasNet (2019)** | Learned 1D encoder (raw wave) | $$\sim 5.1	ext{ M}$$ | $$2	ext{ ms}$$ (causal) | End-to-end time-domain TCN separation |
+| **DNS-Demucs (2020)** | Waveform U-Net + LSTM | $$\sim 18	ext{ M}$$ | $$40	ext{ ms}$$ | High-capacity real-time waveform denoising |
+
+Look at the ratio across the table: **DeepFilterNet** uses **20× more parameters than RNNoise** to add complex harmonic restoration, yet still stays **10× smaller than Demucs**—illustrating the exact Pareto frontier between model size, latency, and perceptual quality!
+
+### Deep-Dive Explanation: How to Read an Audio Paper in 20 Minutes Without Getting Lost (Read Slowly)
+
+1. **Check four numbers on Page 1–3 before reading a single equation:** Sample rate (16 kHz vs 48 kHz), causal vs. non-causal (algorithmic latency!), MACs/s or RTF on CPU, and parameter count.
+2. **Always listen to the authors’ audio demo page:** A paper with +0.8 dB higher SI-SDR can still sound metallic or over-smoothed on real speech; 30 seconds of listening tells you more than three tables.
+3. **Spot the *delta* from its predecessor:** Ask *"what single bottleneck did the previous paper hit, and what exact mechanism here fixes it?"* (e.g., RNNoise’s real band gains $$	o$$ DeepFilterNet’s complex deep filter).
+4. **Reproduce one tiny piece in code:** Even implementing just the paper’s STFT framing or loss function in 40 lines of Python/Rust cements the idea permanently.
+
+**Quick check.** When comparing two speech-enhancement papers, why is it misleading to compare Paper A’s **16 kHz non-causal** SI-SDR directly against Paper B’s **48 kHz causal (20 ms latency)** SI-SDR?
+
+---
 
 ## Exercises
 

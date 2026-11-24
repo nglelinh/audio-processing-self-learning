@@ -11,7 +11,11 @@ lesson_type: required
 draft: false
 ---
 
+Hãy thử tưởng tượng một buổi họp duyệt phát hành sản phẩm: kỹ sư ML tự tin chiếu lên màn hình một biểu đồ duy nhất — *"Bản mới tăng +1,2 dB SI-SDR so với bản cũ, đề nghị ship ngay chiều nay!"* Nhưng khi đưa lên bảng tổng hợp đa chiều kiểu DNS Challenge, câu chuyện lập tức đảo ngược: bản mới làm **tỉ lệ lỗi nhận dạng giọng nói (WER) tăng vọt**, thua nghe thử ở phòng yên tĩnh và đẩy **RTF p95 lên 0,92** sát ngưỡng vỡ tiếng! Trong kỹ thuật âm thanh thực chiến, không có một chỉ số vạn năng nào — chỉ có một **hệ thống bảng đo đa trục** đặt tất cả sự đánh đổi lên cùng một mặt bàn.
+
 Chỉ dựa vào một con số trung bình SI-SDR là cách nhiều bài báo được trích dẫn nhưng cũng là lý do khiến sản phẩm thực tế gặp sự cố ngoài dự kiến. Cuộc thi Microsoft DNS Challenge ([microsoft/DNS-Challenge](https://github.com/microsoft/DNS-Challenge)) cung cấp khuôn mẫu đánh giá công khai mà khóa học mô phỏng lại ở quy mô gọn nhẹ: gồm cặp dữ liệu tổng hợp (nơi các chỉ số xâm nhập có hiệu lực), bản ghi thực tế (nơi chỉ số xâm nhập không áp dụng được), lát cắt kiểm thử lắng nghe và cột hiệu năng hệ thống để chi phí thời gian thực không bị che khuất sau bảng chất lượng âm thanh. Do mỗi năm cuộc thi lại điều chỉnh danh mục chỉ số, bạn cần ghi rõ năm hoặc bài báo đang tham chiếu, và không tuyên bố “đạt chuẩn DNS Challenge” nếu chưa chạy đúng tập kiểm thử mù và quy trình của năm đó.
+
+**Mạch bài học:** Cái bẫy ra quyết định bằng một con số duy nhất → Bản đồ kiến thức nền (Đánh giá đa nhánh kiểu DNS Challenge, Kỷ luật trung thực `n/a` & Tái lập thực nghiệm, Tương tác với hệ thống hạ nguồn ASR & Cổng kiểm duyệt RTF) → 5 hạng mục đánh giá & Tổ chức thư mục `eval/` → Khung giải thích phân tích bảng đối chiếu 2 bản dựng thực chiến (vì sao bản SI-SDR cao hơn vẫn bị loại) → Khung báo cáo, Mini-lab và Bài tập.
 
 ![Bản đồ đánh giá cho cả bộ metric]({{ site.imgurl }}/generated/eval-metric-map.png)
 
@@ -20,6 +24,20 @@ Chỉ dựa vào một con số trung bình SI-SDR là cách nhiều bài báo �
 ## Mục tiêu học tập
 
 Sau bài học này, bạn sẽ xây dựng được bảng báo cáo 6 cột (mỗi hàng một đoạn âm thanh), chạy script kiểm tra tự động để bắt lỗi thiếu cột, giải thích chính xác ô nào bắt buộc ghi `n/a`, và phân biệt rõ ngưỡng sai số hồi quy nội bộ (epsilon) của phòng lab với các con số xuất hiện trong bài báo.
+
+## Bản đồ kiến thức nền: Thiết kế hệ thống đánh giá toàn diện (Evaluation Harness)
+
+### 1. Kiến trúc đa nhánh kiểu DNS Challenge (Synthetic + Real + Listening + Systems)
+- **Là gì:** Khuôn khổ đánh giá kết hợp bốn góc nhìn không thể thay thế lẫn nhau: dữ liệu tổng hợp (đo SI-SDR/$$\Delta$$SI-SDR), dữ liệu thu thực tế (đo DNSMOS), nghe mù của con người (AB) và chi phí vận hành thời gian thực (RTF p95, thời gian khởi động lạnh).
+- **Nghiên cứu gì:** Phát hiện mọi xung đột tối ưu hóa (ví dụ khử nhiễu quá tay giúp đẹp SI-SDR trên nhiễu dừng nhưng hỏng giọng thực tế hoặc vượt ngân sách CPU).
+
+### 2. Tính tái lập (Reproducibility) và Kỷ luật `n/a`
+- **Là gì:** Lưu cố định dữ liệu (`meta.csv`), phiên bản gói (`1.3.0`), tệp nhị phân WASM/ONNX, checkpoint DNSMOS, hạt giống ngẫu nhiên và thiết bị đo; ghi tường minh `n/a` cho mọi ô không hợp lệ (như SI-SDR trên bản ghi thật).
+- **Nghiên cứu gì:** Đảm bảo hai bảng báo cáo cách nhau 3 tháng vẫn so sánh được chính xác từng hàng, không bị nhiễm số liệu bịa hay lẫn phiên bản runtime.
+
+### 3. Đánh giá hạ nguồn (Downstream ASR — WER/CER) và Chống quá khớp tập Holdout
+- **Là gì:** Đo thêm tác động của bộ khử nhiễu lên tỉ lệ lỗi từ (WER) hoặc lỗi ký tự (CER) của một bộ nhận dạng giọng nói cố định, đồng thời giữ riêng một tập holdout gồm người nói và bối cảnh chưa từng mở ra khi tinh chỉnh.
+- **Nghiên cứu gì:** Bảo vệ các ứng dụng có phụ đề tự động / ghi chú họp AI khỏi những bộ lọc làm mượt tai người nhưng vô tình xóa mất âm cuối làm hỏng phiên âm.
 
 ## Các hạng mục đánh giá cần duy trì
 
@@ -32,6 +50,21 @@ Sau bài học này, bạn sẽ xây dựng được bảng báo cáo 6 cột (m
 | Hạ nguồn (tùy chọn) | Một phiên bản nhận dạng giọng nói (ASR) cố định | Độ chênh lệch WER hoặc CER (không thay thế MOS) |
 
 Dữ liệu tổng hợp mang lại khả năng điều chỉnh SNR linh hoạt và có tín hiệu tham chiếu chính xác, nhưng dễ tạo ảo giác lạc quan khi kho nhiễu quá “sạch” so với môi trường thật. Ngược lại, bản ghi thực tế phản ánh đúng sản phẩm nhưng không thể tính SI-SDR. Nguyên tắc cốt lõi là không tối ưu mô hình chỉ dựa trên một cột duy nhất, đồng thời đóng băng riêng một tập nghe thử cuối cùng mà bạn không mở ra trong lúc tinh chỉnh tham số.
+
+## Khung giải thích: Đọc bảng quyết định phát hành giữa hai bản dựng thực chiến (nên đọc chậm)
+
+Giả sử nhóm của bạn đang cân nhắc giữa **Bản A (mặc định hiện tại, `level = 60`)** và **Bản B (ứng viên mới, `level = 85` + mô hình nặng hơn chút)**. Dưới đây là kết quả gom đủ 5 trục (số liệu minh họa):
+
+| Tiêu chí đánh giá | Bản A (`level 60`) | Bản B (`level 85`) | Chênh lệch (B so với A) |
+| :--- | :--- | :--- | :--- |
+| Tổng hợp — Quạt 10 dB (SI-SDR) | $$14{,}50\text{ dB}$$ | $$15{,}70\text{ dB}$$ | **$$+1{,}20\text{ dB}$$** (B thắng) |
+| Thực tế — Quán cà phê (SI-SDR) | `n/a` | `n/a` | Đúng quy tắc (không có bản sạch) |
+| Thực tế — Quán cà phê (DNSMOS BAK / SIG) | $$3{,}75\text{ / }3{,}50$$ | $$4{,}00\text{ / }3{,}15$$ | BAK $$+0{,}25$$, nhưng SIG **$$-0{,}35$$** |
+| Nghe thử AB — Phòng yên ($$N = 10$$) | Thắng 6, Hòa 2 | Thắng 2, Hòa 2 | **B thua 2–6** (cắt giọng sạch!) |
+| Hạ nguồn ASR (WER) | $$8{,}0\%$$ | $$11{,}5\%$$ | Tăng **$$+3{,}5\%$$** tuyệt đối (tăng $$43{,}8\%$$ tương đối!) |
+| Hệ thống — Laptop đích (RTF p95) | $$0{,}58$$ (dư $$4{,}2\text{ ms}$$) | $$0{,}92$$ (chỉ dư $$0{,}8\text{ ms}$$) | **Cực sát trần underrun!** |
+
+**Kết luận ra quyết định (`Decision`):** **KHÔNG SHIP Bản B** làm mặc định! Dù Bản B đẹp hơn ở cột SI-SDR tổng hợp (`+1,20 dB`) và nền quán cà phê yên hơn (`BAK +0,25`), bốn cột còn lại đồng loạt bật đèn đỏ: giọng phòng yên bị méo (`AB 2–6`), phụ đề tự động lỗi tăng gần gấp rưỡi (`WER 8% → 11,5%`) và ngân sách thời gian thực chỉ còn đúng `0,8 ms` dự phòng cho hệ điều hành. Nếu không có bảng đa trục, một nhóm chỉ nhìn SI-SDR sẽ ship ngay một bản cập nhật tệ hơn cho người dùng!
 
 ## Tổ chức thư mục bộ công cụ đánh giá (harness)
 

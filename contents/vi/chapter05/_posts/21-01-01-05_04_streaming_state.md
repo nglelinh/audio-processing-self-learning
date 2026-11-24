@@ -11,7 +11,11 @@ lesson_type: required
 draft: false
 ---
 
+Hãy thử bấm nút "Bật khử nhiễu" ngay giữa một câu nói trong cuộc gọi video: nếu kỹ sư quên xử lý mượt ranh giới trạng thái, bạn sẽ nghe ngay một tiếng *tách* chói tai, theo sau là một chùm nhiễu rít dài đúng 10 mili giây trước khi giọng nói mới êm lại. Tại sao một mô hình chạy nhanh dư dả (RTF chỉ 0,04) vẫn phát ra tiếng tách đúng lúc người dùng bấm nút? Câu trả lời không nằm ở tốc độ CPU — mà nằm ở **trí nhớ ẩn (streaming state)** mà mô hình mang theo từ hop này sang hop khác.
+
 Một bộ tăng cường giọng nói chạy theo luồng (streaming) là hàm của cả hop hiện tại lẫn toàn bộ trạng thái (state) được giữ lại từ hop trước đó: đuôi chồng lấp của STFT (short-time Fourier transform, biến đổi Fourier thời gian ngắn), véctơ trạng thái của GRU (gated recurrent unit, đơn vị hồi tiếp có cổng), lịch sử khung của bộ lọc sâu (deep filter) và các mẫu chưa đọc trong ring buffer. Nếu xóa trắng cụm trạng thái này giữa cuộc gọi, hop kế tiếp sẽ không còn khớp với phần đuôi trước đó, khiến người nghe nghe thấy tiếng tách (click) hoặc một chùm nhiễu kéo dài bằng một hop.
+
+**Mạch bài học:** Tiếng tách khi bấm nút dù RTF rất thấp → Bản đồ kiến thức nền (Hàm có trạng thái trong DSP/RNN, Tái tạo liên tục OLA, Crossfade không gián đoạn) → Bảng kiểm kê 7 thành phần trạng thái ở 48 kHz → Chính sách xử lý 5 sự kiện (khởi động lạnh, bật/tắt, đổi thiết bị, underrun) → Khung giải thích tính tay bước nhảy gián đoạn khi xóa đuôi OLA và công thức crossfade 480 mẫu → Cuộc gọi dài, Mini-lab và Bài tập.
 
 ![Ring buffer mà các mẫu chưa đọc là state phải sống qua hop kế]({{ site.imgurl }}/generated/ring-buffer.png)
 
@@ -20,6 +24,20 @@ Một bộ tăng cường giọng nói chạy theo luồng (streaming) là hàm 
 ## Mục tiêu học tập
 
 Sau bài học này, bạn sẽ liệt kê được đầy đủ các trạng thái mà một hop kiểu DeepFilterNet phải truyền ngược lại cho bước tiếp theo, tính được độ dài đuôi chồng lấp ở cấu hình cửa sổ 20 ms / hop 10 ms đã công bố, và áp dụng kỹ thuật chuyển mờ chéo (crossfade) khi tắt/bật tiếng (mute) thay vì xóa trắng phần đuôi đó.
+
+## Bản đồ kiến thức nền: Vì sao bộ khử nhiễu streaming là một máy trạng thái (stateful machine)?
+
+### 1. Hệ thống có nhớ (Stateful System) trong DSP và Mạng hồi tiếp
+- **Là gì:** Một bộ khử nhiễu streaming không phải hàm thuần $$y_t = f(x_t)$$, mà là một cặp ánh xạ $$(y_t, s_t) = f(x_t, s_{t-1})$$, trong đó $$s_{t-1}$$ gói gọn toàn bộ lịch sử từ ring buffer, đuôi STFT, bộ lọc 5 tap, bộ chuẩn hóa mức tín hiệu đến vector ẩn GRU.
+- **Nghiên cứu gì:** Giải thích vì sao mọi thao tác tạo mới session mỗi hop, dùng chung biến trạng thái giữa hai cuộc gọi, hay tua (seek) file mà không phân tách trạng thái đều lập tức phá vỡ chất lượng âm thanh.
+
+### 2. Điều kiện tái tạo hoàn hảo của Cộng chồng lấp (Overlap-Add / COLA)
+- **Là gì:** Khi phân tích và tổng hợp khung 20 ms (960 mẫu) với hop 10 ms (480 mẫu), mỗi mẫu âm thanh đầu ra là tổng của **nửa sau khung trước** (đuôi OLA) và **nửa đầu khung hiện tại**.
+- **Nghiên cứu gì:** Khi xóa trắng đuôi OLA về 0, tổng trọng số cửa sổ bị sụp đổ đột ngột tạo nên một bước nhảy gián đoạn (step discontinuity) — trong miền tần số, bước nhảy này chứa năng lượng trải rộng khắp dải tần, nghe chính xác là một tiếng *tách*.
+
+### 3. Chuyển tiếp mượt bằng Crossfade và Quản trị vòng đời trạng thái
+- **Là gì:** Kỹ thuật pha trộn tuyến tính (hoặc cosin nâng) giữa luồng gốc (dry) và luồng đã xử lý (wet) trong 10–20 ms khi bật/tắt khử nhiễu, thay vì cắt chuyển đột ngột hoặc xóa trắng GRU.
+- **Nghiên cứu gì:** Phân biệt rõ sự kiện nào **cấm** xóa trạng thái (mute/unmute, underrun ngắn) và sự kiện nào **bắt buộc** reset sạch (khởi động lạnh, đổi micro hoặc đổi tần số lấy mẫu).
 
 ## Kế hoạch 60 phút
 
@@ -52,6 +70,31 @@ Với cửa sổ 960 mẫu và hop 480 mẫu, mỗi khung sau khi biến đổi 
 Trong khi đó, xóa trạng thái GRU thường gây ra một chùm nhiễu ngắn. Khi bị ép về 0, các ước lượng SNR và hệ số khuếch đại ở một hoặc hai hop 10 ms đầu tiên sẽ phản ánh giá trị kích hoạt khởi tạo — thường là “không có giọng nói” hoặc “giữ nguyên biên độ (gain đầy)”. Giữ gain đầy trên các bin chứa nhiễu sẽ tạo thành một chùm nhiễu, còn cổng SNR ép $$\xi<-10$$ dB (bài 04-03) sẽ tạo thành một khoảng lặng hụt hơi. Cả hai hiện tượng đều xảy ra ngay thời điểm người dùng vừa bấm nút.
 
 Do đó, xóa cứng bộ đệm là cách xử lý mute sai. Cách đúng là thực hiện chuyển mờ chéo (crossfade) từ tín hiệu đã xử lý (wet) sang tín hiệu gốc (dry) trong khoảng một hop (480 mẫu, tương ứng khoảng 3,75 quantum 128 mẫu). Nếu GRU vẫn được giữ ấm trong lúc bypass, chỉ cần áp dụng fade trên các mẫu trong ring buffer chứ không can thiệp vào trạng thái ẩn của mạng.
+
+## Khung giải thích: Tự tính tay cú rơi biên độ khi xóa đuôi OLA và đường cong crossfade (nên đọc chậm)
+
+### Phép tính 1: Chuyện gì xảy ra khi xóa đuôi OLA trên tín hiệu hằng $$x[n] = 1{,}0$$?
+Xét cặp cửa sổ phân tích và tổng hợp hình sin (cùng bản chất Princen–Bradley với Vorbis) độ dài $$N = 960$$, chồng lấp 50% ($$H = 480$$):
+$$ w(n) = \sin\left(\frac{\pi n}{960}\right), \qquad 0 \le n < 960. $$
+Tại mọi vị trí $$0 \le n < 480$$ trong hop hiện tại:
+- Đuôi khung trước đóng góp: $$w^2(n + 480) = \sin^2\left(\frac{\pi n}{960} + \frac{\pi}{2}\right) = \cos^2\left(\frac{\pi n}{960}\right)$$.
+- Nửa đầu khung hiện tại đóng góp: $$w^2(n) = \sin^2\left(\frac{\pi n}{960}\right)$$.
+- **Khi giữ nguyên đuôi OLA:** $$y[n] = \cos^2\left(\frac{\pi n}{960}\right) + \sin^2\left(\frac{\pi n}{960}\right) = \mathbf{1{,}0}$$ phẳng tuyệt đối!
+- **Khi xóa trắng đuôi OLA về 0 tại $$n = 0$$:** Phần $$\cos^2$$ biến mất!
+  - Tại $$n = 0$$: $$y_{\text{reset}}[0] = \sin^2(0) = \mathbf{0{,}0}$$ (biên độ rơi thẳng đứng từ $$1{,}0 \to 0{,}0$$!).
+  - Tại $$n = 240$$ (giữa hop, 5 ms sau): $$y_{\text{reset}}[240] = \sin^2(\pi/4) = \mathbf{0{,}5}$$.
+  - Phải đến tận cuối hop ($$n = 479$$), đầu ra mới bò lên lại gần $$1{,}0$$. Cả một rãnh hình sin kéo dài đúng 10 ms kèm vách dựng đứng độ cao 1,0 — đó chính là tiếng *tách* đinh tai!
+
+### Phép tính 2: Kiểm tra công thức Crossfade tuyến tính 480 mẫu (10 ms)
+Khi người dùng bật khử nhiễu tại mẫu $$n = 0$$, thay vì chuyển đột ngột từ tín hiệu gốc $$y_{\text{dry}}[n]$$ sang tín hiệu đã xử lý $$y_{\text{wet}}[n]$$, ta trộn bằng hệ số $$\alpha_n = \frac{n}{479}$$ với $$0 \le n \le 479$$:
+$$ y[n] = (1 - \alpha_n)\,y_{\text{dry}}[n] + \alpha_n\,y_{\text{wet}}[n]. $$
+Giả sử tại ranh giới chuyển mạch, $$y_{\text{dry}} = 0{,}80$$ và $$y_{\text{wet}} = 0{,}20$$ (lệch nhau $$0{,}60$$):
+- Nếu cắt cứng: nhảy bậc ngay lập tức $$0{,}80 \to 0{,}20$$ trong $$1$$ mẫu ($$20{,}8\,\mu\text{s}$$).
+- Với crossfade 480 mẫu:
+  - $$n = 0$$ ($$\alpha_0 = 0$$): $$y[0] = 0{,}8000$$ (khớp liên tục với mẫu trước).
+  - $$n = 1$$ ($$\alpha_1 = 1/479$$): $$y[1] = 0{,}7987$$ (chỉ thay đổi $$0{,}00125$$ mỗi mẫu — nhỏ hơn **480 lần** cú cắt cứng!).
+  - $$n = 240$$ ($$\alpha_{240} \approx 0{,}501$$): $$y[240] \approx 0{,}499$$.
+  - $$n = 479$$ ($$\alpha_{479} = 1$$): $$y[479] = 0{,}2000$$ (chuyển hoàn toàn sang tín hiệu đã khử nhiễu mà tai người không hề nghe thấy vết nối).
 
 ### Chính sách xử lý theo từng sự kiện
 

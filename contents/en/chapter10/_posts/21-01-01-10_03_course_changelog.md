@@ -17,6 +17,23 @@ This course is a full set of English and Vietnamese articles across Chapters 00�
 
 *Figure. A sum of tones in time becomes lines in frequency. Maintainers regenerate this PNG, and every other course figure, with `python3 scripts/generate_course_figures.py`. Output lands in `img/generated/`. Lessons embed it as `{{ site.imgurl }}/generated/fourier-intuition.png`.*
 
+Technical courses rot fast. Within eighteen months, an `onnxruntime-web` import path changes, a browser tightens its `AudioWorklet` security policy, a PyTorch ONNX opset deprecates an old flag, or a new open-source denoiser beats the old baseline by 2 dB at half the compute. What separates a living engineering course from an abandoned blog post is **disciplined maintenance**: pinned versions, automated smoke tests, and a transparent changelog!
+
+This closing note documents how to maintain, audit, and evolve `audio-processing-self-learning` cleanly over time—treating course materials with the exact same engineering rigor as production software.
+
+---
+
+## Background Knowledge Map: Four Pillars of Living Technical Course Maintenance
+
+Keeping a systems-and-ML course accurate across years relies on four software-engineering habits:
+
+1. **Pinned Toolchains & Reproducible Environments:** Recording exact tested versions of Python, PyTorch, `onnxruntime-web`, Rust (`rustc`), and browser engines prevents silent drift when upstream APIs change.
+2. **Automated Verification Over Manual Hopes:** Code snippets, STFT/SI-SDR unit tests, and MathJax/Markdown link checks should run automatically in CI on every pull request so broken examples never silently reach learners.
+3. **Backward-Compatible Changelog Discipline:** When swapping a benchmark model or updating an ONNX opset, log *what* changed, *why* (measured metric/latency delta), and *which* lesson exercises are affected.
+4. **Separating Timeless Fundamentals From Fast-Moving Tooling:** Fourier analysis, causal latency math, ring buffers, and SI-SDR projection geometry stay valid for decades; isolate volatile npm/WASM version glue in dedicated integration chapters so updates stay surgical.
+
+---
+
 ## What you should be able to do
 
 You should be able to patch a lesson when `deepfilternet3-noise-filter` or the CDN layout changes, update the Vietnamese twin in the same pull request, add a figure without breaking `baseurl`, and file a maintenance note that lists both language files. You should also build the site locally and name the failure if `bundle exec jekyll build` warns.
@@ -110,6 +127,32 @@ bad none
 ```
 
 Failure modes: editing a PNG in an image editor and skipping the script, so the next regeneration wipes the tweak; changing English lab floats and leaving the Vietnamese twin on the old number; a `baseurl` copied from a different repository name so every image 404s; a pull request that “fixes” a lesson by editing the product repo.
+
+---
+
+### Worked Numerical Example: A Quantitative Maintenance Audit Before Bumping a Course Dependency
+
+Suppose a maintainer wants to upgrade `onnxruntime-web` from `v1.17` to `v1.20` across Chapters 6–9. Run a crisp 4-point quantitative regression audit before merging:
+
+| Audit Check | Before (`v1.17`) | After (`v1.20`) | Pass Rule | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| **Streaming Parity (`max |Δ|`)** | $$3.2	imes 10^{-6}$$ | $$2.8	imes 10^{-6}$$ | $$< 10^{-5}$$ | **Pass** |
+| **WASM SIMD Bundle (Brotli)** | $$1.45	ext{ MB}$$ | $$1.52	ext{ MB}$$ | $$\le +10\%$$ | **Pass (+4.8%)** |
+| **$$\mathrm{RTF}_{p99}$$ (48 kHz 10 ms hop)** | $$0.38$$ | $$0.34$$ | $$\le 0.40$$ | **Pass (-10.5% faster!)** |
+| **All Lab & Exercise Scripts** | 26 / 26 passing | 26 / 26 passing | 100% pass | **Pass** |
+
+Only when all four objective checks pass does the upgrade land in the changelog with a dated entry—turning course maintenance into a clean, verifiable engineering workflow!
+
+### Deep-Dive Explanation: Four Rules for Maintaining Any Technical Learning Repo (Read Slowly)
+
+1. **Test every code snippet against real synthetic audio:** Even a 0.5-second generated sine wave + white noise fixture in CI catches 95% of broken library imports, shape mismatches, and deprecated kwargs.
+2. **Never delete historical context when updating a recommendation:** Keep a short changelog note explaining *why* an older API (like `ScriptProcessorNode`) was replaced by `AudioWorklet`—learners will still encounter legacy code in the wild.
+3. **Audit MathJax and formatting automatically:** Unbalanced double-dollar MathJax delimiters or raw `|` pipes inside Markdown tables silently break rendering on static Jekyll/GitHub Pages sites unless caught by an automated linter.
+4. **Review external links and reference papers annually:** Prefer archival links (arXiv, DOI, official W3C/MDN specs) over ephemeral blog posts that disappear after two years.
+
+**Quick check.** In the dependency upgrade audit table above, why do we check **both** `max |Δ| < 1e-5` (numerical parity) and `WASM Brotli size` rather than checking only `RTF`?
+
+---
 
 ## Exercises
 

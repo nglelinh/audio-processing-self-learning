@@ -11,7 +11,11 @@ lesson_type: required
 draft: false
 ---
 
+Hãy thử tưởng tượng bạn vừa tìm thấy trên mạng một mô hình khử nhiễu tiếng nói chỉ tốn **0,05 GMAC** — nhẹ hơn DeepFilterNet2 tới bảy lần trên giấy. Bạn hăm hở xuất sang ONNX, nhúng vào trình duyệt hay bo mạch nhúng, rồi bật micro thử nghiệm... và lập tức nghe thấy tiếng *tách, tách* liên hồi vì mỗi khung xử lý bị trễ hạn! Chuyện gì vừa xảy ra? Một mô hình ít phép nhân-cộng hơn tại sao lại chạy *chậm hơn* ngoài đời thực, và tại sao một mạng GRU chạy êm ru suốt đoạn demo 3 giây lại bỗng dưng méo tiếng sau 40 phút họp trực tuyến?
+
 Nhiều sản phẩm không đủ ngân sách tài nguyên như mức laptop mà DeepFilterNet2 giả định. Các tên gọi **GTCRN**, **FastEnhancer**, **μNet** và **Fast-ULCNet** thường xuất hiện trong danh sách rút gọn (shortlist) cho nhóm bộ tăng cường tiếng nói streaming siêu nhẹ. Bài học này **không** gắn tiêu đề bài báo, năm xuất bản hay URL cho bốn cái tên đó; thay vào đó, bài tập trung vào phương pháp đo kiểm để ra quyết định: lý giải vì sao bảng số phép tính MAC và hệ số RTF thực tế (wall-clock) thường tách rời nhau, và vì sao hiện tượng trôi trạng thái GRU sau một giờ chạy liên tục là một dạng lỗi khác hẳn với lỗi hop chậm.
+
+**Mạch bài học:** Ngộ nhận "ít MAC = chạy nhanh" → Bản đồ kiến thức nền (Nghẽn băng thông bộ nhớ, Độ trễ đuôi p95, Ổn định hệ động lực hồi tiếp dài hạn) → Đối chiếu ngân sách phần cứng & số liệu DF2 → Bốn cái tên định hướng trong shortlist → Khung giải thích tính tay sự tách rời MAC/RTF và cơ chế tích lũy trôi trạng thái sau 270.000 hop → Danh mục kiểm tra, Mini-lab và Bài tập.
 
 ![RTF đối chiếu quantum AudioWorklet: thời gian tường mỗi khối audio, không phải bảng MAC]({{ site.imgurl }}/generated/rtf-audioworklet.png)
 
@@ -20,6 +24,20 @@ Nhiều sản phẩm không đủ ngân sách tài nguyên như mức laptop mà
 ## Mục tiêu học tập
 
 Sau bài học này, bạn sẽ giải thích được (thông qua bảng số liệu có thể kiểm chứng của DeepFilterNet2) vì sao GMAC và RTF có thể biến thiên ngược chiều nhau; đưa bốn tên mô hình siêu nhẹ vào danh mục kiểm tra lựa chọn mà không suy đoán kết quả; và thiết kế bài kiểm tra ổn định trạng thái dài hạn độc lập với từng bài báo.
+
+## Bản đồ kiến thức nền: Điều gì quyết định tốc độ và độ bền của mô hình streaming siêu nhẹ?
+
+### 1. Nghẽn tính toán (Compute-bound) vs. Nghẽn bộ nhớ (Memory-bound)
+- **Là gì:** Trong kiến trúc máy tính hiện đại, thời gian chạy một lớp mạng nơ-ron bị chặn bởi giá trị lớn hơn giữa thời gian tính toán (số MAC / tốc độ ALU) và thời gian vận chuyển dữ liệu từ RAM/cache vào thanh ghi (số byte đọc-ghi / băng thông bộ nhớ).
+- **Nghiên cứu gì:** Giải thích vì sao một lớp tích chập nhóm tinh vi hoặc thao tác `gather` cắt lát băng tần có số MAC rất nhỏ nhưng lại chạy chậm rì trên CPU/WASM: bộ xử lý dành phần lớn thời gian *chờ* dữ liệu từ cache thay vì nhân-cộng.
+
+### 2. Phân phối thời gian thực tế (Wall-clock RTF) và phân vị đuôi (p95, p99)
+- **Là gì:** Thay vì đánh giá tốc độ bằng số trung bình hay GMAC lý thuyết, kỹ thuật thời gian thực đo thời gian tường (wall-clock) từng hop trên đúng thiết bị đích và khóa ngưỡng ở phân vị p95/p99.
+- **Nghiên cứu gì:** Đảm bảo không xảy ra underrun (vỡ tiếng) trong dòng âm thanh liên tục — nơi chỉ cần 1% số khung vượt quá hạn hop 10 ms là người nghe đã thấy tiếng nổ lách tách mỗi giây.
+
+### 3. Tính ổn định của hệ hồi tiếp rời rạc (Recurrent State Drift)
+- **Là gì:** Một mạng GRU chạy streaming là một hệ động lực rời rạc $$h_t = F(h_{t-1}, x_t)$$ lặp hàng trăm nghìn bước liên tiếp mà không reset.
+- **Nghiên cứu gì:** Nếu các cổng quên (update/reset gate) tiến gần 1 và xuất hiện sai số lượng tử hóa nhỏ hoặc tín hiệu đầu vào lệch phân bố (như khoảng lặng kéo dài), sai số nhỏ ở mỗi hop có thể tích lũy thành **trôi trạng thái (state drift)** — lỗi vô hình ở đoạn test 3 giây nhưng phá hỏng cuộc gọi 45 phút.
 
 ## Kế hoạch 60 phút
 
@@ -63,6 +81,31 @@ Các đoạn nghe thử dài 3 giây che giấu hoàn toàn hiện tượng trô
 - Trong các khoảng lặng đã phát hiện, kéo mượt trạng thái GRU về 0 dần trong vài trăm mili giây thay vì đặt về 0 đột ngột trong một hop (đặt 0 cứng sẽ gây click hoặc lọt nhiễu như bài 05-04).
 - Giới hạn chuẩn (norm) của vector trạng thái nếu kiến trúc cho phép mà không làm sai lệch độ lợi.
 - Ghi biểu đồ phân bố (histogram) độ lợi tại phút thứ 1 và phút thứ 40 với cùng mức tín hiệu vào — sự dịch chuyển rõ rệt là dấu hiệu trôi trạng thái.
+
+## Khung giải thích: Tự tính tay sự tách rời MAC/RTF và cơ chế tích lũy trôi trạng thái (nên đọc chậm)
+
+Hãy kiểm chứng hai hiện tượng cốt lõi của bài bằng hai phép tính ngắn gọn trên giấy.
+
+### Phép tính 1: Vì sao GMAC tăng 2,3% mà RTF lại giảm gần 3 lần?
+Lấy đúng hai hàng số liệu công bố của DeepFilterNet2 trên cùng CPU Core i5-8250U:
+- **Bản DF ICASSP:** $$\text{GMAC}_1 = 0{,}348$$, $$\text{RTF}_1 = 0{,}11 \implies$$ mỗi hop 10 ms mất $$T_1 = 0{,}11 \times 10 = 1{,}10\text{ ms}$$.
+- **Bản DF2 tinh gọn:** $$\text{GMAC}_2 = 0{,}356$$ (tăng $$\frac{0{,}356 - 0{,}348}{0{,}348} \approx +2{,}3\%$$), nhưng $$\text{RTF}_2 = 0{,}04 \implies$$ mỗi hop 10 ms chỉ mất $$T_2 = 0{,}04 \times 10 = 0{,}40\text{ ms}$$ (**nhanh hơn $$2{,}75\times$$**).
+
+Lý do nằm ở **cường độ số học (arithmetic intensity)**: giả sử một nhân CPU có thông lượng thực dụng $$40\text{ GMAC/s}$$ và băng thông cache/RAM hiệu dụng $$20\text{ GB/s}$$. Nếu một lớp nhỏ phải đọc-ghi $$160\text{ KB}$$ tensor trung gian (vòng đệm activation của kernel $$2\times 3$$) chỉ để thực hiện $$50\,000$$ MAC:
+- Thời gian tính toán thuần: $$\frac{50\,000}{40\times 10^9} = 1{,}25\,\mu\text{s}$$.
+- Thời gian di chuyển bộ nhớ: $$\frac{160\,000\text{ B}}{20\times 10^9\text{ B/s}} = 8{,}00\,\mu\text{s}$$ — **chậm gấp $$6{,}4$$ lần thời gian tính toán!**
+Chỉ cần rút kernel từ $$2\times 3$$ xuống $$1\times 3$$ và hợp nhất lớp (operator fusion) để giữ activation trong thanh ghi, ta cắt mạnh vế bộ nhớ $$8{,}00\,\mu\text{s}$$ dù tổng số MAC gần như không giảm.
+
+### Phép tính 2: Sai số lượng tử hóa tí hon $$\varepsilon = 10^{-4}$$ tích lũy thành trôi trạng thái ra sao?
+Mô hình hóa một chiều trạng thái ẩn GRU trong khoảng lặng kéo dài bằng phương trình sai phân tuyến tính hóa:
+$$ h_t = a\,h_{t-1} + \varepsilon, $$
+với hệ số giữ trạng thái $$a = 0{,}999$$ (cổng cập nhật rất nhỏ để nhớ ngữ cảnh dài) và sai số làm tròn/lượng tử hóa mỗi bước $$\varepsilon = 10^{-4}$$, khởi đầu $$h_0 = 0$$.
+- Sau đoạn demo 3 giây ($$t = 300$$ hop ở hop 10 ms):
+  $$ h_{300} = \varepsilon\,\frac{1 - a^{300}}{1 - a} = 10^{-4} \cdot \frac{1 - 0{,}999^{300}}{0{,}001} \approx 0{,}1 \times (1 - 0{,}741) = 0{,}0259. $$
+  Giá trị nhỏ này hầu như chưa gây méo đáng kể khi nghe thử 3 giây.
+- Sau 1 phút ($$t = 6\,000$$ hop) và kéo dài tới phút thứ 45 ($$t = 270\,000$$ hop): vì $$0{,}999^{6000} \approx 0{,}0025 \to 0$$, trạng thái tiến tới giới hạn lệch:
+  $$ h_\infty = \frac{\varepsilon}{1 - a} = \frac{10^{-4}}{10^{-3}} = 0{,}1000 $$
+  — lớn gấp **1.000 lần** sai số một bước! Nếu hệ số giữ $$a = 0{,}9995$$, độ lệch tăng gấp đôi lên $$0{,}20$$, đủ đẩy đầu ra cổng sigmoid dịch khỏi vùng hiệu chuẩn và làm mờ giọng nói khi người dùng bắt đầu nói lại.
 
 ### Khi nào nhánh DeepFilterNet3 vẫn là lựa chọn phù hợp
 
