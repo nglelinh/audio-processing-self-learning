@@ -11,7 +11,30 @@ lesson_type: required
 draft: false
 ---
 
-Acoustic echo cancellation (AEC) is the sibling problem of noise suppression: the “noise” is a filtered copy of the **far-end reference** playing out of the loudspeaker and coupling back into the microphone. Browser and native VoIP stacks almost always run AEC **before** or **together with** NS inside an audio processing module. This lesson situates AEC in the call graph, sketches adaptive-filter cancellation, and walks the **WebRTC Audio Processing Module (APM)** as the industrial reference you will meet in Mezon / LiveKit / browser integrations (Chapter 07).
+Nothing destroys a video call faster than hearing your own voice bounce back out of a teammate’s laptop speakers half a second late. Yet when users file a bug saying “the noise suppressor is broken—I hear echo!”, they are blaming the wrong block. **Acoustic Echo Cancellation (AEC)** is the sibling of noise suppression: instead of fighting unknown ambient noise, AEC holds a **cheat sheet**—the exact far-end audio $$x[t]$$ currently playing out of the loudspeaker!
+
+In real browsers and VoIP stacks, AEC, NS, and Automatic Gain Control (AGC) live together inside the **WebRTC Audio Processing Module (APM)**. This lesson explains how reference-driven adaptive cancellation works, why **double-talk** is its hardest failure mode, and where a neural suppressor like DeepFilterNet3 must be placed in the chain.
+
+![Clean speech, additive noise, and their sum — the shape of a residual after echo has been subtracted]({{ site.imgurl }}/generated/noise-mixture.png)
+
+*Figure. After a linear AEC, the residual is an additive mixture of near-end speech and whatever the canceller did not remove; this cartoon is that mixture, not the echo path itself.*
+
+**Lesson roadmap:** Background Knowledge Map (echo as reference-driven convolution, NLMS adaptive filtering, WebRTC APM block ordering) → AEC vs. NS comparison & residual echo → Worked example: hand-tracing one double-talk frame (residual echo power $$0.0025$$ vs. total error power $$0.7225$$!) → Deep-Dive Explanation (Read Slowly): 3 steps explaining why block order (HPF → AEC → NS → AGC) is sacred → Integration checklist, Pitfalls, Mini-lab, Exercises & Videos.
+
+---
+
+## Background Knowledge Map: Acoustic Echo Cancellation and the WebRTC Audio Chain
+
+### 1. Echo Is Known-Reference Convolution, Not Blind Noise
+The microphone captures $$y[t] = s[t] + (h * x)[t] + n[t]$$. Because the device *already knows* the far-end render signal $$x[t]$$, AEC runs an adaptive filter $$\hat{h}$$ to predict and subtract the loudspeaker echo: $$e[t] = y[t] - (\hat{h} * x)[t]$$. Blind noise suppression has no reference $$x$$ and cannot distinguish loud far-end speech from near-end speech.
+
+### 2. Double-Talk and Adaptive Filter Divergence
+The adaptive filter updates $$\hat{h}$$ using the residual error $$e[t]$$. When *both* sides speak at once (**double-talk**), $$e[t]$$ is dominated by the near-end speaker $$s[t]$$ rather than echo! If the filter keeps adapting blindly during double-talk, it diverges and corrupts $$\hat{h}$$—so every production AEC includes a double-talk detector to freeze or slow adaptation.
+
+### 3. Why Block Ordering in WebRTC APM Matters
+WebRTC APM runs **HPF → AEC → NS → AGC**. Putting AGC *before* AEC modulates the echo path gain dynamically, forcing $$\hat{h}$$ to chase a moving target; running neural NS *before* AEC destroys the linear correlation between $$x$$ and $$y$$ that AEC relies on!
+
+---
 
 ## Learning objectives
 
@@ -53,11 +76,7 @@ AEC:  e = y − ĥ ∗ x
 NS:   operates on e, not on raw y
 ```
 
-The residual after that subtraction is what a later suppressor actually hears. When the canceller is doing its job, \(e\) looks like the additive mixture in the figure: near-end speech plus whatever did not cancel (ambient noise, and a smaller leftover echo). The figure is not a drawing of the room path.
-
-![Clean speech, additive noise, and their sum — the shape of a residual after echo has been subtracted]({{ site.imgurl }}/generated/noise-mixture.png)
-
-*Figure. After a linear AEC, the residual is an additive mixture of near-end speech and whatever the canceller did not remove; this cartoon is that mixture, not the echo path itself.*
+The residual after that subtraction is what a later suppressor actually hears. When the canceller is doing its job, $$e$$ looks like the additive mixture in the figure: near-end speech plus whatever did not cancel (ambient noise, and a smaller leftover echo). The figure is not a drawing of the room path.
 
 ### Adaptive filter intuition (NLMS sketch)
 
@@ -107,6 +126,34 @@ Linear AEC leaves leftovers when:
 
 Hybrid research (ULCNet + adaptive filter, etc.) trains a small network on the **AEC residual**. Practically: measure ERLE (echo return loss enhancement) before/after AEC; if residual echo remains audible, either fix delay alignment or add a residual-echo suppressor—not only a generic NS.
 
+---
+
+### Deep-Dive Explanation: Tracing Double-Talk and Why APM Block Order Is Sacred (Read Slowly)
+
+#### Step 1: Check a single double-talk frame by hand
+Suppose the true room coupling is $$h = 0.5$$, our adaptive estimate is already close at $$\hat{h} = 0.45$$, and on frame 3 both sides speak: far-end $$x = 1.0$$ and near-end $$s = 0.8$$.
+- True leftover echo: $$(h - \hat{h})x = 0.05 \times 1.0 = 0.05$$ (power $$0.0025$$—tiny!).
+- Measured error seen by the NLMS rule: $$e = s + 0.05 = 0.85$$ (power $$0.7225$$—nearly **300× larger**!).
+
+If NLMS updates $$\hat{h}$$ using $$e = 0.85$$ with step $$\mu = 0.5$$, it pushes $$\hat{h}$$ from $$0.45$$ up to $$0.45 + 0.5(0.85) = 0.875$$—completely ruining a nearly converged echo filter!
+
+#### Step 2: Why AEC MUST run before neural NS
+A linear adaptive filter needs an untouched linear convolution $$h * x$$ to cancel it. If a nonlinear neural noise suppressor runs *before* AEC, it distorts the echo waveform so that no linear filter $$\hat{h}$$ can match $$x$$ anymore—leaving loud metallic echo bursts!
+
+#### Step 3: Why AGC MUST run after AEC (and avoid duplicate AGCs)
+If Automatic Gain Control cranks microphone gain up and down *before* AEC, the apparent room path $$h$$ suddenly jumps every time someone pauses, forcing AEC to re-converge from scratch. Keep one clean chain: **HPF → AEC → Neural/Classical NS → Single AGC**.
+
+Summary of the voice-processing chain:
+
+$$
+y = s + h*x + n
+\;\xrightarrow{\text{HPF}}\;
+\xrightarrow{\text{AEC } (e = y - \hat{h}*x)}
+\;\xrightarrow{\text{NS (e.g. DF3)}}\;
+\xrightarrow{\text{AGC}}
+\text{Clean send track}.
+$$
+
 ## Integration checklist (browser / native)
 
 1. Confirm a **far-end reference** is actually provided to AEC (loopback / `getUserMedia` constraints / native ADM).
@@ -140,9 +187,9 @@ print("residual echo power", np.round(residual_echo ** 2, 4))
 print("measured error power", np.round(err ** 2, 4))
 ```
 
-**Expected.** Residual echo power stays small: `[0, 0.0001, 0.0025, 0.0025, 0.0002, 0.0036]`. Measured error power matches it on every frame except frame 3, where near-end speech pushes it to about `0.7225` while the true leftover echo is still `0.0025`. Adapting \(\hat{h}\) on that frame would treat the talker as echo.
+**Expected.** Residual echo power stays small: `[0, 0.0001, 0.0025, 0.0025, 0.0002, 0.0036]`. Measured error power matches it on every frame except frame 3, where near-end speech pushes it to about `0.7225` while the true leftover echo is still `0.0025`. Adapting $$\hat{h}$$ on that frame would treat the talker as echo.
 
-**Failure modes.** If frame 3’s two powers match, `near` was left at zero and you are not in double-talk. If residual echo power is large on every voiced far-end frame, \(\hat{h}\) is far from \(h\) (try swapping 0.5 and 0.45). Interpreting the error power as a noise floor and feeding it to a Wiener gain will suppress the near-end talker. Nothing here instantiates WebRTC AEC.
+**Failure modes.** If frame 3’s two powers match, `near` was left at zero and you are not in double-talk. If residual echo power is large on every voiced far-end frame, $$\hat{h}$$ is far from $$h$$ (try swapping 0.5 and 0.45). Interpreting the error power as a noise floor and feeding it to a Wiener gain will suppress the near-end talker. Nothing here instantiates WebRTC AEC.
 
 ## Exercises
 
@@ -153,8 +200,8 @@ print("measured error power", np.round(err ** 2, 4))
 
 ### Answer hints
 
-1. Neural NS sits on \(e\), after \(\hat{h}\). In a browser graph that is often after the platform AEC and before the encoder.
-2. A reference that is 40 ms early or late misses the taps that actually hold \(h\), so \(e\) still contains echo and the filter adapts on the wrong lag.
+1. Neural NS sits on $$e$$, after $$\hat{h}$$. In a browser graph that is often after the platform AEC and before the encoder.
+2. A reference that is 40 ms early or late misses the taps that actually hold $$h$$, so $$e$$ still contains echo and the filter adapts on the wrong lag.
 3. Look for the NS level and AEC enable on `AudioProcessing`; names move between releases, so quote the revision you read.
 4. Far-end playback with no near-end talker is the AEC test. Near-end talker in noise, far-end silent, is the NS test. A level jump when either party pauses is often AGC.
 

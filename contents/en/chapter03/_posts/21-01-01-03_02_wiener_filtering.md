@@ -11,13 +11,32 @@ lesson_type: required
 draft: false
 ---
 
-Where spectral subtraction decides “subtract then floor,” the **Wiener filter** decides a continuous gain per bin from an estimated signal-to-noise ratio. The right-hand curve in the figure is that gain; the left-hand bars are the subtractor it replaces.
+Where spectral subtraction acts like a blunt hatchet—“subtract the floor, clip negatives to zero”—the **Wiener filter** acts like a smooth dimmer switch: at every frequency bin, it asks *“what fraction of this bin’s power belongs to speech?”* and multiplies by that exact ratio $$G = \xi / (\xi + 1)$$.
 
 ![Wiener gain versus a priori SNR, beside the spectral-subtraction bars it softens]({{ site.imgurl }}/generated/spectral-subtraction-wiener.png)
 
-*Figure. The Wiener gain is \(1/2\) (\(-6\,\mathrm{dB}\)) when speech and noise power are equal, and it never becomes the hard holes of the subtraction bars on the left.*
+*Figure. The Wiener gain is $$1/2$$ ($$-6\,\mathrm{dB}$$) when speech and noise power are equal, and it never becomes the hard holes of the subtraction bars on the left.*
 
-It is the analytical bridge between classical subtractors and modern mask-based neural enhancers: DeepFilterNet-style models can be read as learned, data-driven cousins of time–frequency Wiener gains, with far richer features and multi-frame filters. This lesson develops the MMSE intuition, a priori / a posteriori SNR, decision-directed tracking, and practical speech Wiener variants used in VoIP stacks.
+This single formula is the conceptual bridge from 1940s statistical estimation to 2020s neural speech enhancement: an Ideal Ratio Mask (IRM) in deep learning is *mathematically identical* to the Wiener gain, and DeepFilterNet’s ERB gains are its learned, data-driven descendants. This lesson derives $$G = \xi / (\xi + 1)$$, distinguishes a priori SNR $$\xi$$ from a posteriori SNR $$\gamma$$, and walks through Ephraim–Malah’s celebrated decision-directed tracker.
+
+**Lesson roadmap:** Background Knowledge Map (MMSE estimation, a priori vs. a posteriori SNR, decision-directed smoothing) → Wiener formula, Ephraim–Malah recursion & soft-mask bridge → Worked example: evaluating $$G$$ at $$-10, 0, +10\,\mathrm{dB}$$ and tracing one decision-directed frame by hand → Deep-Dive Explanation (Read Slowly): 3 steps deriving $$G = \xi / (\xi + 1)$$ from mean-squared error → Tuning checklist, Pitfalls, Mini-lab, Exercises & Videos.
+
+---
+
+## Background Knowledge Map: Minimum Mean-Square Error (MMSE) Speech Estimation
+
+### 1. From Heuristic Subtraction to Optimal MMSE Gain
+Instead of guessing subtraction constants $$\alpha, \beta$$, Norbert Wiener asked a clean optimization question: *which scalar multiplier $$G$$ minimizes the expected squared error $$\mathbb{E}[\vert S - G Y\vert^2]$$?* Under uncorrelated speech and noise, the exact answer is the ratio of speech power to total power: $$G = P_S / (P_S + P_N) = \xi / (\xi + 1)$$.
+
+### 2. A Priori SNR ($$\xi$$) vs. A Posteriori SNR ($$\gamma$$)
+Two SNR ratios look deceptively similar and must never be swapped:
+- **A posteriori SNR** $$\gamma = \vert Y\vert^2 / P_N$$: directly observable from the current noisy frame, but wildly noisy frame-to-frame.
+- **A priori SNR** $$\xi = P_S / P_N$$: the true underlying speech-to-noise power ratio—unobservable directly, estimated smoothly via Ephraim–Malah’s **decision-directed recursion** ($$\eta \approx 0.98$$).
+
+### 3. The Bridge to Neural Masks (IRM & ERB Gains)
+Notice that if you know the true clean and noise powers in each bin, the Ideal Ratio Mask $$M^{\mathrm{IRM}} = \vert S\vert^2 / (\vert S\vert^2 + \vert N\vert^2)$$ is literally the Wiener gain! Neural enhancers beat classical Wiener not by inventing a magic curve shape, but by using deep temporal–spectral context to estimate $$\xi$$ far more accurately during non-stationary bursts.
+
+---
 
 ## Learning objectives
 
@@ -41,7 +60,7 @@ $$
 G^{\mathrm{W}} = \frac{P_S}{P_S + P_N} = \frac{\xi}{\xi + 1},
 $$
 
-where $$P_S=\mathbb{E}|S|^2$$, $$P_N=\mathbb{E}|N|^2$$, and the **a priori SNR** is
+where $$P_S=\mathbb{E}\vert S\vert^2$$, $$P_N=\mathbb{E}\vert N\vert^2$$, and the **a priori SNR** is
 
 $$
 \xi = \frac{P_S}{P_N}.
@@ -56,7 +75,7 @@ The enhanced spectrum is $$\hat{S} = G^{\mathrm{W}} Y$$ (complex multiply—phas
 The **a posteriori SNR** uses the *observed* power:
 
 $$
-\gamma = \frac{|Y|^2}{P_N}.
+\gamma = \frac{\vert Y\vert^2}{P_N}.
 $$
 
 If $$P_N$$ is known, $$\gamma$$ is measurable each frame; $$\xi$$ is not, because $$P_S$$ is unknown. Classical speech enhancement spends most of its ingenuity on estimating $$\xi$$.
@@ -68,7 +87,7 @@ A useful identity under the model is $$\mathbb{E}[\gamma]=\xi+1$$, so a naive pl
 The celebrated **decision-directed** approach recursively blends a prediction from the previous enhanced frame with the instantaneous ML estimate:
 
 $$
-\hat{\xi}(\ell) = \eta\,\frac{|G(\ell-1) Y(\ell-1)|^2}{P_N} + (1-\eta)\,\max\bigl(\gamma(\ell)-1,\,0\bigr),
+\hat{\xi}(\ell) = \eta\,\frac{\vert G(\ell-1) Y(\ell-1)\vert^2}{P_N} + (1-\eta)\,\max\bigl(\gamma(\ell)-1,\,0\bigr),
 $$
 
 with $$\eta$$ typically $$0.98$$. Then set
@@ -93,7 +112,7 @@ You still need $$P_N(k,\ell)$$. Reuse the noise trackers from spectral subtracti
 Define an ideal ratio mask (IRM) in power domain:
 
 $$
-M^{\mathrm{IRM}} = \frac{|S|^2}{|S|^2 + |N|^2} = \frac{\xi}{\xi+1}.
+M^{\mathrm{IRM}} = \frac{\vert S\vert^2}{\vert S\vert^2 + \vert N\vert^2} = \frac{\xi}{\xi+1}.
 $$
 
 That is *exactly* the Wiener gain when $$\xi$$ is the true a priori SNR. Neural SE models often regress a mask $$\hat{M}$$ toward IRM / ideal binary mask / complex ideal ratio mask targets. Reading DeepFilterNet as “learned multi-frame filtering + ERB-band gains” is easier once Wiener is in your bones: the classical formula is the closed-form optimum under strong assumptions; the network relaxes those assumptions using data.
@@ -112,6 +131,37 @@ for each frame ell:
   emit ISTFT_OLA(S_hat)
   update P_N if noise-only
 ```
+
+---
+
+### Deep-Dive Explanation: Deriving $$G = \xi/(\xi+1)$$ in Three Clean Lines (Read Slowly)
+
+#### Step 1: Expand the mean-squared error for a real gain $$G$$
+We want to minimize $$J(G) = \mathbb{E}[\vert S - G(S+N)\vert^2] = \mathbb{E}[\vert(1-G)S - GN\vert^2]$$. Since clean speech $$S$$ and noise $$N$$ are uncorrelated ($$\mathbb{E}[S N^*] = 0$$), the cross-terms vanish identically:
+$$
+J(G) = (1 - G)^2 P_S + G^2 P_N.
+$$
+
+#### Step 2: Differentiate with respect to $$G$$ and set to zero
+Take $$\frac{dJ}{dG} = -2(1 - G)P_S + 2G P_N = 0 \implies G(P_S + P_N) = P_S$$, yielding:
+$$
+G^{\mathrm{W}} = \frac{P_S}{P_S + P_N} = \frac{P_S / P_N}{P_S / P_N + 1} = \frac{\xi}{\xi + 1}!
+$$
+
+#### Step 3: Check one decision-directed frame by hand
+Suppose $$P_N = 1.0$$, previous enhanced power $$\vert S_{\text{prev}}\vert^2 = 4.0$$, current noisy bin power $$\vert Y(\ell)\vert^2 = 1.5$$ (so $$\gamma = 1.5$$), and $$\eta = 0.98$$:
+- Decision-directed $$\hat{\xi} = 0.98(4.0/1.0) + 0.02(1.5 - 1) = 3.92 + 0.01 = 3.93$$.
+- Smooth Wiener gain: $$G = 3.93 / 4.93 \approx 0.797$$ (vs. twitchy ML plug-in $$0.5 / 1.5 = 0.333$$!). That $$0.98$$ memory is what kills musical noise!
+
+Summary of the Wiener enhancement chain:
+
+$$
+\min_G \mathbb{E}[\vert S - GY\vert^2]
+\;\Longrightarrow\;
+G = \frac{\xi}{\xi+1}
+\;\xrightarrow{\text{Decision-directed } \hat{\xi}}\;
+\text{Smooth soft mask (classical IRM)}.
+$$
 
 ## Worked checklist: tuning a speech Wiener
 
@@ -134,7 +184,7 @@ for each frame ell:
 
 ## Mini-lab
 
-**Goal.** Evaluate Wiener gains at a priori SNRs of \(-10\), \(0\), and \(+10\,\mathrm{dB}\).
+**Goal.** Evaluate Wiener gains at a priori SNRs of $$-10$$, $$0$$, and $$+10\,\mathrm{dB}$$.
 
 ```python
 import numpy as np
@@ -146,9 +196,9 @@ for snr_db in (-10, 0, 10):
           "G_dB", round(float(20 * np.log10(G)), 2))
 ```
 
-**Expected.** \(-10\,\mathrm{dB}\) → \(\xi=0.1\), \(G\approx 0.091\) (\(-20.83\,\mathrm{dB}\)). \(0\,\mathrm{dB}\) → \(\xi=1\), \(G=0.5\) (\(-6.02\,\mathrm{dB}\)). \(+10\,\mathrm{dB}\) → \(\xi=10\), \(G\approx 0.909\) (\(-0.83\,\mathrm{dB}\)). The middle row is the point marked on the figure.
+**Expected.** $$-10\,\mathrm{dB}$$ → $$\xi=0.1$$, $$G\approx 0.091$$ ($$-20.83\,\mathrm{dB}$$). $$0\,\mathrm{dB}$$ → $$\xi=1$$, $$G=0.5$$ ($$-6.02\,\mathrm{dB}$$). $$+10\,\mathrm{dB}$$ → $$\xi=10$$, $$G\approx 0.909$$ ($$-0.83\,\mathrm{dB}$$). The middle row is the point marked on the figure.
 
-**Failure modes.** Passing decibels straight into \(\xi/(\xi+1)\) (forgetting \(10^{\mathrm{SNR}/10}\)) makes the \(-10\,\mathrm{dB}\) gain larger than the \(+10\,\mathrm{dB}\) gain, which is the curve upside down. Using \(20\log_{10}\) to convert SNR to \(\xi\), or reporting \(10\log_{10} G\) instead of \(20\log_{10} G\), shifts the decibel column by about a factor of two. \(\gamma/(\gamma+1)\) is a different plug-in; this lab does not estimate \(\gamma\).
+**Failure modes.** Passing decibels straight into $$\xi/(\xi+1)$$ (forgetting $$10^{\mathrm{SNR}/10}$$) makes the $$-10\,\mathrm{dB}$$ gain larger than the $$+10\,\mathrm{dB}$$ gain, which is the curve upside down. Using $$20\log_{10}$$ to convert SNR to $$\xi$$, or reporting $$10\log_{10} G$$ instead of $$20\log_{10} G$$, shifts the decibel column by about a factor of two. $$\gamma/(\gamma+1)$$ is a different plug-in; this lab does not estimate $$\gamma$$.
 
 ## Exercises
 
@@ -159,9 +209,9 @@ for snr_db in (-10, 0, 10):
 
 ### Answer hints
 
-1. Subtract the two forms; \(1-G=1/(\xi+1)\) is the fraction of \(Y\) you attribute to noise.
-2. \(G(-6\,\mathrm{dB})=1/2\) when \(\xi=1\). The three requested gains are about \(0.091\), \(0.5\), and \(0.909\).
-3. Plot \(G\), not \(|Y|\). A twitchy \(\eta\) looks speckled; spectral subtraction looks like holes.
+1. Subtract the two forms; $$1-G=1/(\xi+1)$$ is the fraction of $$Y$$ you attribute to noise.
+2. $$G(-6\,\mathrm{dB})=1/2$$ when $$\xi=1$$. The three requested gains are about $$0.091$$, $$0.5$$, and $$0.909$$.
+3. Plot $$G$$, not $$\vert Y\vert$$. A twitchy $$\eta$$ looks speckled; spectral subtraction looks like holes.
 4. The network is still aiming at a ratio of powers. It wins by estimating that ratio from more context than one decision-directed recursion, not by inventing a different gain shape.
 
 ## Further reading

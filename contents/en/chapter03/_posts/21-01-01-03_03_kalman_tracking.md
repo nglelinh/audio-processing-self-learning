@@ -11,7 +11,30 @@ lesson_type: required
 draft: false
 ---
 
-Kalman filtering is not “another mask.” It is a **recursive Bayesian tracker**: predict the next speech state, then correct that prediction with a new noisy observation. In speech enhancement and acoustic echo control, Kalman-style thinking appears in adaptive filters, residual-echo trackers, and hybrid AEC+NS pipelines (for example classical Kalman AEC followed by a tiny neural postfilter). This lesson stays at the **intuition and block-diagram** level—enough to read papers and debug hybrids—without turning into a control-theory course.
+Imagine tracking a speaker’s room echo path as someone walks across a conference room, or tracking a slowly drifting noise floor during a live call. Estimating from scratch on every single 10 ms frame wastes everything you already learned one frame ago; freezing the old estimate forever falls behind the room.
+
+The **Kalman filter** solves that tension cleanly: it is not “just another spectral mask,” but a **recursive Bayesian tracker** that alternates between *predicting* where the hidden state moved and *updating* that belief with the latest microphone sample—weighted by how uncertain each side is. This lesson builds the Kalman intuition at the block-diagram level and shows why modern low-complexity audio products pair a classical Kalman/adaptive linear filter with a tiny neural residual cleaner.
+
+![A tracked noise floor beside the SNR gain that floor is used to compute]({{ site.imgurl }}/generated/spectral-subtraction-wiener.png)
+
+*Figure. The orange trace is a noise-floor tracker; the curve on the right is the gain that tracker feeds, which is the piece a Kalman update is trying to stabilize.*
+
+**Lesson roadmap:** Background Knowledge Map (state-space dynamics, Kalman gain as adaptive Wiener, hybrid classical + neural AENR) → Scalar predict–update model & speech/AEC state-space table → Worked example: tracing one concrete scalar predict–update step by hand for $$r = 0.1$$ vs. $$r = 10.0$$ → Deep-Dive Explanation (Read Slowly): 3 steps explaining why Kalman is “Wiener plus memory” → Checklist, Pitfalls, Mini-lab, Exercises & Videos.
+
+---
+
+## Background Knowledge Map: Recursive State-Space Estimation in Audio
+
+### 1. State-Space Modeling — Separating Dynamics from Observation
+A state-space model writes two equations: a **process equation** describing how the hidden state $$x_\ell$$ evolves over time (with process-noise variance $$q$$), and a **measurement equation** describing how the noisy microphone $$y_\ell$$ observes it (with measurement-noise variance $$r$$).
+
+### 2. Kalman Gain $$K$$ = Dynamic Trust Knob
+At every hop, the predicted variance grows to $$p^- = p + q$$, and the **Kalman gain** $$K = p^- / (p^- + r)$$ decides how much to trust the fresh microphone reading. Notice its exact algebraic twin: writing $$\xi = p^-/r$$ turns $$K$$ into $$\xi / (\xi + 1)$$—the Wiener gain from Lesson 03-02, now upgraded with evolving memory!
+
+### 3. The Hybrid Classical + Neural Product Pattern
+In acoustic echo and noise reduction (AENR), asking a neural network to learn a 200-tap linear room echo path from scratch is wasteful. Production hybrids (e.g., Kalman/NLMS AEC $$\to$$ ULCNet / DeepFilterNet postfilter) let a recursive linear tracker cancel the linear echo first, then hand the clean residual to a lightweight neural network.
+
+---
 
 ## Learning objectives
 
@@ -31,7 +54,7 @@ You will explain the predict–update loop with process and measurement noise co
 
 Maintain a belief about a hidden state $$x_\ell$$ (for example, clean speech samples, LPC coefficients, or an echo-path impulse response). Each frame:
 
-1. **Predict** using dynamics: $$x_{\ell|\ell-1} = A x_{\ell-1|\ell-1}$$ (plus process noise uncertainty).
+1. **Predict** using dynamics: $$x_{\ell\vert\ell-1} = A x_{\ell-1\vert\ell-1}$$ (plus process noise uncertainty).
 2. **Update** with measurement $$y_\ell = H x_\ell + v_\ell$$: pull the prediction toward the observation in proportion to how trustworthy each is.
 
 The **Kalman gain** $$K_\ell$$ is large when the measurement is reliable relative to the prediction—so you trust the mic more—and small when measurements are noisy—so you coast on the model.
@@ -51,10 +74,6 @@ K = \frac{p^{-}}{p^{-} + r}, \qquad \hat{x} = \hat{x}^{-} + K\bigl(y - \hat{x}^{
 $$
 
 Compare to Wiener: $$K$$ looks like $$\xi/(\xi+1)$$ if you read $$p^{-}/r$$ as a prior SNR. Kalman is Wiener **plus memory** through the predicted state and variance. In the figure, the orange noise floor is the kind of level a recursive tracker maintains, and the blue curve is the gain that floor would feed. A Kalman step is one statistically explicit way to update that floor; the picture itself is still classical NS, not a block diagram of the filter.
-
-![A tracked noise floor beside the SNR gain that floor is used to compute]({{ site.imgurl }}/generated/spectral-subtraction-wiener.png)
-
-*Figure. The orange trace is a noise-floor tracker; the curve on the right is the gain that tracker feeds, which is the piece a Kalman update is trying to stabilize.*
 
 ### Why speech engineers care
 
@@ -83,6 +102,35 @@ Survey pointers (name-level only, Chapter 04 will expand SE models): Align-ULCNe
 - Wiener (typical STFT form): **stateless per frame** given $$\xi_\ell$$ (though $$\xi$$ itself may be recursive).
 - Kalman: **stateful**; the gain depends on predicted covariance, not only on an SNR number.
 - Decision-directed SNR tracking is a *poor man’s* recursive prior—conceptually between naive Wiener and full Kalman.
+
+---
+
+### Deep-Dive Explanation: Tracing One Scalar Kalman Update Step by Hand (Read Slowly)
+
+Suppose our previous state estimate is $$\hat{x}_{0} = 2.0$$ with uncertainty variance $$p = 1.0$$, process noise $$q = 0.1$$, and a fresh microphone measurement arrives at $$y_1 = 5.0$$:
+
+#### Step 1: Predict (uncertainty grows)
+Before seeing $$y_1$$, our prediction stays $$\hat{x}^- = 2.0$$, and its variance grows by the process noise:
+$$
+p^- = p + q = 1.0 + 0.1 = 1.1.
+$$
+
+#### Step 2: Compute the Kalman gain $$K$$ under clean vs. noisy sensors
+- **Trustworthy sensor ($$r = 0.1$$):** $$K = \frac{1.1}{1.1 + 0.1} \approx 0.917$$ $$\implies \hat{x}_1 = 2.0 + 0.917(5.0 - 2.0) = 4.75$$ (jumps straight toward the fresh measurement!), and posterior variance collapses to $$p_1 = (1 - 0.917)(1.1) \approx 0.091$$.
+- **Noisy sensor ($$r = 10.0$$):** $$K = \frac{1.1}{1.1 + 10.0} \approx 0.099$$ $$\implies \hat{x}_1 = 2.0 + 0.099(5.0 - 2.0) = 2.30$$ (barely budges—coasts safely on the prior!), and posterior variance stays near $$0.99$$.
+
+#### Step 3: Why covariance-aware steps beat fixed step sizes in AEC
+When the far-end talker is silent or double-talk erupts, the effective measurement noise $$r$$ spikes—automatically shrinking the Kalman gain $$K \to 0$$ and freezing the echo-path estimate without brittle manual switches!
+
+Summary of the Kalman loop:
+
+$$
+(\hat{x}_{\ell-1}, p_{\ell-1})
+\;\xrightarrow{\text{Predict } (+q)}\;
+(\hat{x}^-, p^-)
+\;\xrightarrow{K = \frac{p^-}{p^- + r}}\;
+\hat{x}_\ell = \hat{x}^- + K(y_\ell - \hat{x}^-).
+$$
 
 ## Checklist: when to reach for Kalman-style thinking
 
@@ -113,9 +161,9 @@ for r in (0.1, 10.0):
     print("r", r, "K", round(K, 3))
 ```
 
-**Expected.** Prior variance after the predict step is \(1.1\). For \(r=0.1\), \(K\approx 0.917\) (trust the measurement). For \(r=10\), \(K\approx 0.099\) (coast on the prediction). Same shape as a Wiener gain: large when the “SNR” \(p^{-}/r\) is large.
+**Expected.** Prior variance after the predict step is $$1.1$$. For $$r=0.1$$, $$K\approx 0.917$$ (trust the measurement). For $$r=10$$, $$K\approx 0.099$$ (coast on the prediction). Same shape as a Wiener gain: large when the “SNR” $$p^{-}/r$$ is large.
 
-**Failure modes.** Updating \(p\) with the measurement before computing \(K\) changes both numbers. Swapping \(q\) and \(r\) makes the noisy sensor look more trustworthy than the clean one. This is a scalar cartoon of the gain, not a speech Kalman filter and not a noise-PSD tracker implementation.
+**Failure modes.** Updating $$p$$ with the measurement before computing $$K$$ changes both numbers. Swapping $$q$$ and $$r$$ makes the noisy sensor look more trustworthy than the clean one. This is a scalar cartoon of the gain, not a speech Kalman filter and not a noise-PSD tracker implementation.
 
 ## Exercises
 
@@ -126,10 +174,10 @@ for r in (0.1, 10.0):
 
 ### Answer hints
 
-1. \(K\) should fall as \(r\) rises, and the estimate should lag a fast wiggle in \(y\) when \(r\) is large.
-2. Far-end taps are the regressor; the mic is \(y\); the neural block sees \(e=y-\hat{h}*x\), not the raw mic.
+1. $$K$$ should fall as $$r$$ rises, and the estimate should lag a fast wiggle in $$y$$ when $$r$$ is large.
+2. Far-end taps are the regressor; the mic is $$y$$; the neural block sees $$e=y-\hat{h}*x$$, not the raw mic.
 3. Both are recursive and both shrink the gain when noise dominates. Wiener (decision-directed) tracks a power ratio; Kalman tracks a state and a variance, and it has an explicit process model.
-4. AEC owns linear echo given the far-end reference. The neural stage owns whatever is left: residual echo and ambient noise. Do not ask the network to rediscover \(\mathbf{h}\).
+4. AEC owns linear echo given the far-end reference. The neural stage owns whatever is left: residual echo and ambient noise. Do not ask the network to rediscover $$\mathbf{h}$$.
 
 ## Further reading
 
