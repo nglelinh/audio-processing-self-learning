@@ -23,7 +23,7 @@ This lecture uses RNNoise as a conceptual bridge between traditional signal proc
 
 ---
 
-## Background Knowledge Map: The Hybrid DSP + Neural Philosophy of RNNoise
+## Key ideas: The Hybrid DSP + Neural Philosophy of RNNoise
 
 Four classical DSP and ML ideas fuse together inside RNNoise:
 
@@ -150,7 +150,7 @@ Compare a naive full-band 48 kHz STFT mask network against RNNoise’s Bark-band
 
 Look at how a Bark band gain works on one band (say Band 5 covering bins $$k=12\dots 16$$): if the GRU predicts gain $$g_5 = 0.25$$ ($$-12.0	ext{ dB}$$), all 5 complex STFT bins in that band are scaled by $$0.25$$, suppressing noise energy by $$g_5^2 = 0.0625$$ (16× power reduction) while preserving original phase.
 
-### Deep-Dive Explanation: What RNNoise Teaches—and Where It Stops (Read Slowly)
+### Explanation: What RNNoise Teaches—and Where It Stops
 
 1. **Let physics handle what physics already solved:** FFTs, perceptual frequency warping, and pitch tracking are exact, zero-parameter operations; offloading them to DSP frees the neural network’s tiny capacity to focus purely on separating speech from non-stationary noise.
 2. **Real-valued band gains cannot fix phase distortion:** At high SNR ($$> 10	ext{ dB}$$), noisy phase barely matters. At low SNR ($$0	ext{ dB}$$ or below), keeping noisy phase introduces audible roughness—motivating complex-valued masks and deep filtering.

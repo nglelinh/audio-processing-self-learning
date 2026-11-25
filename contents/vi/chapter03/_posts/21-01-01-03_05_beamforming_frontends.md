@@ -15,7 +15,7 @@ Khi thiết bị có **từ hai micro trở lên**, hình học mảng thu mang 
 
 Tại sao con người lại có **hai** cái tai thay vì một? Không phải để nghe to gấp đôi, mà để biến *hình học không gian* thành một bộ lọc vật lý: một âm thanh phát ra từ bên phải sẽ chạm vào tai phải sớm hơn tai trái khoảng vài trăm micro-giây. Khi một chiếc laptop, điện thoại hay loa thông minh sở hữu từ hai micro trở lên, ta có thể làm điều tương tự bằng toán học: tạo ra một "đèn pin âm học" chiếu thẳng vào miệng người nói và đẩy tiếng quạt hay tiếng người nói chuyện bên cạnh vào vùng tối — kỹ thuật gọi là **tạo búp sóng (beamforming)**.
 
-## Bản đồ kiến thức nền: Mảng micro, hình học sóng phẳng và lọc không gian
+## Kiến thức cần nhớ: Mảng micro, hình học sóng phẳng và lọc không gian
 
 ### 1. Độ trễ thời gian đến (TDOA) và Vector lái hướng (Steering Vector)
 Với hai micro đặt cách nhau khoảng cách $$d$$ trong không khí (tốc độ âm thanh $$c \approx 343\text{ m/s}$$), một sóng phẳng đến từ góc lệch $$\theta$$ so với phương trực diện phải đi thêm quãng đường $$\Delta r = d \sin\theta$$ để tới micro thứ hai, tạo ra độ trễ $$\Delta\tau = \frac{d \sin\theta}{c}$$. Trên miền tần số $$f$$, độ trễ thời gian biến thành phép xoay pha $$e^{-j 2\pi f \Delta\tau}$$. Xếp pha của tất cả $$M$$ micro thành một cột ta thu được **vector lái hướng** $$\mathbf{a}(\theta, f)$$.
@@ -28,7 +28,7 @@ Với hai micro đặt cách nhau khoảng cách $$d$$ trong không khí (tốc 
 ### 3. Tách nguồn mù đa kênh (IVA) và giới hạn vật lý của mảng nhỏ
 Khi không biết trước hướng người nói, **IVA (Independent Vector Analysis)** khai thác giả định các nguồn âm độc lập thống kê nhau và liên kết các tần số của cùng một nguồn để tránh hoán vị tần số (*permutation problem*). Tuy nhiên, vật lý sóng đặt ra một giới hạn cứng: khi bước sóng âm thanh $$\lambda = c/f$$ lớn hơn nhiều so với khoảng cách micro $$d$$ (ở tần số trầm), lệch pha giữa hai micro quá bé nên beamforming đơn thuần suy giảm mạnh — đó là lý do các hệ thống hiện đại ghép tiền xử lý không gian với hậu lọc mạng nơ-ron đơn kênh.
 
-### Khung giải thích: Cầm tay tính độ trễ TDOA và kiểm tra "điểm mù tần số trầm" của mảng 2 micro laptop (nên đọc chậm)
+### Giải thích: Cầm tay tính độ trễ TDOA và kiểm tra "điểm mù tần số trầm" của mảng 2 micro laptop
 
 Xét một chiếc laptop có 2 micro đặt cách nhau $$d = 4\text{ cm} = 0{,}04\text{ m}$$, tốc độ âm thanh $$c = 343\text{ m/s}$$, tần số lấy mẫu $$f_s = 48\,000\text{ Hz}$$.
 - Người nói ngồi chính diện trước màn hình: $$\theta_s = 0^\circ \implies \Delta\tau_s = 0$$.

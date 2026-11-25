@@ -23,7 +23,7 @@ This roadmap maps four high-impact next paths and shows exactly which skills tra
 
 ---
 
-## Background Knowledge Map: Four Adjacent Frontiers Beyond Noise Suppression
+## Key ideas: Four Adjacent Frontiers Beyond Noise Suppression
 
 Every major area of modern audio AI builds straight on the streaming DSP + ML foundation you now hold:
 
@@ -135,7 +135,7 @@ Suppose a neural encoder downsamples 24 kHz audio by a stride of $$320$$ samples
 
 Compare that with raw uncompressed 24 kHz 16-bit PCM ($$24{,}000 	imes 16 = 384	ext{ kbps}$$): **64× to 256× compression** into discrete tokens ready for a Transformer!
 
-### Deep-Dive Explanation: How to Pick Your Next Audio Specialization Strategically (Read Slowly)
+### Explanation: How to Pick Your Next Audio Specialization Strategically
 
 1. **If you loved Chapters 5–7 (WASM, Rust, WebRTC, low latency):** Go deeper into **Native Rust DSP, Neural AEC, or Multi-Mic Beamforming**—the industry has a massive shortage of engineers who understand both PyTorch and lock-free real-time C++/Rust.
 2. **If you loved Chapters 3–4 (Spectrograms, Neural Nets, Deep Filtering):** Explore **Neural Audio Codecs (RVQ)** and **Flow-Matching Speech Restoration**—the bridge between classic DSP and multimodal voice LLMs.

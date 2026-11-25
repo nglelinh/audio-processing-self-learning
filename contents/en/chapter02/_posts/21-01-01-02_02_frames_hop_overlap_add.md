@@ -19,11 +19,11 @@ The cure is **overlapping frames glued back together by Overlap-Add (OLA)**—go
 
 *Figure. Frames of length $$L$$ advance by hop $$R$$; overlap-add rebuilds the waveform only where the sum of the shifted windows is constant.*
 
-**Lesson roadmap:** Background Knowledge Map (framing parameters $$L, R, \rho$$, COLA perfect reconstruction, analysis vs. synthesis windowing) → Periodic Hann COLA derivation & double-window ripple trap → Streaming OLA accumulator mechanics → Worked examples: DeepFilterNet 48 kHz ($$L=960, R=480$$), 16 kHz ($$L=512, R=256$$), and diagnosing a 100 Hz COLA tremolo → Deep-Dive Explanation (Read Slowly): 3 steps explaining periodic vs. symmetric Hann and $$\sqrt{\mathrm{Hann}}$$ → Pitfalls, Mini-lab, Exercises & Videos.
+**Lesson roadmap:** Key ideas (framing parameters $$L, R, \rho$$, COLA perfect reconstruction, analysis vs. synthesis windowing) → Periodic Hann COLA derivation & double-window ripple trap → Streaming OLA accumulator mechanics → Worked examples: DeepFilterNet 48 kHz ($$L=960, R=480$$), 16 kHz ($$L=512, R=256$$), and diagnosing a 100 Hz COLA tremolo → Explanation: 3 steps explaining periodic vs. symmetric Hann and $$\sqrt{\mathrm{Hann}}$$ → Pitfalls, Mini-lab, Exercises & Videos.
 
 ---
 
-## Background Knowledge Map: Short-Time Framing and Overlap-Add Reconstruction
+## Key ideas: Short-Time Framing and Overlap-Add Reconstruction
 
 ### 1. Two Independent Clocks: Window Length $$L$$ vs. Hop Size $$R$$
 Every streaming STFT is parameterized by two integers: the **window length $$L$$** (how many samples sit inside one FFT, controlling frequency resolution and initial buffering delay $$T_L = L / f_s$$) and the **hop size $$R$$** (how many fresh samples arrive before the next FFT, controlling CPU cadence $$f_s / R$$ and overlap ratio $$\rho = 1 - R/L$$).
@@ -159,7 +159,7 @@ The first $$L-R$$ samples may be incomplete — discard or fade them before you 
 
 ---
 
-### Deep-Dive Explanation: Why Periodic Hann + 50% Overlap Works—and Why Double Hann Fails (Read Slowly)
+### Explanation: Why Periodic Hann + 50% Overlap Works—and Why Double Hann Fails
 
 #### Step 1: Check a concrete 4-sample periodic Hann window by hand
 Set $$L = 4, R = 2$$. Evaluating $$w[n] = \frac{1}{2}(1 - \cos(2\pi n/4))$$ gives $$w = [0,\; 0.5,\; 1.0,\; 0.5]$$. Now shift by $$R = 2$$ and add overlapping copies:

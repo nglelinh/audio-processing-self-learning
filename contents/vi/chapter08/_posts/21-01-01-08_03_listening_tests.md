@@ -15,7 +15,7 @@ Trong giới kỹ thuật âm thanh có một câu đùa rất thật: *"Nếu m
 
 Chỉ số SI-SDR có thể vẫn cao dù giọng nói nghe bị kim loại, còn DNSMOS có thể chấm lệch ngay trên miền dữ liệu người dùng thực tế. Bài kiểm thử lắng nghe (listening test) là trụ cột giúp phát hiện cả hai sai sót đó, với điều kiện bạn kiểm soát chặt độ lớn âm lượng (loudness), thứ tự phát và danh mục mẫu âm thanh. Bạn không cần một phòng lab đạt chứng nhận ITU để áp dụng kỷ luật này; điều quan trọng là có quy trình văn bản rõ ràng, ẩn nhãn hệ thống và bảng kết quả cho phép phương án mới có thể thua. Bài học này trình bày thiết kế bài kiểm thử mù AB (hoặc thang điểm kiểu MUSHRA thu gọn) dành cho nhóm kỹ sư đang cân nhắc thay đổi `setSuppressionLevel` trên `DeepFilterNoiseFilterProcessor`.
 
-**Mạch bài học:** Thiên lệch âm lượng trong nghe thử → Bản đồ kiến thức nền (Thử nghiệm mù & Xáo trộn, Chuẩn hóa độ lớn LUFS/RMS, Thiết kế phân tầng & Kiểm tra tập trung) → Chọn giữa Dogfood, AB, ABC và MUSHRA thu gọn → Ma trận 5 điều kiện nhiễu & bảng kết quả thắng/thua/hòa → Khung giải thích tính tay hệ số chuẩn hóa âm lượng LUFS và bẫy gộp trung bình bảng AB → Mini-lab và Bài tập.
+**Mạch bài học:** Thiên lệch âm lượng trong nghe thử → Kiến thức cần nhớ (Thử nghiệm mù & Xáo trộn, Chuẩn hóa độ lớn LUFS/RMS, Thiết kế phân tầng & Kiểm tra tập trung) → Chọn giữa Dogfood, AB, ABC và MUSHRA thu gọn → Ma trận 5 điều kiện nhiễu & bảng kết quả thắng/thua/hòa → Giải thích tính tay hệ số chuẩn hóa âm lượng LUFS và bẫy gộp trung bình bảng AB → Mini-lab và Bài tập.
 
 ![Bản đồ đánh giá với cột nghe người]({{ site.imgurl }}/generated/eval-metric-map.png)
 
@@ -25,7 +25,7 @@ Chỉ số SI-SDR có thể vẫn cao dù giọng nói nghe bị kim loại, cò
 
 Sau bài học này, bạn sẽ chọn được hình thức đánh giá phù hợp giữa AB và thang kiểu MUSHRA thu gọn, chuẩn hóa độ lớn âm lượng, xáo trộn thứ tự mẫu, soạn hướng dẫn người nghe song ngữ Anh – Việt, báo cáo kết quả thắng/thua/hòa tách riêng theo từng điều kiện, và phân biệt được khi nào chỉ cần dùng thử nội bộ (dogfood) một ngày là đủ.
 
-## Bản đồ kiến thức nền: Kỷ luật khoa học thực nghiệm trong đánh giá thính giác
+## Kiến thức cần nhớ: Kỷ luật khoa học thực nghiệm trong đánh giá thính giác
 
 ### 1. Thiết kế mù (Blinding) và Xáo trộn ngẫu nhiên (Randomization)
 - **Là gì:** Ẩn hoàn toàn tên hệ thống ("Hệ 1 / Hệ 2" thay vì "DF3-80 / Cũ") và đảo ngẫu nhiên vị trí A/B trên từng đoạn âm thanh để triệt tiêu hiệu ứng kỳ vọng (confirmation bias) và thói quen bấm một bên.
@@ -61,7 +61,7 @@ Luôn đưa vào các đoạn giọng nói sạch làm mẫu đối chứng. M�
 
 Một bài kiểm thử nhóm nhỏ thường gồm 8–15 đoạn âm thanh và 5–10 người chấm (luôn ghi rõ số lượng $$N$$ trong bảng). Lặp lại ngẫu nhiên 2 đoạn với nhãn A/B đảo ngược làm bài kiểm tra mức độ tập trung (attention check); nếu người chấm tự mâu thuẫn trên cả hai cặp lặp, loại phiếu đó ra và ghi chú minh bạch. Khi người chấm sử dụng tiếng Việt, hãy dịch tờ hướng dẫn sang tiếng Việt tự nhiên với cùng hệ tiêu chí: ưu tiên phụ âm rõ ràng, giọng nói tự nhiên, ít tạp âm gây xao nhãng; đồng thời chấm trừ các lỗi giọng bị nghẹt, âm sắc robot hoặc mất từ, và dặn người nghe bỏ qua sai khác âm lượng nhỏ nếu còn sót.
 
-## Khung giải thích: Tính tay hệ số chuẩn hóa âm lượng và đọc bảng kết quả AB phân tầng (nên đọc chậm)
+## Giải thích: Tính tay hệ số chuẩn hóa âm lượng và đọc bảng kết quả AB phân tầng
 
 ### Phép tính 1: Chuẩn hóa hai tệp lệch 3 dB về cùng mức đích $$-23\text{ LUFS}$$
 Giả sử tệp A đo được độ lớn tích hợp $$L_A = -26\text{ LUFS}$$ còn tệp B đo được $$L_B = -23\text{ LUFS}$$. Nếu phát thẳng không chuẩn hóa, tệp B có công suất gấp $$10^{3/10} \approx \mathbf{2{,}0\text{ lần}}$$ tệp A — người nghe sẽ thiên vị B ngay cả khi hai tệp giống hệt nhau!

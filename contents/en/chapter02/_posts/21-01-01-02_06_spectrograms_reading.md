@@ -19,11 +19,11 @@ This lesson trains your eye to read speech anatomy (harmonics, formants, plosive
 
 *Figure. Voiced harmonics are a vertical stack of ridges; a noise burst is a vertical bar that fills every band at once.*
 
-**Lesson roadmap:** Background Knowledge Map (log-magnitude color scales, speech vs. noise time–frequency geometry, what spectrograms hide) → 5-step diagnostic reading procedure & landmark tables → Worked examples: mapping 200/400/600 Hz harmonics to fractional bins $$6.4, 12.8, 19.2$$ and stamping reproducible plot metadata → Deep-Dive Explanation (Read Slowly): 3-step visual triage of before/after NS spectrograms → Pitfalls, Mini-lab, Exercises & Videos.
+**Lesson roadmap:** Key ideas (log-magnitude color scales, speech vs. noise time–frequency geometry, what spectrograms hide) → 5-step diagnostic reading procedure & landmark tables → Worked examples: mapping 200/400/600 Hz harmonics to fractional bins $$6.4, 12.8, 19.2$$ and stamping reproducible plot metadata → Explanation: 3-step visual triage of before/after NS spectrograms → Pitfalls, Mini-lab, Exercises & Videos.
 
 ---
 
-## Background Knowledge Map: Visual Diagnostics in Time–Frequency Space
+## Key ideas: Visual Diagnostics in Time–Frequency Space
 
 ### 1. Decibel Compression and the Floor Clamp $$\varepsilon$$
 Human hearing spans over 100 dB of dynamic range; plotting raw linear magnitude $$\vert X(\ell, k)\vert$$ makes quiet fricatives and noise floors invisible next to loud vowels. Taking $$S(\ell, k) = 20\log_{10}(\max(\vert X(\ell, k)\vert, \varepsilon))$$ reveals subtle structure, provided you fix a consistent floor (e.g., $$-80\,\mathrm{dB}$$) across before/after comparisons.
@@ -146,7 +146,7 @@ Both show harmonics; target often louder/closer (higher SNR tracks). Single-chan
 
 ---
 
-### Deep-Dive Explanation: How to Read a Before/After NS Spectrogram Without Getting Fooled (Read Slowly)
+### Explanation: How to Read a Before/After NS Spectrogram Without Getting Fooled
 
 #### Step 1: Lock identical STFT and dB color limits on both panels
 Always plot `noisy` and `enhanced` with the exact same `vmin=-80, vmax=0` (dB), same window, and same linear Hz axis. Auto-scaling each plot independently makes a quiet clean clip look just as bright as a noisy one!

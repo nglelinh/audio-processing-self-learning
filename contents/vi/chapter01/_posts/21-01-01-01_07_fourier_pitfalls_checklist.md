@@ -22,7 +22,7 @@ Một trong những lỗi âm thanh khó chịu nhất khi lập trình DSP khô
 
 ---
 
-## Bản đồ kiến thức nền: Ba nhóm bẫy Fourier kinh điển mà kỹ sư âm thanh hay vấp phải là gì?
+## Kiến thức cần nhớ: Ba nhóm bẫy Fourier kinh điển mà kỹ sư âm thanh hay vấp phải là gì?
 
 ### 1. Tích chập vòng (Circular) vs. Tích chập tuyến tính (Linear Convolution)
 Định lý tích chập của DFT nói rằng nhân hai phổ cỡ $$N$$ tương đương **tích chập vòng modulo $$N$$** trong miền thời gian! Nếu tín hiệu dài $$L$$ và bộ lọc dài $$M$$, kết quả tích chập tuyến tính thực sự dài $$L + M - 1$$ mẫu. Nếu bạn dùng FFT cỡ $$N < L + M - 1$$ mà không đệm đủ số 0, phần đuôi thừa sẽ **quấn ngược vòng lên đầu khung** gây chồng lấp miền thời gian (time-domain aliasing)!
@@ -35,7 +35,7 @@ Thay đổi biên độ hoặc pha đột ngột giữa hai khung liên tiếp m
 
 ---
 
-### Khung giải thích: tự tay bắt tại trận lỗi "Tích chập vòng quấn ngược" với dãy 3 mẫu (nên đọc chậm)
+### Giải thích: tự tay bắt tại trận lỗi "Tích chập vòng quấn ngược" với dãy 3 mẫu
 
 Xét tín hiệu $$x = [1, 1, 1]$$ (độ dài $$L = 3$$) lọc qua bộ lọc $$h = [1, 1, 1]$$ (độ dài $$M = 3$$):
 

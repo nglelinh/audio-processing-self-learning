@@ -22,7 +22,7 @@ Học lý thuyết xử lý tín hiệu mà không gắn với một đường �
 
 ---
 
-## Bản đồ kiến thức nền: Đường ống Khử nhiễu trên Trình duyệt kết nối ba tầng kiến thức nào?
+## Kiến thức cần nhớ: Đường ống Khử nhiễu trên Trình duyệt kết nối ba tầng kiến thức nào?
 
 ### 1. Tầng Toán học – Tín hiệu (Chương 1 & 2)
 Biến đổi Fourier (DFT/FFT), lấy mẫu Nyquist, chia khung (framing), cửa sổ Hann và cặp biến đổi **STFT / ISTFT** biến luồng mẫu PCM 1 chiều thành bản đồ thời gian–tần số 2 chiều mà các bộ lọc và mạng nơ-ron có thể thao tác.
@@ -35,7 +35,7 @@ Trình duyệt cấp dữ liệu âm thanh theo các khối cứng **128 mẫu**
 
 ---
 
-### Khung giải thích: tự tay tính bộ đệm vòng (Ring Buffer) nối `AudioWorklet` (128 mẫu) với DeepFilterNet3 (480 mẫu) (nên đọc chậm)
+### Giải thích: tự tay tính bộ đệm vòng (Ring Buffer) nối `AudioWorklet` (128 mẫu) với DeepFilterNet3 (480 mẫu)
 
 Tại sao không thể gọi trực tiếp DeepFilterNet3 trong mỗi lần `AudioWorklet.process()`? Hãy tính bằng số nguyên sơ cấp ở $$f_s = 48\,000\text{ Hz}$$:
 

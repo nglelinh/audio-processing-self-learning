@@ -15,7 +15,7 @@ Hãy thử tưởng tượng bạn vừa tìm thấy trên mạng một mô hìn
 
 Nhiều sản phẩm không đủ ngân sách tài nguyên như mức laptop mà DeepFilterNet2 giả định. Các tên gọi **GTCRN**, **FastEnhancer**, **μNet** và **Fast-ULCNet** thường xuất hiện trong danh sách rút gọn (shortlist) cho nhóm bộ tăng cường tiếng nói streaming siêu nhẹ. Bài học này **không** gắn tiêu đề bài báo, năm xuất bản hay URL cho bốn cái tên đó; thay vào đó, bài tập trung vào phương pháp đo kiểm để ra quyết định: lý giải vì sao bảng số phép tính MAC và hệ số RTF thực tế (wall-clock) thường tách rời nhau, và vì sao hiện tượng trôi trạng thái GRU sau một giờ chạy liên tục là một dạng lỗi khác hẳn với lỗi hop chậm.
 
-**Mạch bài học:** Ngộ nhận "ít MAC = chạy nhanh" → Bản đồ kiến thức nền (Nghẽn băng thông bộ nhớ, Độ trễ đuôi p95, Ổn định hệ động lực hồi tiếp dài hạn) → Đối chiếu ngân sách phần cứng & số liệu DF2 → Bốn cái tên định hướng trong shortlist → Khung giải thích tính tay sự tách rời MAC/RTF và cơ chế tích lũy trôi trạng thái sau 270.000 hop → Danh mục kiểm tra, Mini-lab và Bài tập.
+**Mạch bài học:** Ngộ nhận "ít MAC = chạy nhanh" → Kiến thức cần nhớ (Nghẽn băng thông bộ nhớ, Độ trễ đuôi p95, Ổn định hệ động lực hồi tiếp dài hạn) → Đối chiếu ngân sách phần cứng & số liệu DF2 → Bốn cái tên định hướng trong shortlist → Giải thích tính tay sự tách rời MAC/RTF và cơ chế tích lũy trôi trạng thái sau 270.000 hop → Danh mục kiểm tra, Mini-lab và Bài tập.
 
 ![RTF đối chiếu quantum AudioWorklet: thời gian tường mỗi khối audio, không phải bảng MAC]({{ site.imgurl }}/generated/rtf-audioworklet.png)
 
@@ -25,7 +25,7 @@ Nhiều sản phẩm không đủ ngân sách tài nguyên như mức laptop mà
 
 Sau bài học này, bạn sẽ giải thích được (thông qua bảng số liệu có thể kiểm chứng của DeepFilterNet2) vì sao GMAC và RTF có thể biến thiên ngược chiều nhau; đưa bốn tên mô hình siêu nhẹ vào danh mục kiểm tra lựa chọn mà không suy đoán kết quả; và thiết kế bài kiểm tra ổn định trạng thái dài hạn độc lập với từng bài báo.
 
-## Bản đồ kiến thức nền: Điều gì quyết định tốc độ và độ bền của mô hình streaming siêu nhẹ?
+## Kiến thức cần nhớ: Điều gì quyết định tốc độ và độ bền của mô hình streaming siêu nhẹ?
 
 ### 1. Nghẽn tính toán (Compute-bound) vs. Nghẽn bộ nhớ (Memory-bound)
 - **Là gì:** Trong kiến trúc máy tính hiện đại, thời gian chạy một lớp mạng nơ-ron bị chặn bởi giá trị lớn hơn giữa thời gian tính toán (số MAC / tốc độ ALU) và thời gian vận chuyển dữ liệu từ RAM/cache vào thanh ghi (số byte đọc-ghi / băng thông bộ nhớ).
@@ -82,7 +82,7 @@ Các đoạn nghe thử dài 3 giây che giấu hoàn toàn hiện tượng trô
 - Giới hạn chuẩn (norm) của vector trạng thái nếu kiến trúc cho phép mà không làm sai lệch độ lợi.
 - Ghi biểu đồ phân bố (histogram) độ lợi tại phút thứ 1 và phút thứ 40 với cùng mức tín hiệu vào — sự dịch chuyển rõ rệt là dấu hiệu trôi trạng thái.
 
-## Khung giải thích: Tự tính tay sự tách rời MAC/RTF và cơ chế tích lũy trôi trạng thái (nên đọc chậm)
+## Giải thích: Tự tính tay sự tách rời MAC/RTF và cơ chế tích lũy trôi trạng thái
 
 Hãy kiểm chứng hai hiện tượng cốt lõi của bài bằng hai phép tính ngắn gọn trên giấy.
 

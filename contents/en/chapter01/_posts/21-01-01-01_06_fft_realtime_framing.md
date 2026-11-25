@@ -19,11 +19,11 @@ In streaming speech enhancement, you never transform a whole file at once. You s
 
 *Figure. Real-time FFT work is this picture on a clock: one new hop in, one windowed transform, overlap-add out. The basis is still the DFT basis; the schedule is the hop.*
 
-**Lesson roadmap:** Background Knowledge Map (streaming STFT loop, hop rate vs. window delay, callback quanta vs. DSP hops) → Key formulas & full 48 kHz / $$L=960, R=480$$ accounting → DeepFilterNet configuration pointers & audio-thread hygiene → Worked examples: FFTs/s across 48 kHz & 16 kHz and latency sketches → Deep-Dive Explanation (Read Slowly): 3 steps budgeting a live AudioWorklet STFT loop → Pitfalls, Mini-lab, Exercises & Videos.
+**Lesson roadmap:** Key ideas (streaming STFT loop, hop rate vs. window delay, callback quanta vs. DSP hops) → Key formulas & full 48 kHz / $$L=960, R=480$$ accounting → DeepFilterNet configuration pointers & audio-thread hygiene → Worked examples: FFTs/s across 48 kHz & 16 kHz and latency sketches → Explanation: 3 steps budgeting a live AudioWorklet STFT loop → Pitfalls, Mini-lab, Exercises & Videos.
 
 ---
 
-## Background Knowledge Map: Streaming STFT on a Hard Real-Time Clock
+## Key ideas: Streaming STFT on a Hard Real-Time Clock
 
 ### 1. The Five-Stage Streaming Loop
 Every hop advance of $$R$$ samples triggers one complete cycle: (1) pull $$L$$ samples from the input ring buffer, (2) multiply by analysis window $$w$$, (3) run forward FFT, (4) apply classical or neural enhancement, and (5) run inverse FFT + overlap-add (OLA) into the output ring buffer.
@@ -141,7 +141,7 @@ Classical spectral subtraction on MCU: FFT~all. DFN-class on laptop: net~all. Mo
 
 ---
 
-### Deep-Dive Explanation: Budgeting a Live Streaming STFT Callback Step by Step (Read Slowly)
+### Explanation: Budgeting a Live Streaming STFT Callback Step by Step
 
 #### Step 1: Separate “how often you compute” from “how long you wait”
 With $$L = 960, R = 480$$ at $$48\,\mathrm{kHz}$$, your compute cadence is governed by $$R$$ ($$100\,\mathrm{hops/s} \implies 200\,\mathrm{FFTs/s}$$ and a $$10\,\mathrm{ms}$$ deadline per hop), whereas your initial buffering delay is governed by $$L$$ ($$20\,\mathrm{ms}$$ to fill the first window). Halving $$R$$ from $$480$$ to $$240$$ **doubles** your FFT + neural CPU load even if $$L$$ stays unchanged!

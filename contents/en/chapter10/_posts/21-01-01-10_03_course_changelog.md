@@ -23,7 +23,7 @@ This closing note documents how to maintain, audit, and evolve `audio-processing
 
 ---
 
-## Background Knowledge Map: Four Pillars of Living Technical Course Maintenance
+## Key ideas: Four Pillars of Living Technical Course Maintenance
 
 Keeping a systems-and-ML course accurate across years relies on four software-engineering habits:
 
@@ -143,7 +143,7 @@ Suppose a maintainer wants to upgrade `onnxruntime-web` from `v1.17` to `v1.20` 
 
 Only when all four objective checks pass does the upgrade land in the changelog with a dated entry—turning course maintenance into a clean, verifiable engineering workflow!
 
-### Deep-Dive Explanation: Four Rules for Maintaining Any Technical Learning Repo (Read Slowly)
+### Explanation: Four Rules for Maintaining Any Technical Learning Repo
 
 1. **Test every code snippet against real synthetic audio:** Even a 0.5-second generated sine wave + white noise fixture in CI catches 95% of broken library imports, shape mismatches, and deprecated kwargs.
 2. **Never delete historical context when updating a recommendation:** Keep a short changelog note explaining *why* an older API (like `ScriptProcessorNode`) was replaced by `AudioWorklet`—learners will still encounter legacy code in the wild.

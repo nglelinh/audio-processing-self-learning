@@ -23,7 +23,7 @@ This lecture makes **streaming model state** completely explicit: how to convert
 
 ---
 
-## Background Knowledge Map: Turning Time-Domain Networks Into Pure State Machines
+## Key ideas: Turning Time-Domain Networks Into Pure State Machines
 
 A streaming neural network is mathematically a finite-state machine $$(y_t, s_t) = f(x_t, s_{t-1})$$. Four state components must be tracked with exact precision:
 
@@ -152,7 +152,7 @@ Compute the exact number of `f32` floats carried between frames:
 Just **5.25 KB of explicit state**—small enough to sit permanently inside the CPU’s L1 data cache! And notice the golden verification test: run offline forward pass $$Y_{	ext{offline}} = F(X_{0..T-1})$$, then loop $$t = 0\dots T-1$$ passing `(x_t, state)` explicitly, and assert $$\max \lvert Y_{	ext{stream}} - Y_{	ext{offline}} 
 vert < 10^{-5}$$!
 
-### Deep-Dive Explanation: Four Rules for Bug-Free Streaming State (Read Slowly)
+### Explanation: Four Rules for Bug-Free Streaming State
 
 1. **Make every state tensor an explicit ONNX input and output:** Never rely on hidden mutable globals inside a runtime; explicit `(x_t, s_in) -> (y_t, s_out)` makes your model pure, testable, and safe for multiple concurrent audio tracks.
 2. **Check causality *before* exporting:** A single non-causal `BatchNorm` running across the time axis or symmetric padding `padding = (K-1)//2` silently leaks future frames and breaks offline-vs-streaming equivalence!

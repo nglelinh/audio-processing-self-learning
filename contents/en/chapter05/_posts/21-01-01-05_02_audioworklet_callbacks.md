@@ -23,7 +23,7 @@ This lecture demystifies the real-time audio callback contract in browsers (and 
 
 ---
 
-## Background Knowledge Map: Real-Time Audio Thread Contracts
+## Key ideas: Real-Time Audio Thread Contracts
 
 Audio callbacks obey the strictest execution rules in application software:
 
@@ -169,7 +169,7 @@ Look at the crucial systems insight revealed by this table:
 mid 480$$, inference fires on callbacks #4, #8, #12, #15 (since $$\mathrm{lcm}(128, 480) = 1920$$ samples = 15 callbacks = 4 ML hops = 40 ms!).
 - On callback #4, if inference runs **inline** inside `process()`, it must finish in **under 2.67 ms** (not 10 ms!), otherwise callback #4 overruns! That is why offloading to a Worker + ring buffer smooths the bursty 10 ms compute across all 4 callbacks!
 
-### Deep-Dive Explanation: Four Rules for Glitch-Free AudioWorklet Engineering (Read Slowly)
+### Explanation: Four Rules for Glitch-Free AudioWorklet Engineering
 
 1. **Zero allocations inside `process()`:** Create all `Float32Array` scratch buffers, FFT workspaces, and ring buffers once during initialization so JavaScript’s garbage collector stays asleep during calls.
 2. **Never confuse hop deadline (10 ms) with callback deadline (2.67 ms):** Running a 3.5 ms ML inference synchronously inside a 2.67 ms `AudioWorklet` callback guarantees underruns even though $$\mathrm{RTF} = 0.35$$!

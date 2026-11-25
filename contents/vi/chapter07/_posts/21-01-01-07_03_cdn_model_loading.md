@@ -15,7 +15,7 @@ Hãy thử nghĩ xem chuyện gì xảy ra nếu bạn có 10.000 người dùng
 
 Chạy DeepFilterNet3 trên trình duyệt đòi hỏi hai tệp nhị phân lớn: module **WASM** (WebAssembly — mã nhị phân chạy trong trình duyệt) và gói trọng số `DeepFilterNet3_onnx.tar.gz`. Nếu đóng gói cả hai vào tarball npm, kích thước cài đặt sẽ tăng vọt và mỗi lần cập nhật tệp mô hình đều buộc phải triển khai lại toàn bộ ứng dụng web. Do đó, các hệ thống thực tế tải chúng từ **CDN** (mạng phân phối nội dung) để tận dụng lớp lưu đệm gần người dùng. Gói `deepfilternet3-noise-filter` **1.3.0** tự động phân giải đường dẫn từ `assetConfig.cdnUrl`. Bài học này giúp bạn tính chính xác 4 URL cho hai thế hệ 1.1.2 và 1.3.0, đồng thời đảm bảo một lỗi mạng khi tải tệp không làm gián đoạn cuộc gọi.
 
-**Mạch bài học:** Băng thông & độ trễ khi phân phối mô hình AI trên web → Bản đồ kiến thức nền (Phân phối biên CDN & HTTP Caching bất biến, Hợp đồng CORS & MIME `application/wasm`, Tải song song `Promise.all` & Sẵn sàng tăng dần) → Cặp tệp tài nguyên & quy tắc đường dẫn `v2/` → Khung giải thích tính tay tiết kiệm băng thông từ cache 80% và so sánh tải song song vs. tuần tự → Bảng xử lý 6 lỗi tải một phần, Mini-lab và Bài tập.
+**Mạch bài học:** Băng thông & độ trễ khi phân phối mô hình AI trên web → Kiến thức cần nhớ (Phân phối biên CDN & HTTP Caching bất biến, Hợp đồng CORS & MIME `application/wasm`, Tải song song `Promise.all` & Sẵn sàng tăng dần) → Cặp tệp tài nguyên & quy tắc đường dẫn `v2/` → Giải thích tính tay tiết kiệm băng thông từ cache 80% và so sánh tải song song vs. tuần tự → Bảng xử lý 6 lỗi tải một phần, Mini-lab và Bài tập.
 
 ![CDN tải WASM và kho ONNX trước khi AudioWorklet biên dịch]({{ site.imgurl }}/generated/onnx-wasm-path.png)
 
@@ -25,7 +25,7 @@ Chạy DeepFilterNet3 trên trình duyệt đòi hỏi hai tệp nhị phân l�
 
 Sau bài học này, bạn sẽ viết chính xác các URL đã phân giải cho phiên bản ≤ 1.1.2 và phiên bản 1.3.0 theo quy tắc README, không đưa `v2` vào `cdnUrl`, thiết lập header cache HTTP an toàn khi nâng cấp phiên bản, và cài đặt cơ chế bypass khử nhiễu khi thao tác tải gặp lỗi.
 
-## Bản đồ kiến thức nền: Ba trụ cột của phân phối mô hình AI qua CDN
+## Kiến thức cần nhớ: Ba trụ cột của phân phối mô hình AI qua CDN
 
 ### 1. Mạng phân phối biên (CDN) và Lưu đệm bất biến (`immutable`)
 - **Là gì:** Hệ thống máy chủ đặt gần người dùng cuối (edge PoP) phục vụ các tệp tĩnh `df_bg.wasm` và `DeepFilterNet3_onnx.tar.gz` kèm header `Cache-Control: public, max-age=31536000, immutable`.
@@ -86,7 +86,7 @@ README quy định rõ cấu trúc đường dẫn phân giải cho từng dải
 
 Với phiên bản ≥ 1.2.0 (bao gồm 1.3.0), chính thư viện sẽ tự động nối thêm `v2/`; tuyệt đối không tự chèn `v2` vào `cdnUrl`. Đường dẫn gốc ví dụ công khai là `https://cdn.mezon.ai/AI/models/datas/noise_suppression/deepfilternet3`. Cũng theo README, bản dựng SIMD từ 1.2.0 trở lên nhanh hơn khoảng 20–30% (số liệu công bố từ README) và yêu cầu trình duyệt Chrome 91+, Firefox 89+ hoặc Safari 16.4+. Riêng bản 1.3.0 cập nhật `tract` lên 0.23.3 cho đường WASM, nhưng thay đổi này không làm đổi quy tắc tiền tố `v2/`.
 
-## Khung giải thích: Tính tay lợi ích của tải song song `Promise.all` và Cache bất biến (nên đọc chậm)
+## Giải thích: Tính tay lợi ích của tải song song `Promise.all` và Cache bất biến
 
 ### Phép tính 1: Tải song song vs. Tải tuần tự trên kết nối độ trễ cao
 Giả sử cặp tệp nén có dung lượng minh họa `df_bg.wasm` = $$1{,}2\text{ MB}$$ ($$9{,}6\text{ Mb}$$) và `DeepFilterNet3_onnx.tar.gz` = $$2{,}2\text{ MB}$$ ($$17{,}6\text{ Mb}$$), tổng $$27{,}2\text{ Mb}$$, trên mạng 4G có băng thông $$10\text{ Mbps}$$ và độ trễ vòng (RTT) $$100\text{ ms}$$:

@@ -22,7 +22,7 @@ Bạn đang họp trực tuyến quan trọng từ một quán cà phê đông �
 
 ---
 
-## Bản đồ kiến thức nền: Bài toán Khử nhiễu Thời gian thực đứng trên ba trụ cột nào?
+## Kiến thức cần nhớ: Bài toán Khử nhiễu Thời gian thực đứng trên ba trụ cột nào?
 
 ### 1. Xử lý tín hiệu số (DSP) nhân quả
 Một hệ thống **nhân quả (causal)** tại thời điểm $$t$$ chỉ được phép nhìn dữ liệu từ quá khứ đến hiện tại ($$x[\tau]$$ với $$\tau \le t$$), cộng thêm tối đa một cửa sổ nhìn trước (look-ahead) rất nhỏ (10–20 ms). Khác với xử lý ngoại tuyến (offline) được đọc trước cả tệp âm thanh, bài toán thời gian thực là cuộc đánh đổi khắt khe giữa chất lượng âm thanh và độ trễ.
@@ -35,7 +35,7 @@ Trong sản phẩm thật (như WebRTC hay gói `deepfilternet3-noise-filter` c�
 
 ---
 
-### Khung giải thích: tự tay tính ngân sách độ trễ và RTF cho một khung thoại 10 ms (nên đọc chậm)
+### Giải thích: tự tay tính ngân sách độ trễ và RTF cho một khung thoại 10 ms
 
 Giả sử bạn triển khai bộ khử nhiễu ở tần số lấy mẫu chuẩn băng rộng đầy đủ $$f_s = 48\,000\text{ Hz}$$ với bước nhảy (hop) $$H = 480\text{ mẫu}$$:
 

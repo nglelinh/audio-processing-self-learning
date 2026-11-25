@@ -23,7 +23,7 @@ This lecture maps the exact **WebRTC audio pipeline insertion points**: `getUser
 
 ---
 
-## Background Knowledge Map: The WebRTC Audio Processing Chain
+## Key ideas: The WebRTC Audio Processing Chain
 
 Inserting custom ML audio processing into WebRTC requires respecting four strict signal-chain realities:
 
@@ -182,7 +182,7 @@ Trace every millisecond from the speaker’s mouth to the listener’s ear on a 
 
 Look how tight that margin is: just **5 ms of headroom**! If an engineer carelessly adds a 40 ms ring buffer or 3 extra frames of lookahead (30 ms), total latency jumps to $$175	ext{–}185	ext{ ms}$$—right where callers start accidentally talking over each other!
 
-### Deep-Dive Explanation: Four Rules for Clean WebRTC NS Integration (Read Slowly)
+### Explanation: Four Rules for Clean WebRTC NS Integration
 
 1. **Disable browser `noiseSuppression` whenever your custom NS is enabled—and re-enable it on fallback:** If your WASM denoiser fails to load, flip native `noiseSuppression: true` via `track.applyConstraints(...)` so the user is never left unprotected.
 2. **Never leak `AudioContext` or `MediaStreamTrack` handles on mute/unmute:** Stopping a call without calling `track.stop()` and `audioCtx.close()` leaves the browser’s red microphone recording indicator stuck on!

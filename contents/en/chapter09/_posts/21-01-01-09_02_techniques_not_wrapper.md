@@ -23,7 +23,7 @@ This lecture strips away the npm wrapper to spotlight the portable engineering t
 
 ---
 
-## Background Knowledge Map: Four Transferable Techniques Beyond Any SDK Wrapper
+## Key ideas: Four Transferable Techniques Beyond Any SDK Wrapper
 
 Mastering these four techniques lets you build or debug *any* real-time audio pipeline from scratch:
 
@@ -130,7 +130,7 @@ Failure modes: a hypothesis with no fail rule; success defined only as “SI-SDR
    (just under two 128-sample Web Audio quanta). At sample $$n \in [0, 239]$$, blending $$y[n] = (1 - lpha_n)\,x_{	ext{raw}}[n] + lpha_n\,x_{	ext{ns}}[n]$$ with $$lpha_n = rac{1}{2}\!\left(1 - \cosrac{\pi n}{239}
 ight)$$ transitions smoothly from $$0 	o 1$$ with zero first-derivative kink!
 
-### Deep-Dive Explanation: Four Habits That Separate Audio Engineers From Wrapper Users (Read Slowly)
+### Explanation: Four Habits That Separate Audio Engineers From Wrapper Users
 
 1. **Always inspect the actual hardware `sampleRate` at runtime:** Never assume 48 kHz; either resample cleanly with a low-latency polyphase/sinc resampler or load a matching 16 kHz model variant.
 2. **Put a hard safety limiter / NaN guard at the very output:** One unguarded `NaN` inside a recursive filter or GRU latches forever; clamping output to `[-1.0, 1.0]` and replacing non-finite samples with `0.0` protects both users’ ears and WebRTC encoders.

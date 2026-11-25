@@ -15,7 +15,7 @@ Bạn vừa huấn luyện xong một mô hình khử nhiễu giọng nói đẹ
 
 Khử nhiễu trực tiếp trên thiết bị gần như luôn yêu cầu **xuất (export)** đồ thị đã huấn luyện sang một runtime suy luận chuyên biệt. **ONNX** (định dạng trao đổi đồ thị) đóng vai trò tệp trung gian; **ONNX Runtime (ORT)** là engine đa nền tảng phổ biến (bao gồm cả phiên bản Web); còn **tract** là thư viện suy luận viết bằng Rust khi bạn cần một chuỗi thực thi thuần Rust. Gói `deepfilternet3-noise-filter` **1.3.0** không đưa PyTorch vào trình duyệt: ghi chú phát hành công khai cho biết đường thực thi WASM (WebAssembly — mã nhị phân chạy trong trình duyệt) được xây dựng lại với **tract 0.23.3**. Trình duyệt chỉ tải module đã biên dịch cùng tệp nén `DeepFilterNet3_onnx.tar.gz`, chứ không chạy một session Python. Bài học này xác định tiêu chí chọn runtime, hợp đồng đầu vào/đầu ra khi chạy streaming, và các lỗi kích thước tensor (shape) khiến đồ thị chạy được trong notebook nhưng lại lỗi khi đưa vào AudioWorklet (callback xử lý âm thanh trên luồng thời gian thực).
 
-**Mạch bài học:** Vực thẳm từ PyTorch sang trình duyệt → Bản đồ kiến thức nền (Đồ thị tĩnh ONNX & Opset, Runtime ORT vs. `tract`, Hợp đồng Tensor Streaming `[1, T, F]`) → Cấu trúc tệp ONNX & cố định phiên bản → Bảng so sánh ORT và `tract` → Khung giải thích tính tay dung lượng I/O từng hop và hậu quả của lỗi cố định trục `T=100` / sót `float64` → Mini-lab, Bẫy thường gặp và Bài tập.
+**Mạch bài học:** Vực thẳm từ PyTorch sang trình duyệt → Kiến thức cần nhớ (Đồ thị tĩnh ONNX & Opset, Runtime ORT vs. `tract`, Hợp đồng Tensor Streaming `[1, T, F]`) → Cấu trúc tệp ONNX & cố định phiên bản → Bảng so sánh ORT và `tract` → Giải thích tính tay dung lượng I/O từng hop và hậu quả của lỗi cố định trục `T=100` / sót `float64` → Mini-lab, Bẫy thường gặp và Bài tập.
 
 ![Đồ thị ONNX được xuất thành module WASM, trình duyệt tải cạnh kho mô hình]({{ site.imgurl }}/generated/onnx-wasm-path.png)
 
@@ -25,7 +25,7 @@ Khử nhiễu trực tiếp trên thiết bị gần như luôn yêu cầu **xu�
 
 Sau bài học này, bạn sẽ giải thích được vai trò định dạng trao đổi của ONNX trong tăng cường giọng nói, so sánh được ORT với `tract` cho ứng dụng trình duyệt và tệp thực thi Rust, liệt kê được các lỗi export chỉ bộc lộ khi chạy từng hop, đồng thời phân biệt được tensor ảnh kiểu NCHW với khung đặc trưng kiểu DeepFilter `[1, T, F]` trước khi khởi tạo session.
 
-## Bản đồ kiến thức nền: Chuỗi biên dịch và thực thi suy luận trên thiết bị biên gồm những gì?
+## Kiến thức cần nhớ: Chuỗi biên dịch và thực thi suy luận trên thiết bị biên gồm những gì?
 
 ### 1. Biểu diễn trung gian (ONNX — Open Neural Network Exchange) và Opset
 - **Là gì:** Một định dạng nhị phân (Protobuf) mô tả mạng nơ-ron dưới dạng **đồ thị có hướng không chu trình (DAG)** gồm các nút toán tử chuẩn hóa (`Conv`, `GRU`, `MatMul`...) và các tensor trọng số cố định (`initializer`), được đánh phiên bản qua **opset**.
@@ -75,7 +75,7 @@ Mô hình streaming cần khai báo khung đầu vào có trục thời gian đ�
 
 Định dạng NCHW như `[1, 3, 224, 224]` là quy ước cho dữ liệu ảnh. Dù chiều đầu tiên bằng 1, tensor bậc 4 vẫn sai kích thước đối với khung đặc trưng DeepFilter; hợp đồng của bài học chỉ chấp nhận tensor bậc 3 với chiều batch bằng 1. Bước triển khai thực tế sau bài kiểm tra minh họa này là khởi tạo `ort.InferenceSession` và đối chiếu **tên đầu vào** khớp hoàn toàn với đồ thị, chứ không chỉ kiểm tra số chiều.
 
-## Khung giải thích: Tính tay ngân sách I/O của một hop ONNX và hai cái bẫy export kinh điển (nên đọc chậm)
+## Giải thích: Tính tay ngân sách I/O của một hop ONNX và hai cái bẫy export kinh điển
 
 ### Phép tính 1: Kích thước byte truyền qua ranh giới session ở mỗi hop (`T = 1`)
 Xét một hop kiểu DeepFilter ở 48 kHz với kiểu dữ liệu chuẩn `float32` (4 byte/phần tử):

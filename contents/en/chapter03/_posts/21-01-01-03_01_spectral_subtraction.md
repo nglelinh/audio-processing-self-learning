@@ -19,11 +19,11 @@ It works astonishingly well on steady fan hum—and then, the moment you listen 
 
 *Figure. Spectral subtraction (left) removes a noise floor and then floors the remainder; the smooth curve on the right is the Wiener gain you get once subtraction becomes an SNR.*
 
-**Lesson roadmap:** Background Knowledge Map (magnitude-only estimation & noisy phase, noise-floor tracking, why musical noise happens) → Over-subtraction $$\alpha$$ & spectral floor $$\beta$$ + pseudocode → Worked example: 3-bin hand calculation showing why flooring prevents spectral holes → Deep-Dive Explanation (Read Slowly): 3 steps explaining how random noise peaks turn into “musical birdies” → Classical front-end use cases, Pitfalls, Mini-lab, Exercises & Videos.
+**Lesson roadmap:** Key ideas (magnitude-only estimation & noisy phase, noise-floor tracking, why musical noise happens) → Over-subtraction $$\alpha$$ & spectral floor $$\beta$$ + pseudocode → Worked example: 3-bin hand calculation showing why flooring prevents spectral holes → Explanation: 3 steps explaining how random noise peaks turn into “musical birdies” → Classical front-end use cases, Pitfalls, Mini-lab, Exercises & Videos.
 
 ---
 
-## Background Knowledge Map: Classical Spectral Subtraction and Noise-Floor Tracking
+## Key ideas: Classical Spectral Subtraction and Noise-Floor Tracking
 
 ### 1. Magnitude-Only Subtraction & Noisy Phase Reuse
 Under additive noise $$Y(k, \ell) = S(k, \ell) + N(k, \ell)$$, spectral subtraction estimates only the clean **magnitude** $$\vert \hat{S}\vert$$ and keeps the **noisy phase** $$\angle Y$$. Because human hearing tolerates moderate phase error at high SNR ($$\ge 5\,\mathrm{dB}$$), this shortcut is fast and lightweight—though it breaks down in heavy noise.
@@ -144,7 +144,7 @@ Bins 1–2 illustrate why flooring matters: without it you would clip to zero an
 
 ---
 
-### Deep-Dive Explanation: How Random Noise Fluctuations Turn into “Musical Birdies” (Read Slowly)
+### Explanation: How Random Noise Fluctuations Turn into “Musical Birdies”
 
 #### Step 1: The noise spectrum is a random variable, not a flat constant
 Even for pure stationary white noise with mean magnitude $$\widehat{\vert N\vert} = 1.0$$, the actual magnitude in each STFT bin fluctuates randomly from frame to frame (following a Rayleigh distribution): some bins dip to $$0.4$$ while neighboring bins spike to $$2.1$$!

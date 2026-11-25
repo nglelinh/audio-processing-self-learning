@@ -23,7 +23,7 @@ This optional lecture explores the **native Rust `df-core` path**: how one porta
 
 ---
 
-## Background Knowledge Map: Native Rust Audio Engines and Safe FFI Boundaries
+## Key ideas: Native Rust Audio Engines and Safe FFI Boundaries
 
 Four systems concepts govern a native Rust audio core like `df-core`:
 
@@ -127,7 +127,7 @@ Benchmark the exact same 48 kHz streaming DeepFilterNet-style model (10 ms hop =
 
 At $$0.6	ext{ ms}$$ per 10 ms frame, a single native CPU core can even denoise **8–10 concurrent audio streams** on a media server—or run on a laptop all day with virtually zero battery impact!
 
-### Deep-Dive Explanation: Four Rules for Building a Native Rust Audio Core (Read Slowly)
+### Explanation: Four Rules for Building a Native Rust Audio Core
 
 1. **Never let a Rust `panic!` unwind across an `extern "C"` FFI boundary:** Unwinding into C/C++/Swift is immediate undefined behavior! Wrap FFI entry points with `std::panic::catch_unwind` or return explicit integer error codes (`0 = OK`, `-1 = InvalidLen`).
 2. **Audit real-time heap allocations with a custom test allocator:** In integration tests, wrap the global allocator with an allocation counter and assert `allocations == 0` across 1,000 calls to `process_frame()`.

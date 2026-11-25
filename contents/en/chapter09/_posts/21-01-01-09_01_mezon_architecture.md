@@ -23,7 +23,7 @@ This architecture tour walks end-to-end from the user’s microphone hardware th
 
 ---
 
-## Background Knowledge Map: Four Architectural Planes of a Production Voice-NS System
+## Key ideas: Four Architectural Planes of a Production Voice-NS System
 
 A real-world browser/desktop NS pipeline separates cleanly into four planes:
 
@@ -145,7 +145,7 @@ Audit the exact memory and timing budget of one active 48 kHz mono voice track r
 
 Notice how cleanly every constraint holds: $$40	ext{ ms}$$ NS delay leaves $$110	ext{ ms}$$ for AEC + Opus + network + jitter buffer (staying under 150 ms!), while $$2.4	ext{ ms}$$ compute per 10 ms hop yields $$\mathrm{RTF} = 0.24$$ with 7.6 ms of headroom!
 
-### Deep-Dive Explanation: Four Architectural Invariants That Keep Voice Calls Stable (Read Slowly)
+### Explanation: Four Architectural Invariants That Keep Voice Calls Stable
 
 1. **Strict thread isolation:** Main-thread React re-renders can take 50 ms; isolating audio I/O inside `AudioWorklet` guarantees UI lag never creates audio pops.
 2. **Single source of truth for frame geometry:** Derive ring-buffer thresholds, STFT window sizes, and latency compensation from one shared constant config so JS and Rust/WASM can never disagree on hop size.

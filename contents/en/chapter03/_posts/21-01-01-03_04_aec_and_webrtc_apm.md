@@ -19,11 +19,11 @@ In real browsers and VoIP stacks, AEC, NS, and Automatic Gain Control (AGC) live
 
 *Figure. After a linear AEC, the residual is an additive mixture of near-end speech and whatever the canceller did not remove; this cartoon is that mixture, not the echo path itself.*
 
-**Lesson roadmap:** Background Knowledge Map (echo as reference-driven convolution, NLMS adaptive filtering, WebRTC APM block ordering) → AEC vs. NS comparison & residual echo → Worked example: hand-tracing one double-talk frame (residual echo power $$0.0025$$ vs. total error power $$0.7225$$!) → Deep-Dive Explanation (Read Slowly): 3 steps explaining why block order (HPF → AEC → NS → AGC) is sacred → Integration checklist, Pitfalls, Mini-lab, Exercises & Videos.
+**Lesson roadmap:** Key ideas (echo as reference-driven convolution, NLMS adaptive filtering, WebRTC APM block ordering) → AEC vs. NS comparison & residual echo → Worked example: hand-tracing one double-talk frame (residual echo power $$0.0025$$ vs. total error power $$0.7225$$!) → Explanation: 3 steps explaining why block order (HPF → AEC → NS → AGC) is sacred → Integration checklist, Pitfalls, Mini-lab, Exercises & Videos.
 
 ---
 
-## Background Knowledge Map: Acoustic Echo Cancellation and the WebRTC Audio Chain
+## Key ideas: Acoustic Echo Cancellation and the WebRTC Audio Chain
 
 ### 1. Echo Is Known-Reference Convolution, Not Blind Noise
 The microphone captures $$y[t] = s[t] + (h * x)[t] + n[t]$$. Because the device *already knows* the far-end render signal $$x[t]$$, AEC runs an adaptive filter $$\hat{h}$$ to predict and subtract the loudspeaker echo: $$e[t] = y[t] - (\hat{h} * x)[t]$$. Blind noise suppression has no reference $$x$$ and cannot distinguish loud far-end speech from near-end speech.
@@ -128,7 +128,7 @@ Hybrid research (ULCNet + adaptive filter, etc.) trains a small network on the *
 
 ---
 
-### Deep-Dive Explanation: Tracing Double-Talk and Why APM Block Order Is Sacred (Read Slowly)
+### Explanation: Tracing Double-Talk and Why APM Block Order Is Sacred
 
 #### Step 1: Check a single double-talk frame by hand
 Suppose the true room coupling is $$h = 0.5$$, our adaptive estimate is already close at $$\hat{h} = 0.45$$, and on frame 3 both sides speak: far-end $$x = 1.0$$ and near-end $$s = 0.8$$.

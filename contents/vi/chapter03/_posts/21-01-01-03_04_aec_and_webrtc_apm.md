@@ -15,7 +15,7 @@ Khử tiếng vọng âm học (Acoustic Echo Cancellation, AEC) là bài toán 
 
 Trong một cuộc gọi video không dùng tai nghe, không có gì gây ức chế bằng việc vừa nói xong nửa câu thì nghe chính giọng mình dội ngược lại sau nửa giây. Nếu khử nhiễu (NS) là bài toán "mù" — bạn không hề có bản ghi riêng của tiếng quạt hay tiếng xe cộ — thì **khử tiếng vọng âm học (AEC)** lại có một lợi thế vàng: thiết bị của bạn *biết chính xác* tín hiệu đầu xa $$x[t]$$ mà nó vừa đẩy ra loa! Nhiệm vụ của AEC vì thế trở thành bài toán nhận dạng hệ thống theo thời gian thực: học bản sao đường truyền phòng $$\hat{\mathbf{h}}$$, tự tổng hợp tiếng vọng dự đoán rồi trừ thẳng trước khi giọng nói đi vào tầng khử nhiễu.
 
-## Bản đồ kiến thức nền: Nhận dạng hệ thống thích nghi và kiến trúc đường ống WebRTC APM
+## Kiến thức cần nhớ: Nhận dạng hệ thống thích nghi và kiến trúc đường ống WebRTC APM
 
 ### 1. Tích chập đường vọng và bộ lọc thích nghi NLMS
 Âm thanh phát từ loa dội qua bàn, tường, trần nhà rồi mới tới micro; chuỗi phản xạ đó được mô tả bằng đáp ứng xung phòng $$\mathbf{h}$$ (tích chập tuyến tính $$d[n] = (\mathbf{h} * \mathbf{x})[n]$$). Bộ lọc thích nghi kinh điển **NLMS (Normalized Least Mean Squares)** cập nhật vector trọng số $$\mathbf{w}[n]$$ bằng cách đi ngược hướng gradient của sai số tức thời $$e[n] = y[n] - \mathbf{w}[n]^T \mathbf{x}[n]$$, có chuẩn hóa theo năng lượng đầu vào $$\|\mathbf{x}[n]\|^2$$ để tốc độ hội tụ không bị bùng nổ khi loa phát to hay ì ạch khi loa phát nhỏ.
@@ -26,7 +26,7 @@ Khi cả hai đầu cùng nói cùng lúc (*double-talk*), tín hiệu micro $$y
 ### 3. Vai trò của WebRTC APM và phần vọng dư phi tuyến
 Trong các ứng dụng gọi điện hiện đại (trình duyệt, Mezon, LiveKit), **WebRTC APM** xếp các khối theo thứ tự có chủ đích: lọc thông cao (HPF) bỏ rung ù tần số cực thấp → **AEC** dùng tham chiếu loa để triệt vọng tuyến tính → **NS** dọn nhiễu nền và **vọng dư phi tuyến** (do loa laptop nhỏ bị bão hòa/rè, thứ mà bộ lọc tuyến tính $$\mathbf{h} * \mathbf{x}$$ không bao giờ mô hình hóa hết được) → **AGC** cân bằng âm lượng.
 
-### Khung giải thích: Cầm tay cập nhật 1 bước bộ lọc thích nghi NLMS và tính chỉ số ERLE (nên đọc chậm)
+### Giải thích: Cầm tay cập nhật 1 bước bộ lọc thích nghi NLMS và tính chỉ số ERLE
 
 Giả sử đường vọng thực của phòng được mô hình gọn bằng 2 tap $$\mathbf{h} = [0{,}5,\; -0{,}2]^T$$. Tại thời điểm $$n$$, loa đang phát vector tham chiếu $$\mathbf{x}[n] = [1{,}0,\; 0{,}5]^T$$ và người dùng đầu gần đang im lặng ($$s[n] = 0$$, bỏ qua nhiễu nhỏ):
 - Tiếng vọng thực tế micro thu được:

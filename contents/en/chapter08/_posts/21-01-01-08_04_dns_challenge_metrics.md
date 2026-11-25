@@ -23,7 +23,7 @@ This lecture integrates everything in Chapter 8 into a unified **DNS Challenge-s
 
 ---
 
-## Background Knowledge Map: Multi-Objective Evaluation and Release Gates
+## Key ideas: Multi-Objective Evaluation and Release Gates
 
 Four evaluation dimensions prevent any single blind spot from slipping into production:
 
@@ -141,7 +141,7 @@ Compare Candidate v2.1 against Production v2.0 on a balanced DNS-style release s
 
 Look at what this scorecard just saved you from: Candidate v2.1 looked like a slam dunk on SI-SDRi ($$+1.2	ext{ dB}$$) and BAK ($$+0.38$$), yet its over-aggressive masking damaged consonants enough to push ASR WER from $$4.5\%$$ to $$6.8\%$$ (a **51% relative increase in transcription errors**)! The multi-metric gate blocks the regression cleanly.
 
-### Deep-Dive Explanation: Four Rules for Building a DNS-Style Evaluation Suite (Read Slowly)
+### Explanation: Four Rules for Building a DNS-Style Evaluation Suite
 
 1. **Freeze your test sets and never train or tune hyperparameters on them:** Keep a locked blind test set (synthetic + real + clean) that is touched *only* for release decisions.
 2. **Track both aggregate averages and worst-5% tail clips:** A model that raises mean OVRL by `+0.15` while completely muting 2% of soft-spoken female or child voices is a release blocker!

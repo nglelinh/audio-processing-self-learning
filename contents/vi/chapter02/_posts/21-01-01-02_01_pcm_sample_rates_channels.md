@@ -18,7 +18,7 @@ Trước khi bất kỳ thuật toán FFT hay mạng nơ-ron nào chạm tới g
 
 ---
 
-## Bản đồ kiến thức nền: Biểu diễn Âm thanh số PCM đứng trên ba trụ cột nào?
+## Kiến thức cần nhớ: Biểu diễn Âm thanh số PCM đứng trên ba trụ cột nào?
 
 ### 1. Rời rạc hóa thời gian (Sample Rate) và Rời rạc hóa biên độ (Bit Depth)
 PCM thực hiện hai phép rời rạc hóa độc lập: **lấy mẫu theo thời gian** ở tần số $$f_s$$ (8 kHz điện thoại cổ điển, 16 kHz chuẩn ASR băng rộng, 48 kHz chuẩn WebRTC/Video) và **lượng tử hóa biên độ** bằng $$B$$ bit (phổ biến là `int16` có $$2^{16} = 65\,536$$ mức từ $$-32\,768$$ đến $$+32\,767$$, hoặc `float32` chuẩn hóa trong $$[-1.0,\ +1.0]$$).
@@ -37,7 +37,7 @@ Mỗi khi tăng thêm **1 bit** độ sâu, dải động sạch của bản ghi
 
 ---
 
-### Khung giải thích: tự tay tính Bitrate, dung lượng và SQNR của chuẩn PCM 48 kHz / 16-bit (nên đọc chậm)
+### Giải thích: tự tay tính Bitrate, dung lượng và SQNR của chuẩn PCM 48 kHz / 16-bit
 
 1. **Tính tốc độ bit (Bitrate) và dung lượng file WAV không nén** cho âm thanh Stereo ($$C = 2$$ kênh), $$f_s = 48\,000\text{ Hz}$$, độ sâu $$B = 16\text{ bit}$$:
    $$

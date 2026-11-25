@@ -23,7 +23,7 @@ This curated reading map organizes the essential papers, textbooks, and open-sou
 
 ---
 
-## Background Knowledge Map: Five Paradigms Across the Speech-Enhancement Canon
+## Key ideas: Five Paradigms Across the Speech-Enhancement Canon
 
 Every paper on the reading list sits cleanly inside one of five intellectual lineages:
 
@@ -134,7 +134,7 @@ Use this concrete scale table to orient yourself whenever you open a new speech-
 
 Look at the ratio across the table: **DeepFilterNet** uses **20× more parameters than RNNoise** to add complex harmonic restoration, yet still stays **10× smaller than Demucs**—illustrating the exact Pareto frontier between model size, latency, and perceptual quality!
 
-### Deep-Dive Explanation: How to Read an Audio Paper in 20 Minutes Without Getting Lost (Read Slowly)
+### Explanation: How to Read an Audio Paper in 20 Minutes Without Getting Lost
 
 1. **Check four numbers on Page 1–3 before reading a single equation:** Sample rate (16 kHz vs 48 kHz), causal vs. non-causal (algorithmic latency!), MACs/s or RTF on CPU, and parameter count.
 2. **Always listen to the authors’ audio demo page:** A paper with +0.8 dB higher SI-SDR can still sound metallic or over-smoothed on real speech; 30 seconds of listening tells you more than three tables.

@@ -19,11 +19,11 @@ With a single microphone, two people talking at equal loudness in a café are ne
 
 *Figure. This is the mono publish path; a beamformer is not drawn, and would sit in front of DeepFilterNoiseFilterProcessor so the processor still sees one channel.*
 
-**Lesson roadmap:** Background Knowledge Map (steering vectors & time-of-arrival geometry, fixed vs. adaptive beamforming, blind separation via IVA) → Delay-and-sum, MVDR, GSC, and IVA architectures → Hybrid spatial + mono neural patterns → Worked example: computing the exact $$41.2\,\mu\mathrm{s}$$ (1.98-sample) inter-mic delay and phase shift for a 2 cm dual-mic array at 48 kHz → Deep-Dive Explanation (Read Slowly): 3 steps from delay-and-sum to MVDR/GSC and hybrid neural postfiltering → Decision checklist, Pitfalls, Mini-lab, Exercises & Videos.
+**Lesson roadmap:** Key ideas (steering vectors & time-of-arrival geometry, fixed vs. adaptive beamforming, blind separation via IVA) → Delay-and-sum, MVDR, GSC, and IVA architectures → Hybrid spatial + mono neural patterns → Worked example: computing the exact $$41.2\,\mu\mathrm{s}$$ (1.98-sample) inter-mic delay and phase shift for a 2 cm dual-mic array at 48 kHz → Explanation: 3 steps from delay-and-sum to MVDR/GSC and hybrid neural postfiltering → Decision checklist, Pitfalls, Mini-lab, Exercises & Videos.
 
 ---
 
-## Background Knowledge Map: Multi-Microphone Spatial Audio Processing
+## Key ideas: Multi-Microphone Spatial Audio Processing
 
 ### 1. Steering Vectors — Encoding Direction as Phase Shifts
 When a plane wave from angle $$\theta$$ crosses a microphone array with spacing $$d$$, the arrival delay $$\tau = (d\sin\theta)/c$$ turns into a frequency-dependent phase shift $$e^{-j2\pi f\tau}$$ in the STFT domain. Stacking those phase factors across all $$M$$ mics produces the **steering vector** $$\mathbf{a}(\theta, f)$$.
@@ -113,7 +113,7 @@ Pattern C — **mono DF3 only**: correct default when $$M=1$$ (most browser tabs
 
 ---
 
-### Deep-Dive Explanation: How Two Microphones 2 cm Apart Steer a Spatial Null (Read Slowly)
+### Explanation: How Two Microphones 2 cm Apart Steer a Spatial Null
 
 #### Step 1: Compute the physical delay $$\tau$$ and phase shift by hand
 Place two mics $$d = 0.02\,\mathrm{m}$$ apart (speed of sound $$c = 343\,\mathrm{m/s}$$):

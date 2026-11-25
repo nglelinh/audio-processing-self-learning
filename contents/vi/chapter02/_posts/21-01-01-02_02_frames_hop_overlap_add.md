@@ -14,11 +14,11 @@ draft: false
 Pipeline STFT chia tín hiệu âm thanh thành các khung chồng lấp, xử lý từng khung rồi ghép lại bằng kỹ thuật cộng chồng lấp (overlap-add, OLA). Cấu hình sai bước nhảy hop hoặc sai OLA sẽ tạo ra tiếng rung giật (warble) mà việc cập nhật trọng số mạng nơ-ron không thể khắc phục. Bài học này chứng minh điều kiện COLA (constant overlap-add: tổng các hàm cửa sổ chồng lấp bằng hằng số) cho cửa sổ Hann tuần hoàn, đồng thời quy đổi \(L\) và \(R\) sang mili giây — vì thông số "chồng lấp 50%" chưa cho biết độ trễ cho tới khi chia cho \(f_s\).
 
 
-Khi bạn cắt một đoạn ghi âm thành từng lát 20 ms, nhân mỗi lát với một đường cong hình chuông (như cửa sổ Hann) để hai đầu lát vuốt êm về 0, rồi biến đổi ngược lại miền thời gian — một câu hỏi sống còn lập tức đặt ra: *làm sao ghép các lát hình chuông ấy lại với nhau để giọng nói phát ra không bị lúc to lúc nhỏ nhấp nhô theo nhịp 10 ms?* Bí mật nằm ở thuật toán **Overlap-Add (OLA)** và một điều kiện toán học đẹp như thơ mang tên **COLA (Constant Overlap-Add)**!
+Khi bạn cắt một đoạn ghi âm thành từng lát 20 ms, nhân mỗi lát với một đường cong hình chuông (như cửa sổ Hann) để hai đầu lát vuốt êm về 0, rồi biến đổi ngược lại miền thời gian — một câu hỏi quan trọng lập tức đặt ra: *làm sao ghép các lát hình chuông ấy lại với nhau để giọng nói phát ra không bị lúc to lúc nhỏ nhấp nhô theo nhịp 10 ms?* Bí mật nằm ở thuật toán **Overlap-Add (OLA)** và một điều kiện toán học đẹp như thơ mang tên **COLA (Constant Overlap-Add)**!
 
 ---
 
-## Bản đồ kiến thức nền: Chia khung, Bước nhảy và Overlap-Add đứng trên ba trụ cột nào?
+## Kiến thức cần nhớ: Chia khung, Bước nhảy và Overlap-Add đứng trên ba trụ cột nào?
 
 ### 1. Bộ ba tham số: Frame Length ($$N$$), Hop Size ($$H$$) và Tỉ lệ chồng lấp
 Mỗi khung thứ $$m$$ bắt đầu tại vị trí $$mH$$ và lấy $$N$$ mẫu: $$x_m[n] = x[mH + n]\cdot w[n]$$. Tỉ lệ chồng lấp là $$1 - H/N$$ (ví dụ $$N = 960,\ H = 480 \implies$$ chồng lấp **50%**; $$H = 240 \implies$$ chồng lấp **75%**). Giảm $$H$$ giúp bám sát biến đổi nhanh của tiếng nói tốt hơn nhưng làm tăng tuyến tính số khung phải chạy FFT mỗi giây.
@@ -37,7 +37,7 @@ Trong **OLA cổ điển**, chỉ nhân cửa sổ ở đầu phân tích (analy
 
 ---
 
-### Khung giải thích: tự tay kiểm chứng điều kiện COLA của cửa sổ Hann với chồng lấp 50% (nên đọc chậm)
+### Giải thích: tự tay kiểm chứng điều kiện COLA của cửa sổ Hann với chồng lấp 50%
 
 Xét cửa sổ **Hann định kỳ (periodic Hann)** độ dài $$N$$ với bước nhảy $$H = N/2$$:
 

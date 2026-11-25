@@ -23,7 +23,7 @@ This lecture teaches how to run rigorous, lightweight **subjective listening tes
 
 ---
 
-## Background Knowledge Map: Psychophysics and Statistical Rigor in Listening Tests
+## Key ideas: Psychophysics and Statistical Rigor in Listening Tests
 
 Four experimental principles separate trustworthy listening tests from wishful thinking:
 
@@ -119,7 +119,7 @@ Suppose you run a blind A/B preference test comparing New Model B against Prod M
 
 That simple calculation explains why "I asked 5 teammates to listen to 2 clips" is never enough—even a 70% win rate needs roughly **35–40 independent ratings** (e.g., 8 listeners × 5 diverse clips, or 10 listeners × 4 clips) to clear 95% confidence!
 
-### Deep-Dive Explanation: Four Rules for Running Fast, Honest Listening Tests (Read Slowly)
+### Explanation: Four Rules for Running Fast, Honest Listening Tests
 
 1. **Loudness-normalize every clip before anyone presses play:** A 2 dB louder output wins blind A/B tests almost automatically—normalize all systems to the same active speech LUFS first.
 2. **Stratify your test playlist across failure modes:** Include (a) steady fan/AC noise, (b) babble/café voices, (c) sudden keyboard clicks, (d) double-talk/echo, and (e) **clean quiet speech** to catch clean-speech degradation.

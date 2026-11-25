@@ -22,7 +22,7 @@ Khi bạn nhìn vào dạng sóng (waveform) của một đoạn ghi âm trên m
 
 ---
 
-## Bản đồ kiến thức nền: Biến đổi Fourier liên tục đứng trên ba trụ cột toán học nào?
+## Kiến thức cần nhớ: Biến đổi Fourier liên tục đứng trên ba trụ cột toán học nào?
 
 ### 1. Phép chiếu trực giao lên họ sóng sin phức $$e^{j 2\pi f t}$$
 Trong đại số tuyến tính, muốn biết vectơ $$\mathbf{v}$$ chứa bao nhiêu thành phần theo hướng $$\mathbf{u}$$, ta lấy tích vô hướng $$\langle \mathbf{v}, \mathbf{u}\rangle$$. **Biến đổi Fourier liên tục (CFT)** làm đúng điều đó cho hàm số $$x(t)$$:
@@ -37,11 +37,11 @@ Tích phân này "quấn" tín hiệu $$x(t)$$ quanh đường tròn đơn vị 
 Kết quả $$X(f) = |X(f)|\,e^{j\angle X(f)}$$ là một **số phức**: môđun $$|X(f)|$$ cho biết *mạnh yếu* của tần số $$f$$, còn góc pha $$\angle X(f)$$ cho biết *thời điểm dịch chuyển* của sóng đó. Trong xử lý tiếng nói, biên độ quyết định âm sắc và cấu trúc formant, còn pha quyết định độ sắc nét của các phụ âm nổ (như /p/, /t/, /k/) và tính tự nhiên của giọng nói.
 
 ### 3. Đối ngẫu Thời gian – Tần số (Co giãn và Tích chập)
-Hai tính chất vàng của CFT điều khiển toàn bộ thiết kế bộ lọc âm thanh: (1) **Định lý co giãn**: ép hẹp tín hiệu theo thời gian $$a$$ lần thì phổ tần số lập tức phình rộng ra đúng $$a$$ lần; (2) **Định lý tích chập**: phép lọc tích chập nặng nề $$y(t) = (h * x)(t)$$ trong miền thời gian biến thành phép nhân đơn giản $$Y(f) = H(f)\,X(f)$$ trong miền tần số!
+Hai tính chất của CFT điều khiển toàn bộ thiết kế bộ lọc âm thanh: (1) **Định lý co giãn**: ép hẹp tín hiệu theo thời gian $$a$$ lần thì phổ tần số lập tức phình rộng ra đúng $$a$$ lần; (2) **Định lý tích chập**: phép lọc tích chập nặng nề $$y(t) = (h * x)(t)$$ trong miền thời gian biến thành phép nhân đơn giản $$Y(f) = H(f)\,X(f)$$ trong miền tần số!
 
 ---
 
-### Khung giải thích: tự tay tính biến đổi Fourier của một xung chữ nhật rộng $$T$$ (nên đọc chậm)
+### Giải thích: tự tay tính biến đổi Fourier của một xung chữ nhật rộng $$T$$
 
 Hãy tính tích phân Fourier của một xung chữ nhật bật trong khoảng $$[-T/2,\ +T/2]$$ (biên độ 1 bên trong, 0 bên ngoài — mô hình đơn giản nhất của việc "cắt một khung âm thanh dài $$T$$"):
 

@@ -23,7 +23,7 @@ This lecture compares ONNX, ORT, and `tract` through a systems-engineering lens:
 
 ---
 
-## Background Knowledge Map: Graph IRs, Static Execution Plans, and Runtime Trade-Offs
+## Key ideas: Graph IRs, Static Execution Plans, and Runtime Trade-Offs
 
 Four systems principles guide your choice of inference runtime for real-time audio:
 
@@ -147,7 +147,7 @@ Suppose a streaming denoiser processes 10 ms frames (100 frames/s) with input `[
 
 Notice the trap: even though the tensor payload is only 3 KB, if a JS wrapper allocates *new* `ort.Tensor` objects and copies buffers on every 10 ms frame, you trigger 100 heap allocations/sec—causing GC micro-stutters!
 
-### Deep-Dive Explanation: Four Rules for Painless ONNX Export and Deployment (Read Slowly)
+### Explanation: Four Rules for Painless ONNX Export and Deployment
 
 1. **Fix opset version and freeze static frame shapes:** Avoid dynamic sequence axes (`seq_len = "T"`) for streaming inference; locking `seq_len = 1` unlocks stronger operator fusion and simpler memory planning.
 2. **Keep STFT/iSTFT outside the ONNX graph:** Complex FFT operators have uneven support across ORT/tract/WASM backends; run STFT/iSTFT in clean Rust/C++/WASM DSP code and pass real-valued magnitude/complex pairs into ONNX.

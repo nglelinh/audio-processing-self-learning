@@ -23,7 +23,7 @@ This lecture introduces the engineering art of **ultra-light streaming speech en
 
 ---
 
-## Background Knowledge Map: Four Pillars of Ultra-Light Streaming Audio Models
+## Key ideas: Four Pillars of Ultra-Light Streaming Audio Models
 
 Designing a neural audio model that runs live on CPU/WASM rests on four interlocking constraints:
 
@@ -141,7 +141,7 @@ Suppose we design a causal STFT denoiser at sample rate $$f_s = 48{,}000	ext{ Hz
    $$	ext{Compute rate} = 100 	imes 1.5	ext{ MMAC} = 150	ext{ MMAC/s} pprox 300	ext{ MFLOP/s}.$$
    On a single browser WASM core sustaining ~3 GFLOP/s, the model consumes roughly $$300 / 3000 = 10\%$$ of the frame budget ($$\mathrm{RTF} pprox 0.10$$)!
 
-### Deep-Dive Explanation: Four Rules for Designing Real-Time Streaming Models (Read Slowly)
+### Explanation: Four Rules for Designing Real-Time Streaming Models
 
 1. **Always separate *algorithmic* latency from *compute* latency:** Even on an infinitely fast CPU, a 20 ms STFT window plus 2 frames of lookahead (20 ms) still introduces 40 ms of unavoidable delay.
 2. **Halving the hop size doubles your CPU bill:** Dropping $$H$$ from 10 ms to 5 ms cuts latency by 5 ms, but doubles the neural network frame rate from 100 to 200 calls per second!

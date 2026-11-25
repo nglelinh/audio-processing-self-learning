@@ -23,7 +23,7 @@ This lecture turns your capstone from "works on my machine" into a rock-solid li
 
 ---
 
-## Background Knowledge Map: Four Verification Gates Before Demo Day
+## Key ideas: Four Verification Gates Before Demo Day
 
 Before putting headphones on a reviewer or stakeholder, verify four independent gates:
 
@@ -132,7 +132,7 @@ Calculate the exact numbers behind a 5-minute pre-flight soak test at $$f_s = 48
 | **Memory Leak Check (5 restarts)** | $$\mathrm{RAM}_{	ext{after }5} - \mathrm{RAM}_{	ext{after }1}$$ | $$\le +0.5	ext{ MB}$$ | $$0.0	ext{ MB}$$ drift |
 | **Blind A/B Demo Clips** | 5 diverse clips (fan, café, typing, clean, echo) | All normalized to $$-24	ext{ LUFS}$$ | Local `.wav` backup ready |
 
-### Deep-Dive Explanation: Four Rules for an Unforgettable Audio Engineering Demo (Read Slowly)
+### Explanation: Four Rules for an Unforgettable Audio Engineering Demo
 
 1. **Always play loudness-matched before/after audio within the first 60 seconds:** Nothing convinces an audience faster than hearing noisy café chatter vanish into crystal-clear speech—just make sure both clips are matched to the exact same LUFS!
 2. **Show your live telemetry overlay during the demo:** Displaying real-time `RTF`, `p99 ms`, `underruns: 0`, and a live bypass toggle proves your system is genuinely running in real time, not playing a pre-baked file.

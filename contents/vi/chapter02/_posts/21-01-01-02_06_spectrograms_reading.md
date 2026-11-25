@@ -18,7 +18,7 @@ Một kỹ sư âm thanh lão luyện không chỉ nghe tệp âm thanh bằng t
 
 ---
 
-## Bản đồ kiến thức nền: Đọc Spectrogram Tiếng nói đứng trên ba trụ cột âm học nào?
+## Kiến thức cần nhớ: Đọc Spectrogram Tiếng nói đứng trên ba trụ cột âm học nào?
 
 ### 1. Mô hình Nguồn – Bộ lọc (Source–Filter Model) của Giọng nói
 Giọng nói con người sinh ra từ hai bộ phận: **Dây thanh (Source)** rung tuần hoàn với tần số cơ bản $$F_0$$ (nam ~85–180 Hz, nữ ~165–255 Hz) tạo ra chuỗi **hài âm (harmonics)** $$F_0, 2F_0, 3F_0, \dots$$; sau đó **Khoang miệng – mũi (Filter)** cộng hưởng khuếch đại một vài dải tần cố định gọi là **Formant ($$F_1, F_2, F_3$$)** — chính vị trí formant quyết định tai ta nghe ra chữ "a", "i" hay "u"!
@@ -32,7 +32,7 @@ Vì năng lượng phụ âm cao tần yếu hơn nguyên âm trầm tới 30–
 
 ---
 
-### Khung giải thích: tự tay đọc tần số cơ bản $$F_0$$ và chọn cửa sổ tách hài âm (nên đọc chậm)
+### Giải thích: tự tay đọc tần số cơ bản $$F_0$$ và chọn cửa sổ tách hài âm
 
 Giả sử bạn thu âm một giọng nam đọc nguyên âm /a/ với tần số cơ bản $$F_0 = 125\text{ Hz}$$ ở $$f_s = 48\,000\text{ Hz}$$:
 

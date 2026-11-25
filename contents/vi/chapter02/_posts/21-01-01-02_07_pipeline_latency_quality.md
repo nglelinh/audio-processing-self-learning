@@ -18,7 +18,7 @@ Trong phòng thí nghiệm, bạn có thể đẩy kích thước cửa sổ lê
 
 ---
 
-## Bản đồ kiến thức nền: Đánh đổi Độ trễ – Chất lượng – CPU trong Pipeline đứng trên ba trụ cột nào?
+## Kiến thức cần nhớ: Đánh đổi Độ trễ – Chất lượng – CPU trong Pipeline đứng trên ba trụ cột nào?
 
 ### 1. Giải phẫu tổng độ trễ (Algorithmic + Buffering + Compute Latency)
 Độ trễ một chiều của pipeline không chỉ là thời gian chạy mô hình! Nó gồm 4 phần cộng dồn: (1) **Độ trễ khung STFT/OLA** (thường bằng $$N$$ hoặc $$H$$ tùy cách căn đệm), (2) **Độ trễ nhìn trước (Look-ahead)** nếu dùng tích chập tương lai $$L_{\text{la}}$$ khung, (3) **Độ trễ đệm đồng bộ kích thước khối** (ví dụ nối 128 mẫu AudioWorklet với 480 mẫu hop), và (4) **Thời gian tính toán CPU** $$T_{\text{compute}}$$.
@@ -31,7 +31,7 @@ Các hệ thống thoại thương mại (WebRTC APM, RNNoise, DeepFilterNet3) h
 
 ---
 
-### Khung giải thích: tự tay so sánh hai cấu hình Pipeline STFT ở 48 kHz (nên đọc chậm)
+### Giải thích: tự tay so sánh hai cấu hình Pipeline STFT ở 48 kHz
 
 Giả sử bạn đang chọn cấu hình STFT cho một mô hình khử nhiễu tốn cố định $$T_{\text{model}} = 2.0\text{ ms}$$ cho mỗi lần suy luận khung ở $$f_s = 48\,000\text{ Hz}$$:
 

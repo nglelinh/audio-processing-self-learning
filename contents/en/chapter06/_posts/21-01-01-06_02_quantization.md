@@ -23,7 +23,7 @@ Yet naive quantization can wreck a speech model—turning soft background silenc
 
 ---
 
-## Background Knowledge Map: Fixed-Point Arithmetic and Quantization Noise in Audio
+## Key ideas: Fixed-Point Arithmetic and Quantization Noise in Audio
 
 Four mathematical concepts explain when quantization shines and when it breaks speech quality:
 
@@ -161,7 +161,7 @@ vert = 0.95$$ to $$127$$):
    - $$\mathrm{SQNR} = 10\log_{10}\!\left(rac{1.7414}{1.53	imes 10^{-6}}
 ight) pprox \mathbf{60.6	ext{ dB}}$$ — virtually indistinguishable from `FP32`, while cutting storage by **4×** (from 16 bytes to 4 bytes + 1 scale float)!
 
-### Deep-Dive Explanation: Four Rules for Quantizing Speech Models Safely (Read Slowly)
+### Explanation: Four Rules for Quantizing Speech Models Safely
 
 1. **Always use *per-channel* quantization for Conv/Linear weights:** A single outlier filter in a convolutional layer can degrade SQNR by 15+ dB under per-tensor scaling.
 2. **Calibrate activations on realistic noisy + quiet audio:** If you calibrate static PTQ only on loud clean speech, quiet silence frames and sudden loud transient claps will clip or buzz in production.

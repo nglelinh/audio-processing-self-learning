@@ -23,7 +23,7 @@ Think of this brief as an industry RFC (Request for Comments): clear scope, hard
 
 ---
 
-## Background Knowledge Map: The Four Pillars of an Industry-Grade Audio Capstone
+## Key ideas: The Four Pillars of an Industry-Grade Audio Capstone
 
 A portfolio-worthy audio engineering capstone demonstrates mastery across four integrated dimensions:
 
@@ -123,7 +123,7 @@ vert < 10^{-5}$$ | Automated unit test on 5 s random/speech audio |
 
 Notice why locking these six numbers *before* coding transforms your project: every architectural trade-off (INT8 vs FP32, hop 10 ms vs 20 ms, lookahead 0 vs 1) immediately becomes an objective engineering decision!
 
-### Deep-Dive Explanation: Four Traps That Derail Audio Capstones (Read Slowly)
+### Explanation: Four Traps That Derail Audio Capstones
 
 1. **Building a giant custom model before wiring the end-to-end streaming pipe:** Always get a trivial **passthrough or gain-only** streaming pipeline working end-to-end on Day 1, then drop in a pre-trained RNNoise/DeepFilterNet/ONNX model, and *only then* iterate on custom models.
 2. **Forgetting impulse-response latency measurement:** Don’t just guess your pipeline latency on paper—feed a 1-sample unit impulse `1.0` into the input and measure the exact sample index where the peak exits!

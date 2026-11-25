@@ -19,11 +19,11 @@ This capstone lesson of Chapter 01 distills every Fourier and STFT failure mode 
 
 *Figure. The dominant pitfall in this lesson is a wrong frequency axis: Nyquist is $$f_s/2$$, and an off-by-one bin is a different Hertz value, not a rounding error.*
 
-**Lesson roadmap:** Background Knowledge Map (the three categories of silent DSP bugs: axis, energy/window, and symmetry/layout) → 10-point master pre-flight checklist → Worked debugging walk-throughs: off-by-one Nyquist bin ($$7968.75\,\mathrm{Hz}$$ vs. $$8000\,\mathrm{Hz}$$), swapped real/imag Hermitian violation, and 100 Hz COLA warble → Deep-Dive Explanation (Read Slowly): 3-step isolation protocol before touching neural weights → Unit tests, Mini-lab, Exercises & Videos.
+**Lesson roadmap:** Key ideas (the three categories of silent DSP bugs: axis, energy/window, and symmetry/layout) → 10-point master pre-flight checklist → Worked debugging walk-throughs: off-by-one Nyquist bin ($$7968.75\,\mathrm{Hz}$$ vs. $$8000\,\mathrm{Hz}$$), swapped real/imag Hermitian violation, and 100 Hz COLA warble → Explanation: 3-step isolation protocol before touching neural weights → Unit tests, Mini-lab, Exercises & Videos.
 
 ---
 
-## Background Knowledge Map: Why Fourier Bugs Fail Silently in Production
+## Key ideas: Why Fourier Bugs Fail Silently in Production
 
 ### 1. Axis & Rate Bugs (Right Math, Wrong Units)
 An FFT array carries no sample-rate tag. Confusing bin $$N/2 - 1$$ with Nyquist $$N/2$$, labeling plots in raw bins instead of Hertz ($$f_k = k f_s / N$$), or feeding 48 kHz audio into a 16 kHz STFT produces zero runtime errors—yet shifts every spectral feature to the wrong physical frequency.
@@ -147,7 +147,7 @@ Phase/complex issues or musical noise; check symmetry and time-domain artifacts;
 
 ---
 
-### Deep-Dive Explanation: The 3-Step Isolation Protocol Before Touching Model Weights (Read Slowly)
+### Explanation: The 3-Step Isolation Protocol Before Touching Model Weights
 
 #### Step 1: Run a deterministic sine & impulse round-trip with the neural model bypassed
 Feed a pure 1 kHz sine and a unit impulse through your exact PCM $$\to$$ STFT $$\to$$ ISTFT $$\to$$ PCM wrapper with gain $$G \equiv 1$$. Check three assertions: (a) peak stays at exactly 1 kHz (verifies $$f_s$$ and channel stride), (b) output RMS matches input RMS to $$10^{-6}$$ (verifies Parseval & COLA), and (c) imaginary residue after iFFT is $$< 10^{-12}$$ (verifies Hermitian symmetry).

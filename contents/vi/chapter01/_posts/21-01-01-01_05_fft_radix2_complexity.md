@@ -24,7 +24,7 @@ Nếu nhân trực tiếp ma trận DFT cỡ $$N \times N$$ tốn $$O(N^2)$$ ph�
 
 ---
 
-## Bản đồ kiến thức nền: Thuật toán FFT Radix-2 hoạt động nhờ ba ý tưởng thuật toán nào?
+## Kiến thức cần nhớ: Thuật toán FFT Radix-2 hoạt động nhờ ba ý tưởng thuật toán nào?
 
 ### 1. Chia để trị (Divide and Conquer) theo chỉ số Chẵn – Lẻ
 Tách tổng DFT độ dài $$N$$ thành hai nửa: nửa các mẫu ở chỉ số **chẵn** $$x[2m]$$ (DFT là $$E[k]$$) và nửa ở chỉ số **lẻ** $$x[2m+1]$$ (DFT là $$O[k]$$). Nhờ tính chất $$W_N^{2mk} = W_{N/2}^{mk}$$, bài toán cỡ $$N$$ lập tức tách thành **hai bài toán DFT giống hệt nhau cỡ $$N/2$$**!
@@ -43,7 +43,7 @@ Phương trình đệ quy $$T(N) = 2T(N/2) + O(N)$$ có nghiệm $$T(N) = O(N \l
 
 ---
 
-### Khung giải thích: tự tay chạy trọn vẹn FFT Radix-2 cho $$N = 4$$ và so sánh tốc độ tại $$N = 1\,024$$ (nên đọc chậm)
+### Giải thích: tự tay chạy trọn vẹn FFT Radix-2 cho $$N = 4$$ và so sánh tốc độ tại $$N = 1\,024$$
 
 Hãy tự tay tính FFT cho tín hiệu 4 mẫu $$x = [1,\ 2,\ 3,\ 4]$$ (với $$W_4^0 = 1,\ W_4^1 = -j$$):
 

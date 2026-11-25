@@ -19,11 +19,11 @@ This lesson draws the sharp boundary between time-domain LTI filtering, block FF
 
 *Figure. Both panels are per-bin gains, not a single convolution: the left bars change with the local spectrum, and the right curve assigns a different multiplier to each SNR.*
 
-**Lesson roadmap:** Background Knowledge Map (fixed LTI convolution vs. time-varying STFT gains, circular wrap-around vs. OLA/OLS, group delay in live calls) → Decision guide & DeepFilterNet multi-frame tie-in → Worked examples: 2-tap DC blocker $$h=[1,-1]$$, Wiener gain curve $$G = \xi/(1+\xi)$$, and an 8-point linear vs. circular convolution mismatch of 8.0 → Deep-Dive Explanation (Read Slowly): 3 steps choosing the right filtering domain → Pitfalls, Mini-lab, Exercises & Videos.
+**Lesson roadmap:** Key ideas (fixed LTI convolution vs. time-varying STFT gains, circular wrap-around vs. OLA/OLS, group delay in live calls) → Decision guide & DeepFilterNet multi-frame tie-in → Worked examples: 2-tap DC blocker $$h=[1,-1]$$, Wiener gain curve $$G = \xi/(1+\xi)$$, and an 8-point linear vs. circular convolution mismatch of 8.0 → Explanation: 3 steps choosing the right filtering domain → Pitfalls, Mini-lab, Exercises & Videos.
 
 ---
 
-## Background Knowledge Map: Time-Domain vs. Frequency-Domain Filtering
+## Key ideas: Time-Domain vs. Frequency-Domain Filtering
 
 ### 1. Fixed LTI Convolution vs. Time-Varying STFT Masking
 A **fixed LTI filter** $$y[n] = (h * x)[n]$$ has one permanent frequency response $$H(e^{j\omega})$$—ideal for DC blocking, anti-alias low-passing, or static EQ, but blind to whether the current frame is a vowel or a coffee-cup clatter. An **adaptive STFT suppressor** $$\hat{X}(\ell, k) = G(\ell, k)Y(\ell, k)$$ updates its gain every hop $$\ell$$ to track non-stationary speech and noise.
@@ -113,7 +113,7 @@ Zeroing random bins each hop without smoothing → birdies. Time-domain equivale
 
 ---
 
-### Deep-Dive Explanation: Picking the Right Filtering Domain in 3 Steps (Read Slowly)
+### Explanation: Picking the Right Filtering Domain in 3 Steps
 
 #### Step 1: Check whether the filter changes over time
 If the frequency response is **static** (removing DC bias below 60 Hz, anti-alias low-passing before decimation), a tiny 2–6 tap time-domain IIR/FIR filter runs in nanoseconds with near-zero delay. Do not waste an FFT on it!

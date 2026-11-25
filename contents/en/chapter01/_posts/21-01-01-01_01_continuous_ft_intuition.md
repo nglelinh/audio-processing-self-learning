@@ -19,11 +19,11 @@ This lesson builds **continuous-time Fourier intuition** from the ground up so t
 
 *Figure. Frequency is a coordinate: each sinusoid is one basis tone, and the transform measures how much of that tone is in the signal.*
 
-**Lesson roadmap:** Background Knowledge Map (frequency as a basis coordinate, LTI eigenfunctions, magnitude vs. phase) → CTFT analysis/synthesis & operational properties → Speech formants vs. noise spectra → Worked examples: Euler decomposition of two tones, phase ramp from a 5 ms delay, and the dB addition trap → Deep-Dive Explanation (Read Slowly): 3 steps explaining why complex exponentials diagonalize filters and why phase still matters → Pitfalls, Mini-lab, Exercises & Videos.
+**Lesson roadmap:** Key ideas (frequency as a basis coordinate, LTI eigenfunctions, magnitude vs. phase) → CTFT analysis/synthesis & operational properties → Speech formants vs. noise spectra → Worked examples: Euler decomposition of two tones, phase ramp from a 5 ms delay, and the dB addition trap → Explanation: 3 steps explaining why complex exponentials diagonalize filters and why phase still matters → Pitfalls, Mini-lab, Exercises & Videos.
 
 ---
 
-## Background Knowledge Map: Harmonic Analysis and Frequency-Domain Audio
+## Key ideas: Harmonic Analysis and Frequency-Domain Audio
 
 ### 1. Frequency as an Orthogonal Coordinate System
 Just as a 3D vector breaks into $$(x, y, z)$$ components along orthogonal axes, a time-domain sound wave $$x(t)$$ breaks into complex sinusoidal components $$e^{j\Omega t}$$. The Continuous-Time Fourier Transform (CTFT) computes the inner product of $$x(t)$$ against every basis frequency $$\Omega$$; the inverse transform sums those weighted tones back into the exact waveform.
@@ -133,7 +133,7 @@ Speech bin magnitude 0.10, noise 0.10 (linear). Sum 0.20 if **coherent** same-ph
 
 ---
 
-### Deep-Dive Explanation: Why Spectral Filtering Works—and Where It Breaks (Read Slowly)
+### Explanation: Why Spectral Filtering Works—and Where It Breaks
 
 #### Step 1: Complex exponentials turn convolution into pointwise multiplication
 Suppose an LTI system has impulse response $$h(t)$$. Feed in $$e^{j\Omega t}$$:

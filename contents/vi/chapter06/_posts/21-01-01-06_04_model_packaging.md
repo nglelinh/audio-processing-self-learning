@@ -15,7 +15,7 @@ Bạn vừa hoàn thành một đồ thị ONNX chuẩn chỉnh, lượng tử h
 
 Một đồ thị ONNX (định dạng trao đổi đồ thị) chuẩn xác vẫn có thể thất bại khi đưa vào sản phẩm nếu khâu **đóng gói** sai sót: dung lượng tải lần đầu quá lớn, URL không được lưu đệm (cache), tệp WASM và gói mô hình lệch phiên bản, hoặc vướng rào cản giấy phép phân phối. Gói `deepfilternet3-noise-filter` **1.3.0** tách bạch hai lớp này: gói npm chỉ chứa mã kết nối JavaScript, AudioWorklet (callback xử lý âm thanh trên luồng thời gian thực) được nhúng nội tuyến và bộ nạp; còn hai tệp dung lượng lớn là `df_bg.wasm` và `DeepFilterNet3_onnx.tar.gz` được tải từ CDN (mạng phân phối nội dung) thông qua `assetConfig.cdnUrl`. Bài học này trình bày bố cục tệp, quy tắc tiền tố phiên bản, kiểm tra tính toàn vẹn và phương án khôi phục (rollback). Chi tiết ghép nối URL đầy đủ sẽ được trình bày ở bài 07-03.
 
-**Mạch bài học:** Vì sao mô hình tốt vẫn hỏng ở khâu phát hành → Bản đồ kiến thức nền (Tách mã điều khiển vs. Tài nguyên nhị phân CDN, Cache bất biến & Mã băm SHA-256, Ma trận tương thích & Rollback không ghi đè) → Bố cục thư mục sidecar & quy tắc đường dẫn `v2/` → Khung giải thích tính tay thời gian khởi động lạnh theo băng thông mạng và dò lỗi lặp tiền tố `/v2/v2/` → Giấy phép, Staged rollout, Mini-lab và Bài tập.
+**Mạch bài học:** Vì sao mô hình tốt vẫn hỏng ở khâu phát hành → Kiến thức cần nhớ (Tách mã điều khiển vs. Tài nguyên nhị phân CDN, Cache bất biến & Mã băm SHA-256, Ma trận tương thích & Rollback không ghi đè) → Bố cục thư mục sidecar & quy tắc đường dẫn `v2/` → Giải thích tính tay thời gian khởi động lạnh theo băng thông mạng và dò lỗi lặp tiền tố `/v2/v2/` → Giấy phép, Staged rollout, Mini-lab và Bài tập.
 
 ![WASM và kho ONNX đã đóng gói ở phía CDN của đường vào trình duyệt]({{ site.imgurl }}/generated/onnx-wasm-path.png)
 
@@ -25,7 +25,7 @@ Một đồ thị ONNX (định dạng trao đổi đồ thị) chuẩn xác v�
 
 Sau bài học này, bạn sẽ tách bạch được gói npm khỏi các tệp tài nguyên trên CDN, áp dụng đúng quy tắc đường dẫn cho các phiên bản ≤ 1.1.2 và ≥ 1.2.0 (bao gồm bản 1.3.0 vốn tự động nối tiền tố `v2/`), phát hiện và loại bỏ các `cdnUrl` đã chứa sẵn `v2`, đồng thời liệt kê đầy đủ các hạng mục kiểm tra giấy phép và cache trước khi phát hành.
 
-## Bản đồ kiến thức nền: Ba trụ cột của kỹ thuật đóng gói mô hình âm thanh web
+## Kiến thức cần nhớ: Ba trụ cột của kỹ thuật đóng gói mô hình âm thanh web
 
 ### 1. Phân tách Gói điều khiển (npm) và Tài nguyên nhị phân lớn (CDN Assets)
 - **Là gì:** Gói npm chỉ giữ mã JavaScript/TypeScript gọn nhẹ và mã AudioWorklet nội tuyến, còn các tệp nặng hàng megabyte (`df_bg.wasm`, `DeepFilterNet3_onnx.tar.gz`) được tải bất đồng bộ từ CDN biên (edge cache).
@@ -80,7 +80,7 @@ README của gói quy định cấu trúc đường dẫn theo phiên bản như
 
 Với các phiên bản từ 1.2.0 trở lên, client sẽ tự động thêm tiền tố `v2/`; người cấu hình không được tự thêm vào `cdnUrl`. Nếu đường dẫn gốc đã kết thúc bằng `/v2`, URL sinh ra sẽ trở thành `.../v2/v2/...` và gặp lỗi 404. Đường dẫn gốc minh họa trong README là `https://cdn.mezon.ai/AI/models/datas/noise_suppression/deepfilternet3`. Tên gói mô hình là `DeepFilterNet3_onnx.tar.gz` (từ kho DeepFilterNet gốc của Rikorose), còn tên tệp WASM là `df_bg.wasm`.
 
-## Khung giải thích: Tính tay ngân sách tải lạnh (Cold Start) và kiểm chứng ghép URL (nên đọc chậm)
+## Giải thích: Tính tay ngân sách tải lạnh (Cold Start) và kiểm chứng ghép URL
 
 ### Phép tính 1: Thời gian khởi động lạnh từ dung lượng nén và tốc độ mạng
 Giả sử cặp tệp sau khi nén trên CDN có tổng dung lượng minh họa là $$3{,}4\text{ MB}$$ (gồm `df_bg.wasm` $$1{,}2\text{ MB}$$ và `DeepFilterNet3_onnx.tar.gz` $$2{,}2\text{ MB}$$), tương đương $$3{,}4 \times 8 = \mathbf{27{,}2\text{ Mb}}$$ (megabit). Cộng thêm thời gian biên dịch WASM khoảng $$0{,}20\text{ s}$$:

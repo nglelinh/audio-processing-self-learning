@@ -19,7 +19,7 @@ DPDFNet, DeepFilterGAN và HDF-Net trong khóa học này chỉ đóng vai trò 
 
 Trong nghiên cứu học sâu cho âm thanh, hầu như mỗi tháng đều xuất hiện một cái tên kiến trúc mới hứa hẹn nhích thêm $$0{,}05$$ điểm PESQ hay $$0{,}2\text{ dB}$$ SI-SDR trên bảng xếp hạng. Nhưng dưới góc nhìn của một kỹ sư hệ thống đang vận hành sản phẩm thời gian thực (như bộ lọc nhiễu trên trình duyệt hay ứng dụng gọi thoại), **một cái tên mới trên bảng benchmark chưa bao giờ tự động trở thành lý do để thay mô hình đang chạy ổn định**. Bài khảo sát này giúp bạn xây dựng "bộ lọc tư duy kỹ thuật" khi đứng trước các hướng kế tục xoay quanh họ DeepFilterNet — như kiến trúc hai đường (dual-path), huấn luyện đối nghịch (GAN) hay lọc phân cấp (hierarchical) — dựa trên ba thước đo không biết nói dối: ngân sách RTF, độ trễ thuật toán và tính tương thích thực thi ONNX/AudioWorklet.
 
-## Bản đồ kiến thức nền: Ba hướng mở rộng kiến trúc và chi phí kỹ thuật đi kèm
+## Kiến thức cần nhớ: Ba hướng mở rộng kiến trúc và chi phí kỹ thuật đi kèm
 
 ### 1. Hai đường thời gian–tần số (Dual-Path: Thời gian + Tần số)
 Các mạng RNN/GRU chuẩn trong DeepFilterNet quét mạnh theo trục thời gian, còn trục tần số chủ yếu xử lý bằng tích chập cục bộ. Tư duy **Dual-Path** (như trong các biến thể kiểu DPDFNet) luân phiên quét dọc theo *trục tần số* (để nắm bắt quan hệ họa âm cách xa nhau trên cùng một khung) rồi quét dọc theo *trục thời gian* (để bám quỹ đạo giọng nói). Lợi ích là nắm bắt cấu trúc họa âm toàn cục tốt hơn, nhưng cái giá phải trả là thêm nhiều lớp tuần tự/chú ý trên mỗi khung, dễ đội RTF và làm tăng số toán tử khó tối ưu trên WebAssembly/ONNX Runtime.
@@ -30,7 +30,7 @@ Các mạng RNN/GRU chuẩn trong DeepFilterNet quét mạnh theo trục thời 
 ### 3. Lọc phân cấp (Hierarchical) và nguyên tắc kỷ luật thư mục khoa học
 Các hướng lọc phân cấp (kiểu HDF-Net) chia bài toán khử nhiễu theo nhiều mức độ phân giải hoặc nhiều chặng tinh chỉnh liên tiếp. Tuy nhiên, mỗi tầng tinh chỉnh bổ sung đều có nguy cơ cộng thêm khung nhìn trước (*look-ahead*) hoặc tăng dung lượng trạng thái cần giữ trong bộ nhớ cache. Quan trọng không kém về mặt học thuật: bài học này rèn thói quen **kỷ luật trích dẫn** — chỉ ghi nhận con số, năm xuất bản và cấu trúc khi đã tự tay mở đọc bài báo gốc, tuyệt đối không suy đoán từ tên gọi.
 
-### Khung giải thích: Cầm tay tính ngân sách độ phức tạp và quyết định "Đổi hay Giữ" trong AudioWorklet (nên đọc chậm)
+### Giải thích: Cầm tay tính ngân sách độ phức tạp và quyết định "Đổi hay Giữ" trong AudioWorklet
 
 Giả sử bạn đang vận hành một luồng âm thanh $$48\text{ kHz}$$ với hop $$H = 10\text{ ms}$$ trong trình duyệt (AudioWorklet + WASM/ONNX). Để đảm bảo không bao giờ giật tiếng (buffer underrun) trên laptop tầm trung khi còn chạy kèm WebRTC AEC và video, đội kỹ thuật đặt trần an toàn:
 - Thời gian suy luận tối đa mỗi khung: $$T_{\max} = 2{,}5\text{ ms}$$ (tương ứng $$\mathrm{RTF} \le 0{,}25$$).

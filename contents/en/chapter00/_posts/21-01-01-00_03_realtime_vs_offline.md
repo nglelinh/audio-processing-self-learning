@@ -19,11 +19,11 @@ On a live audio thread, time is a hard wall: the OS hands you a tiny block of sa
 
 *Figure. Offline look-ahead and a streaming hop are different delays: the picture is the split you have to budget, not a second algorithm.*
 
-**Lesson roadmap:** Background Knowledge Map (three latency layers, RTF vs. tail latency, causal stateful filtering) → Causal vs. offline comparison & streaming failure modes → Worked examples: 10 ms hop RTF spike (mean 0.312 hiding a 1.50 underrun!), 128-sample WebAudio quantum mismatch, and a ship/no-ship model audit → Deep-Dive Explanation (Read Slowly): 3 steps explaining why mean RTF lies on real-time audio threads → Pitfalls, Mini-lab, Exercises & Videos.
+**Lesson roadmap:** Key ideas (three latency layers, RTF vs. tail latency, causal stateful filtering) → Causal vs. offline comparison & streaming failure modes → Worked examples: 10 ms hop RTF spike (mean 0.312 hiding a 1.50 underrun!), 128-sample WebAudio quantum mismatch, and a ship/no-ship model audit → Explanation: 3 steps explaining why mean RTF lies on real-time audio threads → Pitfalls, Mini-lab, Exercises & Videos.
 
 ---
 
-## Background Knowledge Map: Real-Time Signal Processing and Streaming Systems
+## Key ideas: Real-Time Signal Processing and Streaming Systems
 
 ### 1. Three Distinct Layers of Latency
 “Latency” is not a single number—it is the sum of three independent clocks:
@@ -131,7 +131,7 @@ A DeepFilterNet-class streaming model with small hop and RTF $$\sim 0.2$$–$$0.
 
 ---
 
-### Deep-Dive Explanation: Why Streaming Audio Threads Punish Averages (Read Slowly)
+### Explanation: Why Streaming Audio Threads Punish Averages
 
 #### Step 1: Decouple the OS callback quantum from your DSP hop
 The browser AudioWorklet fires every $$128$$ samples ($$2.67\,\mathrm{ms}$$ at 48 kHz), while your STFT hop might be $$480$$ samples ($$10\,\mathrm{ms}$$). Because $$480 / 128 = 3.75$$ is not an integer, your DSP loop runs **irregularly**: three callbacks do almost nothing (just copying into a ring buffer), and the fourth callback triggers the entire STFT + neural forward pass + ISTFT!

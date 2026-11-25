@@ -19,7 +19,7 @@ DeepFilterNet2 và DeepFilterNet3 giữ nguyên kiến trúc hai tầng gồm đ
 
 Một kiến trúc học sâu hiếm khi dừng lại ở phiên bản đầu tiên. Sau bài báo ICASSP 2022 chứng minh ý tưởng ERB + Deep Filter hoạt động tốt, nhóm tác giả của DeepFilterNet đối mặt với câu hỏi khắc nghiệt hơn của kỹ thuật triển khai thực tế: *làm sao để mô hình chạy nhanh gấp nhiều lần trên CPU phổ thông, không bị méo khi gặp khoảng lặng hoàn toàn, và nghe tự nhiên hơn trên dữ liệu thực tế?* Câu trả lời mang tên **DeepFilterNet2** (2022) và **DeepFilterNet3** (Interspeech 2023) — hai bản nâng cấp giữ nguyên bộ xương hai tầng sáng giá, nhưng tinh chỉnh sắc sảo từng khớp nối từ tầng tính toán nhóm, bộ hậu lọc cho tới cổng điều khiển theo SNR.
 
-## Bản đồ kiến thức nền: Ba trụ cột tiến hóa từ DeepFilterNet1 sang 2 và 3
+## Kiến thức cần nhớ: Ba trụ cột tiến hóa từ DeepFilterNet1 sang 2 và 3
 
 ### 1. Tối ưu hóa tính toán thời gian thực (Grouped Linear / GRU & giảm bộ đệm)
 Các lớp tuyến tính dày đặc và GRU kích thước lớn là nút thắt cổ chai lớn nhất trên CPU đơn luồng. DeepFilterNet2 tái cấu trúc các lớp tuyến tính và GRU theo dạng **nhóm (grouped)** kết hợp rút gọn kích thước trạng thái/bộ đệm thời gian, giúp kéo hệ số thời gian thực (RTF) xuống mức công bố chỉ khoảng $$0{,}04$$ trên CPU hiện đại — nghĩa là chỉ dùng $$4\%$$ thời gian của một nhân CPU để xử lý luồng $$48\text{ kHz}$$!
@@ -30,7 +30,7 @@ Huấn luyện chỉ trên một độ phân giải STFT duy nhất ($$20\text{ 
 ### 3. Cổng điều khiển theo SNR cục bộ (Local SNR Gating) trong DeepFilterNet3
 Khi không có ai nói (SNR cục bộ cực âm) hoặc khi môi trường hoàn toàn yên tĩnh (SNR cục bộ cực dương), việc chạy hết công suất cả tầng lọc sâu vừa dư thừa vừa có nguy cơ tạo nhiễu giả nhẹ. DeepFilterNet3 giới thiệu cơ chế ước lượng **SNR cục bộ (LSNR)** để điều phối: khi tín hiệu sạch rõ ràng hoặc thuần nhiễu, mô hình điều chỉnh mượt mà cường độ can thiệp, giúp giọng nói tự nhiên hơn và nâng chất lượng nhận thức (PESQ/DNSMOS) trên tập chuẩn Voicebank+Demand.
 
-### Khung giải thích: Cầm tay kiểm tra ngân sách CPU ở $$\mathrm{RTF} = 0{,}04$$ và cách hoạt động của Bộ hậu lọc (nên đọc chậm)
+### Giải thích: Cầm tay kiểm tra ngân sách CPU ở $$\mathrm{RTF} = 0{,}04$$ và cách hoạt động của Bộ hậu lọc
 
 **Phần A — Con số $$\mathrm{RTF} = 0{,}04$$ và độ trễ $$40\text{ ms}$$ có nghĩa là gì trên thực tế?**
 - Cấu hình khung chuẩn: cửa sổ $$20\text{ ms}$$, bước nhảy hop $$H = 10\text{ ms}$$, nhìn trước $$2\text{ khung} = 20\text{ ms}$$.

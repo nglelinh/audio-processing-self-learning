@@ -19,11 +19,11 @@ Why bother learning the DTFT at all? Because the **DFT is just a finite grid of 
 
 *Figure. A DFT does not draw a continuous curve; it reports inner products against these discrete complex tones, one bin per tone.*
 
-**Lesson roadmap:** Background Knowledge Map (the four-transform zoo, windowing as frequency smearing, conjugate symmetry & circular convolution) → DTFT vs. DFT definitions & zero-padding myth → Worked examples: bin listing at 16 kHz / 512, circular convolution wrap-around, and zero-padding 64 samples to 512 → Deep-Dive Explanation (Read Slowly): 3 steps separating grid density from true frequency resolution → Pitfalls, Mini-lab, Exercises & Videos.
+**Lesson roadmap:** Key ideas (the four-transform zoo, windowing as frequency smearing, conjugate symmetry & circular convolution) → DTFT vs. DFT definitions & zero-padding myth → Worked examples: bin listing at 16 kHz / 512, circular convolution wrap-around, and zero-padding 64 samples to 512 → Explanation: 3 steps separating grid density from true frequency resolution → Pitfalls, Mini-lab, Exercises & Videos.
 
 ---
 
-## Background Knowledge Map: From Continuous Theory to Finite FFT Grids
+## Key ideas: From Continuous Theory to Finite FFT Grids
 
 ### 1. The Four-Transform Map (Time vs. Frequency)
 Every Fourier variant obeys one dual rule: **discreteness in one domain causes periodicity in the other**.
@@ -143,7 +143,7 @@ Take 64 samples of a 1 kHz tone at 16 kHz. The tone completes $$1000\times 64/16
 
 ---
 
-### Deep-Dive Explanation: Why Zero-Padding Never Creates New Information (Read Slowly)
+### Explanation: Why Zero-Padding Never Creates New Information
 
 #### Step 1: Write the DTFT of a zero-padded sequence
 Suppose your signal $$x[0], \ldots, x[L-1]$$ has length $$L = 64$$, and you append $$N - L = 448$$ zeros to form $$\tilde{x}[n]$$ of length $$N = 512$$. Compute the DTFT of $$\tilde{x}$$:

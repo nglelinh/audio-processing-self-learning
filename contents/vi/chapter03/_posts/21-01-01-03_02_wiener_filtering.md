@@ -21,7 +21,7 @@ Nếu trừ phổ xử lý theo hướng "trừ rồi kẹp sàn", thì **bộ l
 
 Nếu trừ phổ giống như cầm chiếc kéo cắt phẳng mọi phần nhô lên khỏi mặt sàn nhiễu, thì **bộ lọc Wiener** lại giống một người thợ chỉnh âm tinh tế vặn chiếc chiết áp liên tục trên từng dải tần: hễ nơi nào tiếng nói áp đảo nhiễu, chiết áp mở gần tối đa; nơi nào nhiễu lấn át tiếng nói, chiết áp hạ êm xuống gần $$0$$ mà không bao giờ tạo ra vết cắt sắc lẹm. Kỳ diệu ở chỗ, công thức độ lợi mượt mà $$G = \frac{\xi}{1+\xi}$$ không phải là một mẹo đặt tay cảm tính, mà là nghiệm tối ưu duy nhất của bài toán bình phương sai số trung bình cực tiểu (MMSE) trong lý thuyết xác suất.
 
-## Bản đồ kiến thức nền: Từ hình học không gian Hilbert đến bộ lọc Wiener thời gian–tần số
+## Kiến thức cần nhớ: Từ hình học không gian Hilbert đến bộ lọc Wiener thời gian–tần số
 
 ### 1. Tiêu chí MMSE và nguyên lý trực giao (Orthogonality Principle)
 Trong lý thuyết ước lượng thống kê, nếu muốn tìm một hệ số thực $$G$$ sao cho tín hiệu ước lượng $$\hat{S} = G \cdot Y$$ gần tín hiệu sạch $$S$$ nhất theo nghĩa sai số bình phương trung bình $$E[\vert S - G Y \vert^2]$$ nhỏ nhất, điều kiện cần và đủ là sai số $$(S - G Y)$$ phải *trực giao* với dữ liệu quan sát $$Y$$: $$E[(S - G Y) Y^*] = 0$$. Khi $$S$$ và $$N$$ không tương quan, phương trình trực giao này rút gọn chỉ trong hai dòng đại số thành $$G = \frac{E[\vert S \vert^2]}{E[\vert S \vert^2] + E[\vert N \vert^2]} = \frac{\xi}{1 + \xi}$$, với $$\xi = \frac{E[\vert S \vert^2]}{E[\vert N \vert^2]}$$ là **SNR tiên nghiệm (a priori SNR)**.
@@ -34,7 +34,7 @@ Năm 1984, Ephraim và Malah đưa ra một công thức đệ quy thiên tài g
 $$\hat{\xi}(\ell, k) = \alpha\,\frac{\vert \hat{S}(\ell-1, k) \vert^2}{\hat{\lambda}_N(\ell, k)} + (1 - \alpha)\,\max(\gamma(\ell, k) - 1,\; 0), \qquad \alpha \approx 0{,}98.$$
 Nhờ bộ nhớ làm mượt này, độ lợi Wiener biến thiên êm ái, gần như triệt tiêu nhiễu nhạc. Và khi bước sang Chương 4, bạn sẽ thấy mặt nạ tỷ số lý tưởng (IRM) hay độ lợi ERB của DeepFilterNet thực chất chính là một mạng nơ-ron học cách dự đoán trực tiếp đường cong $$G(\ell, k)$$ thay vì tự tính $$\hat{\xi}$$ bằng công thức đệ quy.
 
-### Khung giải thích: Cầm tay tính độ lợi Wiener ở 3 mức SNR và kiểm chứng sức mạnh làm mượt của Decision-Directed (nên đọc chậm)
+### Giải thích: Cầm tay tính độ lợi Wiener ở 3 mức SNR và kiểm chứng sức mạnh làm mượt của Decision-Directed
 
 **Phần A — Độ lợi Wiener tại 3 mức SNR tiên nghiệm:** áp dụng $$G = \frac{\xi}{1+\xi}$$ và đổi sang suy hao decibel $$20\log_{10} G$$:
 

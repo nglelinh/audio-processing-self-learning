@@ -15,7 +15,7 @@ Trừ phổ (spectral subtraction) là bước nhập môn kinh điển của b�
 
 Nếu bạn đứng trong một quán cà phê ồn ào và cố lắng nghe người bạn đối diện, phản xạ tự nhiên nhất của não bộ — và cũng là ý tưởng đầu tiên trong lịch sử khử nhiễu số — là: *đợi lúc bạn mình ngừng nói để "ghi nhớ" tiếng ồn nền, rồi lấy tổng âm thanh trừ bớt tiếng ồn đó đi*. Thoạt nghe tưởng chừng quá đơn giản để có thể sai, nhưng chính phép trừ tưởng như ngây thơ ấy lại mở ra một bài học sâu sắc về thống kê ngẫu nhiên: khi trừ đi một đại lượng trung bình khỏi một tín hiệu nhiễu biến động ngẫu nhiên từng khung một, những đỉnh nhiễu sót lại sẽ kêu lách tách như những nốt nhạc rơi rời rạc — thứ mà giới kỹ sư gọi là **nhiễu nhạc (musical noise)**.
 
-## Bản đồ kiến thức nền: Trừ phổ nằm ở đâu trong xử lý tín hiệu thống kê?
+## Kiến thức cần nhớ: Trừ phổ nằm ở đâu trong xử lý tín hiệu thống kê?
 
 ### 1. Mô hình cộng tính và giả định độc lập thống kê
 Trong phòng kín không vang quá nặng, sóng âm thu được tại micro là tổng tuyến tính $$y[t] = s[t] + n[t]$$. Nhờ tính tuyến tính của biến đổi Fourier thời gian ngắn (STFT), quan hệ này giữ nguyên trên từng ô thời gian–tần số: $$Y(\ell, k) = S(\ell, k) + N(\ell, k)$$. Khi giả định tiếng nói và nhiễu không tương quan nhau, công suất kỳ vọng cộng trực tiếp: $$E[\vert Y \vert^2] = E[\vert S \vert^2] + E[\vert N \vert^2]$$. Trừ phổ thay kỳ vọng lý thuyết bằng phổ tức thời $$\vert Y(\ell, k) \vert$$ và một ước lượng trung bình $$\vert \hat{N}(k) \vert$$ đo được trong các khoảng lặng.
@@ -26,7 +26,7 @@ Một số phức STFT gồm biên độ $$\vert Y \vert$$ và pha $$\angle Y$$.
 ### 3. Cơ chế sinh nhiễu nhạc và hai van an toàn $$\alpha, \beta$$
 Do nhiễu nền là quá trình ngẫu nhiên, biên độ thực $$\vert N(\ell, k) \vert$$ dao động mạnh quanh mức trung bình $$\vert \hat{N}(k) \vert$$. Nếu trừ đúng $$1\times$$ mức trung bình rồi cắt về $$0$$ khi âm (half-wave rectification), một nửa số bin nhiễu bị xóa sạch về $$0$$, còn nửa kia trồi lên thành những gai nhọn cô lập xuất hiện rồi biến mất sau mỗi $$10\text{ ms}$$. Qua ISTFT, mỗi gai cô lập trở thành một hình sin ngắn nghe như tiếng "bíp" hay tiếng nước nhỏ giọt. Giải pháp kinh điển của Berouti (1979) là trừ dư bằng hệ số $$\alpha > 1$$ để dập các gai cô lập, đồng thời giữ lại một **sàn phổ (spectral floor)** $$\beta \vert Y \vert$$ (hoặc $$\beta \vert \hat{N} \vert$$) nhằm lấp các hố phổ đen kịt bằng một lớp nền dịu đều tai hơn.
 
-### Khung giải thích: Cầm tay tính 3 bin STFT để thấy rõ sự khác biệt giữa trừ ngây thơ và trừ có $$\alpha, \beta$$ (nên đọc chậm)
+### Giải thích: Cầm tay tính 3 bin STFT để thấy rõ sự khác biệt giữa trừ ngây thơ và trừ có $$\alpha, \beta$$
 
 Giả sử bộ ước lượng nhiễu trong khoảng lặng cho $$\vert \hat{N}(k) \vert = 2{,}0$$ tại cả 3 bin tần số xét cùng một khung. Quan sát biên độ đo được $$\vert Y(k) \vert$$ tại 3 bin:
 - **Bin A (họa âm tiếng nói mạnh):** $$\vert Y_A \vert = 10{,}0$$.

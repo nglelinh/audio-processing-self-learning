@@ -23,7 +23,7 @@ This lecture dissects how to design a clean, resilient **public npm SDK surface*
 
 ---
 
-## Background Knowledge Map: Designing a Production Audio SDK Surface
+## Key ideas: Designing a Production Audio SDK Surface
 
 Four software-architecture principles turn a working prototype into a dependable npm package:
 
@@ -209,7 +209,7 @@ Trace how a well-designed SDK automatically selects the right execution tier at 
 
 Notice the product engineering math: if 85% of users hit Tier 1–2, 12% hit Tier 3, and 3% hit Tier 4, **100.0% of users join the call with working audio**—zero broken microphones!
 
-### Deep-Dive Explanation: Four Rules for Shipping a Clean Audio npm Package (Read Slowly)
+### Explanation: Four Rules for Shipping a Clean Audio npm Package
 
 1. **Never hardcode relative asset paths without an override:** Expose `baseUrl` / `modelUrl` options so consumers hosting assets on their own CDN or Electron `file://` bundle never get 404s.
 2. **Keep the main entry bundle tiny (< 20 KB gzipped):** Lazy-load `.wasm` and `.onnx` binaries on demand so apps that only occasionally start voice calls don’t pay a startup tax on every page load.

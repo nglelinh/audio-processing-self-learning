@@ -19,11 +19,11 @@ The **Kalman filter** solves that tension cleanly: it is not “just another spe
 
 *Figure. The orange trace is a noise-floor tracker; the curve on the right is the gain that tracker feeds, which is the piece a Kalman update is trying to stabilize.*
 
-**Lesson roadmap:** Background Knowledge Map (state-space dynamics, Kalman gain as adaptive Wiener, hybrid classical + neural AENR) → Scalar predict–update model & speech/AEC state-space table → Worked example: tracing one concrete scalar predict–update step by hand for $$r = 0.1$$ vs. $$r = 10.0$$ → Deep-Dive Explanation (Read Slowly): 3 steps explaining why Kalman is “Wiener plus memory” → Checklist, Pitfalls, Mini-lab, Exercises & Videos.
+**Lesson roadmap:** Key ideas (state-space dynamics, Kalman gain as adaptive Wiener, hybrid classical + neural AENR) → Scalar predict–update model & speech/AEC state-space table → Worked example: tracing one concrete scalar predict–update step by hand for $$r = 0.1$$ vs. $$r = 10.0$$ → Explanation: 3 steps explaining why Kalman is “Wiener plus memory” → Checklist, Pitfalls, Mini-lab, Exercises & Videos.
 
 ---
 
-## Background Knowledge Map: Recursive State-Space Estimation in Audio
+## Key ideas: Recursive State-Space Estimation in Audio
 
 ### 1. State-Space Modeling — Separating Dynamics from Observation
 A state-space model writes two equations: a **process equation** describing how the hidden state $$x_\ell$$ evolves over time (with process-noise variance $$q$$), and a **measurement equation** describing how the noisy microphone $$y_\ell$$ observes it (with measurement-noise variance $$r$$).
@@ -105,7 +105,7 @@ Survey pointers (name-level only, Chapter 04 will expand SE models): Align-ULCNe
 
 ---
 
-### Deep-Dive Explanation: Tracing One Scalar Kalman Update Step by Hand (Read Slowly)
+### Explanation: Tracing One Scalar Kalman Update Step by Hand
 
 Suppose our previous state estimate is $$\hat{x}_{0} = 2.0$$ with uncertainty variance $$p = 1.0$$, process noise $$q = 0.1$$, and a fresh microphone measurement arrives at $$y_1 = 5.0$$:
 

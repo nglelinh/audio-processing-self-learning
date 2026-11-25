@@ -15,7 +15,7 @@ Bộ lọc Kalman không phải là "một dạng mặt nạ phổ khác" mà l�
 
 Hãy tưởng tượng bạn đang theo dõi vị trí một con tàu giữa biển sương mù bằng chiếc radar bị nhiễu nặng. Nếu chỉ tin hoàn toàn vào chấm sáng nhảy nhót trên màn hình radar ở giây hiện tại, con tàu trông như đang dịch chuyển tức thời; nhưng nếu bạn nhớ vận tốc con tàu ở giây trước để *dự đoán* nó sẽ ở đâu, rồi chỉ *kéo nhẹ* dự đoán đó về phía chấm radar mới theo mức độ tin cậy của radar, quỹ đạo ước lượng sẽ mượt mà đến kinh ngạc. Đó chính là linh hồn của **bộ lọc Kalman** — không phải một chiếc mặt nạ cắt phổ độc lập từng khung, mà là một cỗ máy suy luận Bayes đệ quy biết cân đo đong đếm giữa *niềm tin vào mô hình quá khứ* và *bằng chứng từ phép đo nhiễu hiện tại*.
 
-## Bản đồ kiến thức nền: Không gian trạng thái và suy luận Bayes đệ quy
+## Kiến thức cần nhớ: Không gian trạng thái và suy luận Bayes đệ quy
 
 ### 1. Mô hình không gian trạng thái (State-Space Model)
 Thay vì coi mỗi khung âm thanh là một ốc đảo tách biệt, bộ lọc Kalman mô tả tín hiệu ẩn $$x_k$$ (có thể là mẫu tiếng nói theo mô hình tự hồi quy AR, hoặc vector đáp ứng xung đường vọng $$\mathbf{h}_k$$) tiến hóa theo thời gian qua hai phương trình:
@@ -28,7 +28,7 @@ Thay vì coi mỗi khung âm thanh là một ốc đảo tách biệt, bộ lọ
 ### 3. Vì sao Kalman sống khỏe trong các hệ thống AEC+NS lai hiện đại?
 Khử vọng tuyến tính (AEC) có cấu trúc vật lý rõ ràng: đáp ứng xung phòng thay đổi chậm theo thời gian (trừ khi có người di chuyển hoặc đổi vị trí loa), cực kỳ hợp với bộ lọc Kalman miền tần số (như trong kiến trúc của Enzner & Vary). Một tầng Kalman gọn nhẹ có thể triệt sạch phần vọng tuyến tính ổn định mà không cần học lại từ đầu, để phần việc khó còn lại (vọng phi tuyến do loa rè, nhiễu nền không dừng) cho một mạng nơ-ron nhỏ gọn phía sau xử lý.
 
-### Khung giải thích: Cầm tay chạy 1 chu kỳ Dự đoán – Cập nhật của bộ lọc Kalman vô hướng (nên đọc chậm)
+### Giải thích: Cầm tay chạy 1 chu kỳ Dự đoán – Cập nhật của bộ lọc Kalman vô hướng
 
 Xét một bài toán 1 chiều theo dõi biên độ trạng thái tiếng nói $$x_k$$ với mô hình tự hồi quy bậc 1:
 - Động học: $$x_k = 0{,}9\,x_{k-1} + w_k$$, phương sai nhiễu quá trình $$Q = 0{,}09$$.

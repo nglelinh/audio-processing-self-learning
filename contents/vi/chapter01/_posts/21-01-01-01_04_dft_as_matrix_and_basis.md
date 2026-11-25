@@ -22,7 +22,7 @@ Rất nhiều lập trình viên dùng hàm `np.fft.rfft(x)` hằng ngày như m
 
 ---
 
-## Bản đồ kiến thức nền: Góc nhìn Đại số tuyến tính của DFT đứng trên ba trụ cột nào?
+## Kiến thức cần nhớ: Góc nhìn Đại số tuyến tính của DFT đứng trên ba trụ cột nào?
 
 ### 1. Ma trận DFT $$\mathbf{F}$$ và Hệ cơ sở Trực chuẩn
 Phần tử ở hàng $$k$$, cột $$n$$ của ma trận DFT chuẩn hóa (unitary) là $$\frac{1}{\sqrt{N}} e^{-j 2\pi k n / N}$$. Mỗi hàng là một vectơ sóng đơn sắc có độ dài bằng $$1$$, và **hai hàng khác nhau bất kỳ luôn vuông góc tuyệt đối với nhau** ($$\langle \mathbf{f}_k, \mathbf{f}_m\rangle = \delta_{km}$$). Vì vậy, ma trận $$\mathbf{F}_{\text{unitary}}$$ thỏa mãn $$\mathbf{F}^{-1} = \mathbf{F}^H$$ (nghịch đảo chính là chuyển vị liên hợp!).
@@ -41,7 +41,7 @@ Với tốc độ mẫu $$f_s$$ và kích thước $$N$$, bin thứ $$k$$ ứng 
 
 ---
 
-### Khung giải thích: tự tay nhân ma trận DFT $$4\times 4$$ và kiểm chứng Định lý Parseval (nên đọc chậm)
+### Giải thích: tự tay nhân ma trận DFT $$4\times 4$$ và kiểm chứng Định lý Parseval
 
 Với $$N = 4$$, đặt $$W_4 = e^{-j2\pi/4} = -j$$. Ma trận DFT (quy ước chuẩn NumPy chưa chia $$\sqrt{4}$$) chỉ chứa 4 số cực đơn giản $$\{1, -1, j, -j\}$$:
 

@@ -18,7 +18,7 @@ Bạn tạo một sóng sin hoàn hảo ở tần số 440 Hz trên Python, cắ
 
 ---
 
-## Bản đồ kiến thức nền: Hàm Cửa sổ và Rò phổ đứng trên ba trụ cột nào?
+## Kiến thức cần nhớ: Hàm Cửa sổ và Rò phổ đứng trên ba trụ cột nào?
 
 ### 1. Nhân trong Miền thời gian ↔ Tích chập trong Miền tần số
 Cắt tín hiệu bằng hàm cửa sổ $$w[n]$$ ($$x_w[n] = x[n]\cdot w[n]$$) tương đương lấy **tích chập phổ thật $$X(f)$$ với phổ cửa sổ $$W(f)$$**. Một sóng sin thuần đáng lẽ là mũi kim Dirac $$\delta(f - f_0)$$ lập tức biến thành bản sao của chính hình dáng $$W(f - f_0)$$ đặt tại $$f_0$$!
@@ -33,7 +33,7 @@ Khi tần số tín hiệu rơi đúng giữa hai bin (lệch $$0.5$$ bin), biê
 
 ---
 
-### Khung giải thích: tự tay so sánh mức rò phổ của sóng lệch nửa bin ($$k = 1.5$$) với $$N = 4$$ (nên đọc chậm)
+### Giải thích: tự tay so sánh mức rò phổ của sóng lệch nửa bin ($$k = 1.5$$) với $$N = 4$$
 
 Xét một sóng sin phức có tần số rơi đúng giữa bin 1 và bin 2: $$x[n] = e^{j 2\pi (1.5) n / 4} = e^{j \frac{3\pi}{4} n}$$ lấy mẫu tại $$n = 0, 1, 2, 3$$:
 

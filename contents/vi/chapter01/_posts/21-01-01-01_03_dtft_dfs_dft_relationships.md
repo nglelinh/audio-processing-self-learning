@@ -22,7 +22,7 @@ Một trong những nỗi hoang mang kinh điển nhất của sinh viên khi b�
 
 ---
 
-## Bản đồ kiến thức nền: Bốn họ Biến đổi Fourier liên hệ với nhau qua ba quy luật nào?
+## Kiến thức cần nhớ: Bốn họ Biến đổi Fourier liên hệ với nhau qua ba quy luật nào?
 
 ### 1. Ma trận đối xứng Rời rạc ↔ Tuần hoàn
 Hãy nhớ bảng 4 ô nhỏ gọn sau:
@@ -39,7 +39,7 @@ Nếu bạn có một tín hiệu hữu hạn $$N$$ mẫu $$x[0], \dots, x[N-1]$
 
 ---
 
-### Khung giải thích: tự tay lấy mẫu đường cong DTFT để thu ra đúng DFT 4 điểm (nên đọc chậm)
+### Giải thích: tự tay lấy mẫu đường cong DTFT để thu ra đúng DFT 4 điểm
 
 Xét tín hiệu cực ngắn chỉ gồm 2 mẫu khác không: $$x[0] = 1,\ x[1] = 1$$ (và bằng $$0$$ ở mọi chỗ khác).
 

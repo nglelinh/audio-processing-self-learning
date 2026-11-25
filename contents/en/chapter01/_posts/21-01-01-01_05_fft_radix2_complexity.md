@@ -19,11 +19,11 @@ Enter the **Fast Fourier Transform (FFT)**: not a new transform, not an approxim
 
 *Figure. Radix-2 still computes inner products against these basis tones. It only changes the order of the arithmetic, which is why the result matches a naive DFT up to roundoff.*
 
-**Lesson roadmap:** Background Knowledge Map (divide-and-conquer factorization, twiddle symmetries, real & mixed-radix FFTs) → Radix-2 Cooley–Tukey butterflies & complexity table → Practical production rules (plan reuse, zero-alloc, SIMD) → Worked examples: 10 ms hop ops budget, padding 960 → 1024, and a 4-point butterfly checked by hand → Deep-Dive Explanation (Read Slowly): 3 steps from the even/odd split to $$O(N\log N)$$ → Pitfalls, Mini-lab, Exercises & Videos.
+**Lesson roadmap:** Key ideas (divide-and-conquer factorization, twiddle symmetries, real & mixed-radix FFTs) → Radix-2 Cooley–Tukey butterflies & complexity table → Practical production rules (plan reuse, zero-alloc, SIMD) → Worked examples: 10 ms hop ops budget, padding 960 → 1024, and a 4-point butterfly checked by hand → Explanation: 3 steps from the even/odd split to $$O(N\log N)$$ → Pitfalls, Mini-lab, Exercises & Videos.
 
 ---
 
-## Background Knowledge Map: Fast Algorithms for the DFT
+## Key ideas: Fast Algorithms for the DFT
 
 ### 1. Same Mathematics, Smarter Factorization
 The FFT does not change a single output number of the DFT (up to floating-point roundoff $$\sim 10^{-14}$$). It exploits the periodicity and symmetry of roots of unity $$W_N^k = e^{-j2\pi k/N}$$ to factor the dense $$N\times N$$ matrix $$\mathbf{F}$$ into $$\log_2 N$$ ultra-sparse **butterfly stages**.
@@ -146,7 +146,7 @@ Hop 10 ms → 100 FFT+iFFT pairs/s/channel. $$N=512$$ complex FFT ~ $$5\cdot10^3
 
 ---
 
-### Deep-Dive Explanation: How One Algebraic Sign Flip Saves 100× the Work (Read Slowly)
+### Explanation: How One Algebraic Sign Flip Saves 100× the Work
 
 #### Step 1: Split the DFT sum into even and odd time indices
 Write $$n = 2m$$ for even indices and $$n = 2m + 1$$ for odd indices:

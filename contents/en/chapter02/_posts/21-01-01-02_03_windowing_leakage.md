@@ -19,11 +19,11 @@ Tapering the frame smoothly to zero with a **Hann window** crushes that first si
 
 *Figure. Peak-normalized magnitude of a windowed tone: the rectangular window leaks a slow sidelobe tail, while the Hann window trades a wider main lobe for a much lower floor.*
 
-**Lesson roadmap:** Background Knowledge Map (time multiplication = spectral convolution, main-lobe vs. sidelobe tradeoff, window gain & COLA) → Window catalog (Rectangular, Hann, Hamming, Blackman) → Resolution tradeoffs & musical noise → Worked examples: 48 kHz Hann main-lobe width (200 Hz) and testing a half-bin tone (bin 32.5) → Deep-Dive Explanation (Read Slowly): 3 steps from edge discontinuity to −31 dB sidelobes → Pitfalls, Mini-lab, Exercises & Videos.
+**Lesson roadmap:** Key ideas (time multiplication = spectral convolution, main-lobe vs. sidelobe tradeoff, window gain & COLA) → Window catalog (Rectangular, Hann, Hamming, Blackman) → Resolution tradeoffs & musical noise → Worked examples: 48 kHz Hann main-lobe width (200 Hz) and testing a half-bin tone (bin 32.5) → Explanation: 3 steps from edge discontinuity to −31 dB sidelobes → Pitfalls, Mini-lab, Exercises & Videos.
 
 ---
 
-## Background Knowledge Map: Spectral Leakage and Window Design
+## Key ideas: Spectral Leakage and Window Design
 
 ### 1. Time Multiplication = Frequency Convolution
 Extracting a finite frame multiplies the infinite signal $$x[n]$$ by a window $$w[n]$$. In frequency, that **convolves** the true spectrum $$X(e^{j\omega})$$ with the window’s Fourier transform $$W(e^{j\omega})$$. Every pure sinusoid stops being a razor-thin spike and becomes a copy of $$W(e^{j\omega})$$ centered at its frequency!
@@ -113,7 +113,7 @@ Spectral subtraction with independent bin floors → isolated bin spikes survivi
 
 ---
 
-### Deep-Dive Explanation: Why Tapering to Zero Crushes Sidelobes by 18 dB (Read Slowly)
+### Explanation: Why Tapering to Zero Crushes Sidelobes by 18 dB
 
 #### Step 1: See why the rectangular window leaks slowly ($$1/f$$ decay)
 Under periodic extension, an off-bin sine wave jumps abruptly between sample $$L-1$$ and sample $$0$$—a step discontinuity! The Fourier transform of a step discontinuity decays slowly as $$1/f$$, leaving high sidelobes ($$-13\,\mathrm{dB}$$ at the first peak) far away from the true tone.

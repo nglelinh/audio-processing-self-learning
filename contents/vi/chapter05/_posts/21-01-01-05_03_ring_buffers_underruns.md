@@ -15,7 +15,7 @@ Hãy hình dung hai dây chuyền lắp ráp nối tiếp nhau trong một nhà 
 
 Một hop của DeepFilterNet dài 480 mẫu, trong khi một render quantum của AudioWorklet (luồng render của Web Audio) thường chỉ dài 128 mẫu. Hai nhịp đồng hồ khác nhau này được nối với nhau bằng một **bộ đệm vòng (ring buffer)**: một mảng có kích thước cố định đi kèm chỉ số đọc và chỉ số ghi. Khi bên đọc tiêu thụ nhanh hơn khiến bộ đệm cạn dữ liệu, ta gặp lỗi **underrun** (gây tiếng tách hoặc khoảng mất tiếng). Ngược lại, khi bên ghi đẩy dữ liệu vào nhanh hơn và vượt quá chỗ trống, ta gặp lỗi **overrun** (khiến độ trễ phình dần cho đến khi buộc phải bỏ bớt mẫu hoặc chuyển sang bypass). Bài học này hướng dẫn cách tính dung lượng ring buffer và cài đặt cả hai chính sách xử lý trên mô hình minh họa 8 mẫu.
 
-**Mạch bài học:** Bài toán nối hai nhịp đồng hồ lệch pha → Bản đồ kiến thức nền (Hàng đợi vòng SPSC không khóa, Dung lượng lũy thừa của hai & ngân sách độ trễ, Chính sách phi chặn cho Underrun/Overrun) → Cơ chế mặt nạ bit & sơ đồ hai tầng Ring A / Ring B → Khung giải thích dò tay phép quay vòng mặt nạ bit `index & 7` và tính độ trễ tích lũy → Bảng chính sách, Mini-lab và Bài tập.
+**Mạch bài học:** Bài toán nối hai nhịp đồng hồ lệch pha → Kiến thức cần nhớ (Hàng đợi vòng SPSC không khóa, Dung lượng lũy thừa của hai & ngân sách độ trễ, Chính sách phi chặn cho Underrun/Overrun) → Cơ chế mặt nạ bit & sơ đồ hai tầng Ring A / Ring B → Giải thích dò tay phép quay vòng mặt nạ bit `index & 7` và tính độ trễ tích lũy → Bảng chính sách, Mini-lab và Bài tập.
 
 ![Bộ đệm vòng với chỉ số ghi đi trước chỉ số đọc]({{ site.imgurl }}/generated/ring-buffer.png)
 
@@ -25,7 +25,7 @@ Một hop của DeepFilterNet dài 480 mẫu, trong khi một render quantum c�
 
 Sau bài học này, bạn sẽ tính được mức chiếm chỗ (occupancy) và số chỗ trống sau khi ghi 6 mẫu rồi đọc 4 mẫu; cài đặt được chính sách xử lý overrun bằng cách bỏ mẫu cũ nhất thay vì cấp phát thêm bộ nhớ; và chọn được dung lượng lũy thừa của hai phù hợp cho hop 480 mẫu, quantum 128 mẫu cùng một khoảng dự phòng jitter nhỏ mà không vô tình cộng thêm 100 ms độ trễ vào bộ đệm.
 
-## Bản đồ kiến thức nền: Ba trụ cột thiết kế bộ đệm vòng thời gian thực
+## Kiến thức cần nhớ: Ba trụ cột thiết kế bộ đệm vòng thời gian thực
 
 ### 1. Hàng đợi vòng một bên ghi – một bên đọc (SPSC Lock-Free Ring Buffer)
 - **Là gì:** Một mảng tĩnh kích thước cố định $$C = 2^m$$ với hai con trỏ `write_pos` (chỉ do producer cập nhật) và `read_pos` (chỉ do consumer cập nhật).
@@ -79,7 +79,7 @@ $$
 
 Với $$H=480$$, $$Q=128$$ và $$J=2$$, ta có $$480+960+128=1568$$ mẫu; lũy thừa của hai lớn hơn kế tiếp là **2048** mẫu, tương ứng $$2048/48000\approx 42{,}7$$ ms ở riêng tầng đệm này. Nếu tăng $$J=3$$, tổng rơi đúng vào 2048 mẫu nên lũy thừa của hai kế tiếp có khoảng dư an toàn là **4096** mẫu (khoảng 85 ms). Khi cộng dồn hai tầng ring buffer cùng 40 ms look-ahead của mô hình, độ trễ hội thoại đã trở nên rất đáng kể. Mỗi lần nhân đôi dung lượng bộ đệm không cần thiết đều tạo thêm độ trễ mà người dùng sẽ quy lỗi cho bộ khử nhiễu.
 
-## Khung giải thích: Dò tay phép quay vòng mặt nạ bit và ngân sách độ trễ hai tầng (nên đọc chậm)
+## Giải thích: Dò tay phép quay vòng mặt nạ bit và ngân sách độ trễ hai tầng
 
 ### Phép tính 1: Kiểm tra mặt nạ bit `index & (C - 1)` qua điểm quay vòng (wrap-around)
 Chọn $$C = 8 = 2^3$$ nên mặt nạ bit là $$C - 1 = 7 = \text{0b111}$$. Bắt đầu với `w = 0, r = 0`:

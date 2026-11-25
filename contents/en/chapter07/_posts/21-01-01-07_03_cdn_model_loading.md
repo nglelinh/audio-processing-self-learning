@@ -23,7 +23,7 @@ This lecture engineers the complete **CDN model loading pipeline**: immutable co
 
 ---
 
-## Background Knowledge Map: Edge Delivery, Browser Caching, and Cross-Origin Security
+## Key ideas: Edge Delivery, Browser Caching, and Cross-Origin Security
 
 Four web-infrastructure pillars turn heavy ML assets into instant-loading web features:
 
@@ -176,7 +176,7 @@ Compare loading a `1.3 MB` compressed bundle (`0.85 MB` INT8 model + `0.45 MB` W
 
 Even better: if you store the pre-compiled `WebAssembly.Module` (where supported) or warm the cache on app idle before the user clicks "Join Call," neural noise suppression activates in **under 50 ms**!
 
-### Deep-Dive Explanation: Four Rules for Reliable CDN Model Loading (Read Slowly)
+### Explanation: Four Rules for Reliable CDN Model Loading
 
 1. **Always set explicit `Content-Type: application/wasm` on `.wasm` files:** `WebAssembly.instantiateStreaming` refuses to stream-compile if the CDN serves `.wasm` as `application/octet-stream`!
 2. **Test your CDN headers with `curl -I` before every release:** Confirm `content-encoding: br`, `cache-control: ... immutable`, `access-control-allow-origin`, and `cross-origin-resource-policy: cross-origin` are all present.

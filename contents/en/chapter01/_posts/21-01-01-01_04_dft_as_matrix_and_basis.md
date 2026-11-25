@@ -19,11 +19,11 @@ The cleanest cure is linear algebra: **the length-$$N$$ DFT is simply a rotation
 
 *Figure. Each row of the DFT matrix is one of these complex tones; a bin is the inner product of the frame with that row.*
 
-**Lesson roadmap:** Background Knowledge Map (orthogonal complex exponentials, unitary vs. unnormalized scaling, Parseval’s theorem) → Matrix form, frequency axis, and leakage → Worked examples: length-4 DFT of $$x = [1, 0, -1, 0]$$ checked by hand against Parseval, 48 kHz bin mapping, and white-noise energy check → Deep-Dive Explanation (Read Slowly): 3 steps turning orthogonality into your STFT/ISTFT unit tests → Pitfalls, Mini-lab, Exercises & Videos.
+**Lesson roadmap:** Key ideas (orthogonal complex exponentials, unitary vs. unnormalized scaling, Parseval’s theorem) → Matrix form, frequency axis, and leakage → Worked examples: length-4 DFT of $$x = [1, 0, -1, 0]$$ checked by hand against Parseval, 48 kHz bin mapping, and white-noise energy check → Explanation: 3 steps turning orthogonality into your STFT/ISTFT unit tests → Pitfalls, Mini-lab, Exercises & Videos.
 
 ---
 
-## Background Knowledge Map: Linear Algebra of the Discrete Fourier Transform
+## Key ideas: Linear Algebra of the Discrete Fourier Transform
 
 ### 1. Orthogonal Basis in $$\mathbb{C}^N$$
 The $$N$$ complex exponential vectors $$w_k[n] = e^{j2\pi kn/N}$$ ($$k = 0, \ldots, N-1$$) are mutually perpendicular in $$\mathbb{C}^N$$: $$\langle w_k, w_\ell \rangle = N\delta_{k\ell}$$. Taking a DFT is literally projecting your audio frame $$\mathbf{x}$$ onto these $$N$$ perpendicular axes.
@@ -132,7 +132,7 @@ On-bin tone: single spike (rectangular window). Add white noise: floor rises. Cl
 
 ---
 
-### Deep-Dive Explanation: Turning Orthogonality into Rock-Solid FFT Unit Tests (Read Slowly)
+### Explanation: Turning Orthogonality into Rock-Solid FFT Unit Tests
 
 #### Step 1: Verify orthogonality via the finite geometric sum
 For $$k \neq \ell$$, let $$r = e^{j2\pi(k-\ell)/N} \neq 1$$. Because $$r^N = e^{j2\pi(k-\ell)} = 1$$, the geometric series collapses identically to zero:

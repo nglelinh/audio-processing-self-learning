@@ -15,7 +15,7 @@ Một lỗi kinh điển khi lần đầu tích hợp khử nhiễu mạng nơ-r
 
 Vị trí chèn bộ khử nhiễu trong một cuộc gọi WebRTC quyết định trực tiếp đến độ trễ, khả năng khử vọng (echo) và việc máy chủ SFU có nhận được tín hiệu giọng nói đã làm sạch hay không. Bài học này ánh xạ các điểm chèn tiềm năng với `getUserMedia`, bộ xử lý âm thanh tích hợp (Audio Processing Module — APM) của trình duyệt và `RTCPeerConnection`, đồng thời phân tích cách `DeepFilterNoiseFilterProcessor` trong gói `deepfilternet3-noise-filter` **1.3.0** can thiệp vào luồng phát (uplink) trước bước mã hóa thông qua TrackProcessor (cơ chế biến đổi track của LiveKit).
 
-**Mạch bài học:** Sai lầm đặt nhầm vị trí & lọc nhiễu hai lần → Bản đồ kiến thức nền (Luồng Uplink/Downlink & SFU, Phối hợp AEC/AGC/NS trong APM trình duyệt, Điểm chèn TrackProcessor trước Opus) → So sánh ba điểm chèn A, B, C → Cấu hình `getUserMedia` & nội thất đồ thị processor → Khung giải thích tính tay ngân sách độ trễ hội thoại 150 ms và hiệu ứng suy hao kép khi bật trùng hai bộ NS → Mini-lab, Bẫy thường gặp và Bài tập.
+**Mạch bài học:** Sai lầm đặt nhầm vị trí & lọc nhiễu hai lần → Kiến thức cần nhớ (Luồng Uplink/Downlink & SFU, Phối hợp AEC/AGC/NS trong APM trình duyệt, Điểm chèn TrackProcessor trước Opus) → So sánh ba điểm chèn A, B, C → Cấu hình `getUserMedia` & nội thất đồ thị processor → Giải thích tính tay ngân sách độ trễ hội thoại 150 ms và hiệu ứng suy hao kép khi bật trùng hai bộ NS → Mini-lab, Bẫy thường gặp và Bài tập.
 
 ![Track audio local của LiveKit đi qua processor khử nhiễu trước khi publish]({{ site.imgurl }}/generated/livekit-trackprocessor.png)
 
@@ -25,7 +25,7 @@ Vị trí chèn bộ khử nhiễu trong một cuộc gọi WebRTC quyết đị
 
 Sau bài học này, bạn sẽ biết cách đặt bộ khử nhiễu mạng nơ-ron trên đường phát trước bước mã hóa, giữ lại tính năng khử vọng của trình duyệt đồng thời tắt bộ khử nhiễu mặc định của trình duyệt, và mô tả chính xác những gì `setProcessor` thay đổi trên `MediaStreamTrack` được phát hành mà không cần đẩy bước suy luận ra khỏi thiết bị.
 
-## Bản đồ kiến thức nền: Kiến trúc đường tiếng trong cuộc gọi WebRTC
+## Kiến thức cần nhớ: Kiến trúc đường tiếng trong cuộc gọi WebRTC
 
 ### 1. Luồng gửi (Uplink), Luồng nhận (Downlink) và Kiến trúc SFU
 - **Là gì:** Trong WebRTC dùng máy chủ chuyển tiếp có chọn lọc (**SFU — Selective Forwarding Unit** như LiveKit), mỗi máy khách mã hóa micro thành gói Opus gửi lên (uplink) và giải mã gói của người khác phát ra loa (downlink); SFU chỉ định tuyến gói mà không giải mã hay trộn âm.
@@ -107,7 +107,7 @@ Luôn ghi log kết quả từ `track.getSettings()` trên trình duyệt đích
 
 Các thành phần như WASM (WebAssembly — mã nhị phân chạy trong trình duyệt) và CDN (mạng phân phối nội dung) thuộc phạm vi triển khai của điểm chèn A, không phải điểm B.
 
-## Khung giải thích: Tính tay ngân sách độ trễ một chiều và hậu quả lọc nhiễu kép (nên đọc chậm)
+## Giải thích: Tính tay ngân sách độ trễ một chiều và hậu quả lọc nhiễu kép
 
 ### Phép tính 1: Cộng dồn độ trễ từ miệng tới tai (Mouth-to-Ear) ở điểm chèn A vs. điểm C
 Theo khuyến nghị hội thoại thời gian thực (mốc thực hành chuẩn $$< 150\text{ ms}$$ một chiều để không giẫm lời nhau):

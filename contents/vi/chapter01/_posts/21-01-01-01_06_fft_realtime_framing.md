@@ -22,7 +22,7 @@ Thuật toán FFT trong sách giáo khoa luôn giả định bạn có sẵn c�
 
 ---
 
-## Bản đồ kiến thức nền: Chia khung FFT Thời gian thực đứng trên ba trụ cột nào?
+## Kiến thức cần nhớ: Chia khung FFT Thời gian thực đứng trên ba trụ cột nào?
 
 ### 1. Giả thiết Gần dừng (Quasi-Stationarity) của Tiếng nói
 Dây thanh và khoang miệng con người chuyển động theo quán tính cơ học, nên đặc tính phổ của tiếng nói thay đổi chậm trong cửa sổ **10–30 ms**. Đó là lý do hầu hết hệ thống xử lý thoại (WebRTC, Opus, DeepFilterNet) đều chọn độ dài khung chuẩn quanh mốc **20 ms** và bước nhảy (hop) **10 ms**.
@@ -35,7 +35,7 @@ Chọn kích thước FFT $$N$$ quyết định trực tiếp khoảng cách gi�
 
 ---
 
-### Khung giải thích: tự tay kiểm tra bộ thông số khung thực chiến của DeepFilterNet (nên đọc chậm)
+### Giải thích: tự tay kiểm tra bộ thông số khung thực chiến của DeepFilterNet
 
 Hãy kiểm chứng trọn bộ thông số cốt lõi của hệ thống khử nhiễu 48 kHz bằng những phép chia sơ cấp:
 

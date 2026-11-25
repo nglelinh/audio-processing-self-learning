@@ -23,7 +23,7 @@ This lecture breaks down the **LiveKit `TrackProcessor` pattern**: how LiveKit h
 
 ---
 
-## Background Knowledge Map: Track Lifecycle, Resource Ownership, and Zero-Leak Teardown
+## Key ideas: Track Lifecycle, Resource Ownership, and Zero-Leak Teardown
 
 Building a production-grade `TrackProcessor` rests on four lifecycle guarantees:
 
@@ -176,7 +176,7 @@ Compare a buggy `restart()` (that forgets to close old nodes/workers) against a 
 
 Notice that Chrome enforces a hard cap on simultaneous active `AudioContext` instances per tab—forgetting `.close()` on `destroy()` doesn’t just leak RAM; after 6 channel switches it literally **throws an exception and kills the user’s mic**!
 
-### Deep-Dive Explanation: Four Rules for Rock-Solid LiveKit TrackProcessors (Read Slowly)
+### Explanation: Four Rules for Rock-Solid LiveKit TrackProcessors
 
 1. **Make `destroy()` idempotent:** LiveKit or React strict-mode hooks may invoke `destroy()` twice; guarding with `if (this.destroyed) return;` prevents double-free errors on WASM pointers.
 2. **Disconnect audio graph nodes in strict reverse order:** Disconnect source $$	o$$ worklet $$	o$$ destination, notify the Worker to free its WASM heap, call `worker.terminate()`, and finally `await audioCtx.close()`.

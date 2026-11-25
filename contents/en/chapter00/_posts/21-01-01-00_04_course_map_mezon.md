@@ -19,11 +19,11 @@ This lesson is your **map and contract** for the entire course: how Chapters 00 
 
 *Figure. The drawing is only the public integration slot: a TrackProcessor on a media track. It does not reveal private Mezon internals.*
 
-**Lesson roadmap:** Background Knowledge Map (three-layer architecture of a voice NS product, techniques vs. wrappers, systematic bug triage) → Full 11-chapter map & recommended study tracks → Public Mezon product surface → Worked example: diagnosing a 10 ms (100 Hz) robotic warble back to the right chapter → Deep-Dive Explanation (Read Slowly): 3-step engineering triage loop for audio pipelines → Pitfalls, Mini-lab, Exercises & Videos.
+**Lesson roadmap:** Key ideas (three-layer architecture of a voice NS product, techniques vs. wrappers, systematic bug triage) → Full 11-chapter map & recommended study tracks → Public Mezon product surface → Worked example: diagnosing a 10 ms (100 Hz) robotic warble back to the right chapter → Explanation: 3-step engineering triage loop for audio pipelines → Pitfalls, Mini-lab, Exercises & Videos.
 
 ---
 
-## Background Knowledge Map: The Three-Layer Stack Behind Every Real-Time Noise Suppressor
+## Key ideas: The Three-Layer Stack Behind Every Real-Time Noise Suppressor
 
 ### 1. Layer 1 — Discrete Signal & STFT Foundations (Chapters 01–02)
 Before any machine learning runs, raw microphone PCM is resampled to a fixed clock (e.g., 48 kHz), sliced into overlapping windows, transformed by an FFT, and later reassembled via Overlap-Add (OLA). Most “mysterious model bugs” (clicks, pitch shifts, metallic modulation) actually happen right here—in wrong hop sizes, broken COLA window sums, or un-filtered resampling.
@@ -137,7 +137,7 @@ This triage habit is the point of the course map. A 10 ms warble is $$100\,\math
 
 ---
 
-### Deep-Dive Explanation: How Experienced Audio Engineers Triage a Broken Pipeline (Read Slowly)
+### Explanation: How Experienced Audio Engineers Triage a Broken Pipeline
 
 #### Step 1: Turn every audible symptom into a frequency or time period
 Never stop at “it sounds robotic.” Measure the period of the artifact: a periodic buzz every $$10\,\mathrm{ms}$$ is a $$1/0.010 = 100\,\mathrm{Hz}$$ modulation—which immediately matches a $$480$$-sample hop at $$48\,\mathrm{kHz}$$. A pitch drop of $$3\times$$ immediately screams “48 kHz PCM fed into a 16 kHz consumer.”

@@ -19,11 +19,11 @@ Welcome to Chapter 02, where we build the complete **audio processing pipeline**
 
 *Figure. At $$f_s=8\,\mathrm{kHz}$$ the folding frequency is 4 kHz, so a 7 kHz tone and a 1 kHz tone produce the same sample sequence.*
 
-**Lesson roadmap:** Background Knowledge Map (PCM quantization & dynamic range, planar vs. interleaved memory layout, device clock boundaries) → Encodings, byte arithmetic, and Nyquist rate choices → Downmix policies & WebRTC/Mezon expectations → Worked examples: 3840-byte ambiguity (stereo s16 vs. mono f32), peak clipping, and wrong channel stride → Deep-Dive Explanation (Read Slowly): 3-step edge contract for safe PCM ingestion → Pitfalls, Mini-lab, Exercises & Videos.
+**Lesson roadmap:** Key ideas (PCM quantization & dynamic range, planar vs. interleaved memory layout, device clock boundaries) → Encodings, byte arithmetic, and Nyquist rate choices → Downmix policies & WebRTC/Mezon expectations → Worked examples: 3840-byte ambiguity (stereo s16 vs. mono f32), peak clipping, and wrong channel stride → Explanation: 3-step edge contract for safe PCM ingestion → Pitfalls, Mini-lab, Exercises & Videos.
 
 ---
 
-## Background Knowledge Map: Digital Audio Representation at the System Edge
+## Key ideas: Digital Audio Representation at the System Edge
 
 ### 1. Pulse-Code Modulation (PCM) — Amplitude Discretization
 A digital audio buffer stores a uniform sequence of quantized pressure readings. Voice pipelines rely on two workhorse formats: **`int16` (`s16`)** (range $$[-32768, 32767]$$, 2 bytes/sample, ~96 dB dynamic range, standard in WAV and WebRTC) and **`float32` (`f32`)** (normalized to $$[-1.0, 1.0]$$ full scale, 4 bytes/sample, standard in Web Audio and neural runtimes).
@@ -152,7 +152,7 @@ Interleaved stereo length 960 frames misunderstood as 960 mono samples @ 48 kHz 
 
 ---
 
-### Deep-Dive Explanation: The 3-Step Edge Contract for Safe PCM Ingestion (Read Slowly)
+### Explanation: The 3-Step Edge Contract for Safe PCM Ingestion
 
 #### Step 1: Normalize format once at the graph boundary
 Convert `int16` to `float32` via $$x_{f32} = x_{s16} / 32768.0$$ exactly once upon entering your DSP graph, and keep internal signals in $$[-1, 1]$$ with headroom so neither FFT scaling nor neural gains cause hard clipping.

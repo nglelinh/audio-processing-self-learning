@@ -22,7 +22,7 @@ Bạn hẳn từng xem video quay bánh xe ô tô đang lao nhanh về phía tr�
 
 ---
 
-## Bản đồ kiến thức nền: Định lý Lấy mẫu Nyquist–Shannon đứng trên ba trụ cột nào?
+## Kiến thức cần nhớ: Định lý Lấy mẫu Nyquist–Shannon đứng trên ba trụ cột nào?
 
 ### 1. Lấy mẫu = Nhân với lược Dirac trong miền thời gian ↔ Lặp tuần hoàn phổ trong miền tần số
 Lấy mẫu tín hiệu liên tục $$x(t)$$ mỗi chu kỳ $$T_s = 1/f_s$$ tương đương nhân $$x(t)$$ với chuỗi xung Dirac $$\sum \delta(t - nT_s)$$. Qua biến đổi Fourier, phép nhân này biến thành **tích chập với lược Dirac tần số**, tạo ra vô số bản sao của phổ gốc $$X(f)$$ đặt lặp lại tại các tâm $$0, \pm f_s, \pm 2f_s, \dots$$!
@@ -35,7 +35,7 @@ Nếu thỏa điều kiện Nyquist, ta chỉ cần giữ lại bản sao gốc 
 
 ---
 
-### Khung giải thích: tự tay tính tần số giả (Aliasing) khi lấy mẫu sai tốc độ (nên đọc chậm)
+### Giải thích: tự tay tính tần số giả (Aliasing) khi lấy mẫu sai tốc độ
 
 Giả sử micro thu được một tiếng rít cao tần hình sin thuần ở tần số $$f_0 = 12\,000\text{ Hz}$$ ($$12\text{ kHz}$$): $$x(t) = \cos(2\pi \cdot 12\,000\,t)$$. Một kỹ sư quên đặt bộ lọc chống chồng phổ và hạ tốc độ mẫu xuống $$f_s = 16\,000\text{ Hz}$$ (tần số Nyquist chỉ là $$f_N = 8\,000\text{ Hz}$$). Chuyện gì xảy ra ở các mẫu số $$x[n] = x(n/f_s)$$?
 

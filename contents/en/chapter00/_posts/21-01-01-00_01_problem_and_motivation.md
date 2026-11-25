@@ -19,11 +19,11 @@ That lived product constraint is **real-time noise suppression (NS)**. This open
 
 *Figure. A real-time suppressor may use audio only up to “now,” plus a small look-ahead budget; an offline enhancer may see the whole file.*
 
-**Lesson roadmap:** Background Knowledge Map (additive mixture model, causal vs. offline systems, three competing enhancement goals) → Core product constraints & Mezon public surface → Worked example: a complete 48 kHz latency & RTF budget checked by hand → Deep-Dive Explanation (Read Slowly): 3 steps from raw microphone PCM to a shippable real-time budget → Pitfalls, Mini-lab, Exercises & Videos.
+**Lesson roadmap:** Key ideas (additive mixture model, causal vs. offline systems, three competing enhancement goals) → Core product constraints & Mezon public surface → Worked example: a complete 48 kHz latency & RTF budget checked by hand → Explanation: 3 steps from raw microphone PCM to a shippable real-time budget → Pitfalls, Mini-lab, Exercises & Videos.
 
 ---
 
-## Background Knowledge Map: What Does Real-Time Speech Enhancement Actually Study?
+## Key ideas: What Does Real-Time Speech Enhancement Actually Study?
 
 ### 1. The Observation Model — Separating Signal from Interference
 At the microphone, clean speech $$x(t)$$ and unwanted background noise $$n(t)$$ add together into a single waveform $$y(t) = x(t) + n(t)$$ (or in a reverberant room, $$y(t) = (x * h)(t) + n(t)$$). Single-channel noise suppression is an **ill-posed inverse problem**: you receive one sum and must recover one of its two unknown summands in real time, usually after transforming short overlapping frames into the time–frequency (STFT) domain $$Y(\ell, k) = X(\ell, k) + N(\ell, k)$$.
@@ -143,7 +143,7 @@ Assume $$f_s = 48\,\mathrm{kHz}$$, frame length $$L = 480$$ samples (10 ms), hop
 
 ---
 
-### Deep-Dive Explanation: How a Product Latency Budget Constrains Your Algorithm (Read Slowly)
+### Explanation: How a Product Latency Budget Constrains Your Algorithm
 
 Why do so many impressive academic speech-enhancement papers fail the moment you drop them into a browser call? Trace the 3-step constraint chain:
 

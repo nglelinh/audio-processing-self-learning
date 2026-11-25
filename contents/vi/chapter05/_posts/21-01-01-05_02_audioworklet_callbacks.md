@@ -15,7 +15,7 @@ Hầu hết lập trình viên web đều quen với một phản xạ gỡ lỗ
 
 Âm thanh trên trình duyệt được xử lý trên một luồng thời gian thực chuyên biệt. **AudioWorklet** (luồng render của Web Audio API) là giao diện cho phép đưa mã xử lý của bạn chạy trực tiếp trên luồng đó theo trình tự: gọi `audioWorklet.addModule`, khởi tạo `AudioWorkletNode`, và nhận lệnh gọi `process(inputs, outputs, parameters)` một lần cho mỗi render quantum. Mỗi quantum thường dài **128 mẫu**, tương ứng $$128/48000\approx 2{,}67$$ ms ở tần số lấy mẫu 48 kHz. Bên trong `process`, bạn tuyệt đối không được cấp phát bộ nhớ, chờ khóa (lock) hay gọi mạng. Một lệnh `console.log` vi phạm cả ba nguyên tắc này và không thể dùng để gỡ lỗi mất tiếng (dropout).
 
-**Mạch bài học:** Cú sốc `console.log` trên luồng âm thanh → Bản đồ kiến thức nền (Tách luồng Main vs. Audio Render, Ba lệnh cấm thời gian thực, Độ lệch nhịp 128 vs. 480 mẫu) → Vòng đời AudioWorklet & hợp đồng bypass → Vì sao `console.log` bị cấm → Khung giải thích theo dõi từng callback trong chu kỳ 15 quantum = 4 hop (40 ms) → Mini-lab và Bài tập.
+**Mạch bài học:** Cú sốc `console.log` trên luồng âm thanh → Kiến thức cần nhớ (Tách luồng Main vs. Audio Render, Ba lệnh cấm thời gian thực, Độ lệch nhịp 128 vs. 480 mẫu) → Vòng đời AudioWorklet & hợp đồng bypass → Vì sao `console.log` bị cấm → Giải thích theo dõi từng callback trong chu kỳ 15 quantum = 4 hop (40 ms) → Mini-lab và Bài tập.
 
 ![Quantum AudioWorklet như ngân sách thời gian tường cạnh RTF]({{ site.imgurl }}/generated/rtf-audioworklet.png)
 
@@ -25,7 +25,7 @@ Hầu hết lập trình viên web đều quen với một phản xạ gỡ lỗ
 
 Sau bài học này, bạn sẽ nắm được vòng đời của AudioWorklet, viết được hàm `process` sao chép thẳng tín hiệu đầu vào sang đầu ra khi bật cờ bypass, giải thích được vì sao `console.log` bị cấm trên luồng render âm thanh, và biết cách ghép hop 480 mẫu của DeepFilterNet lên chuỗi quantum 128 mẫu mà không giả định chúng chia hết cho nhau.
 
-## Bản đồ kiến thức nền: Kiến trúc luồng âm thanh thời gian thực trong trình duyệt
+## Kiến thức cần nhớ: Kiến trúc luồng âm thanh thời gian thực trong trình duyệt
 
 ### 1. Tách biệt Luồng chính (Main Thread) và Luồng Render âm thanh (AudioWorklet Thread)
 - **Là gì:** Trong trình duyệt, luồng chính bận vẽ giao diện (DOM layout, cuộn trang, phân tích JSON) và có thể bị treo hàng chục mili giây. `AudioWorklet` đẩy toàn bộ hàm `process()` sang một luồng ưu tiên thời gian thực riêng biệt, giao tiếp với luồng chính bất đồng bộ qua `MessagePort` (hoặc `SharedArrayBuffer`).
@@ -110,7 +110,7 @@ Bước nhảy đã công bố của DeepFilterNet là 10 ms, tương đương *
 
 Biến `sampleRate` luôn có sẵn trong phạm vi toàn cục của worklet, vì vậy hãy đọc trực tiếp giá trị này. Ở tần số 44,1 kHz, cùng khối 128 mẫu kéo dài $$128/44100\approx 2{,}90$$ ms, đồng thời hop 480 mẫu sẽ không còn tương ứng 10 ms cho một mô hình huấn luyện ở 48 kHz. Các API âm thanh native như CoreAudio, WASAPI và AAudio đều tuân theo nguyên tắc tương tự dưới những tên gọi khác: phải hoàn thành trước kỳ kế tiếp và chuyển sang bypass nếu mô hình xử lý bị trễ.
 
-## Khung giải thích: Dò tay chu kỳ ghép 128 mẫu và 480 mẫu (nên đọc chậm)
+## Giải thích: Dò tay chu kỳ ghép 128 mẫu và 480 mẫu
 
 Tại sao ta nói không bao giờ được giả định "cứ đúng 4 callback là chạy 1 hop"? Hãy tính **bội chung nhỏ nhất** của $$Q = 128 = 2^7$$ và $$H = 480 = 2^5 \cdot 3 \cdot 5$$:
 $$ \operatorname{LCM}(128, 480) = 2^7 \cdot 3 \cdot 5 = \mathbf{1920\text{ mẫu}}. $$

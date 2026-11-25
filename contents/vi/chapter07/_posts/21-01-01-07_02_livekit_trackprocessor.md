@@ -15,7 +15,7 @@ Hãy thử đặt mình vào vị trí người dùng đang vội vào một cu�
 
 SDK máy khách của LiveKit cung cấp giao diện **TrackProcessor** (móc biến đổi track) cho phép xử lý track âm thanh cục bộ trước khi mã hóa và phát hành (publish). Lớp `DeepFilterNoiseFilterProcessor` trong gói `deepfilternet3-noise-filter` **1.3.0** chính là cài đặt của giao diện đó cho DeepFilterNet3, đi kèm các phương thức `init`, `restart`, `suspend`, `resume`, `destroy` và phương thức tĩnh `isSupported()`. Bài học này trình bày vòng đời hoạt động, thứ tự gọi hàm khi tham gia phòng họp và cơ chế xử lý lỗi giúp cuộc gọi vẫn duy trì ổn định khi CDN hoặc worklet gặp sự cố.
 
-**Mạch bài học:** Nguyên tắc không chặn cuộc gọi vì tải mô hình → Bản đồ kiến thức nền (Giao diện TrackProcessor, Máy trạng thái bất đồng bộ & Suy giảm êm, Tách biệt Signaling và Media Pipeline) → Phân định trách nhiệm & Mã tích hợp chuẩn bản 1.3.0 → Máy trạng thái & xử lý backpressure → Khung giải thích so sánh dòng thời gian Blocking vs. Non-Blocking Join → Thiết bị di động, telemetry, Mini-lab và Bài tập.
+**Mạch bài học:** Nguyên tắc không chặn cuộc gọi vì tải mô hình → Kiến thức cần nhớ (Giao diện TrackProcessor, Máy trạng thái bất đồng bộ & Suy giảm êm, Tách biệt Signaling và Media Pipeline) → Phân định trách nhiệm & Mã tích hợp chuẩn bản 1.3.0 → Máy trạng thái & xử lý backpressure → Giải thích so sánh dòng thời gian Blocking vs. Non-Blocking Join → Thiết bị di động, telemetry, Mini-lab và Bài tập.
 
 ![Vòng đời TrackProcessor từ lúc dựng tới lúc publish trên track audio local của LiveKit]({{ site.imgurl }}/generated/livekit-trackprocessor.png)
 
@@ -25,7 +25,7 @@ SDK máy khách của LiveKit cung cấp giao diện **TrackProcessor** (móc bi
 
 Sau bài học này, bạn sẽ sắp xếp chính xác thứ tự gọi `new DeepFilterNoiseFilterProcessor`, `setProcessor`, `publishTrack` và `setSuppressionLevel`, chỉ ra được các phương thức vòng đời mà LiveKit tự động kích hoạt, và thiết kế luồng kết nối giữ `connect()` độc lập hoàn toàn với quá trình tải mô hình.
 
-## Bản đồ kiến thức nền: Ba trụ cột của mẫu tích hợp TrackProcessor
+## Kiến thức cần nhớ: Ba trụ cột của mẫu tích hợp TrackProcessor
 
 ### 1. Giao diện biến đổi dòng (TrackProcessor Interface)
 - **Là gì:** Một hợp đồng vòng đời chuẩn (`init`, `restart`, `destroy`) cho phép gắn một đồ thị xử lý Web Audio vào `LocalAudioTrack` mà không phá vỡ tầng truyền tải WebRTC bên dưới.
@@ -98,7 +98,7 @@ Created
 
 Khi rơi vào trạng thái `Failed`, ứng dụng vẫn cần phát hành âm thanh gốc (hoặc chỉ dùng APM trình duyệt) và hiển thị một thông báo dạng toast không chặn thao tác. Tuyệt đối không từ chối `connect()` chỉ vì gói mô hình bị lỗi 404; hãy tách bạch trạng thái “khử nhiễu sẵn sàng” khỏi trạng thái “đã kết nối phòng”.
 
-## Khung giải thích: So sánh dòng thời gian vào phòng (Blocking vs. Non-Blocking Join) (nên đọc chậm)
+## Giải thích: So sánh dòng thời gian vào phòng (Blocking vs. Non-Blocking Join)
 
 Giả sử trên mạng 4G lần đầu truy cập (chưa có cache):
 - Kết nối phòng LiveKit (`room.connect`): $$T_{\text{conn}} = 450\text{ ms}$$.

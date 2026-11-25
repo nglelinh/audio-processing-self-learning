@@ -19,11 +19,11 @@ This capstone lesson of Chapter 02 separates **algorithmic latency** (how late t
 
 *Figure. Each tick is a render quantum; RTF compares process() wall time to that audio duration, which is a different number from the STFT window’s algorithmic delay.*
 
-**Lesson roadmap:** Background Knowledge Map (algorithmic delay vs. RTF, the 9-stage audio pipeline, three failure regimes) → Parameter-knob tradeoff table & 48 kHz vs. 16 kHz numerics → Shipping scorecard & DeepFilterNet contract → Worked examples: Config A vs. Config B sweep and splitting a 40 ms budget → Deep-Dive Explanation (Read Slowly): 3 steps preventing the “two-clock confusion” in design reviews → Pitfalls, Mini-lab, Exercises & Videos.
+**Lesson roadmap:** Key ideas (algorithmic delay vs. RTF, the 9-stage audio pipeline, three failure regimes) → Parameter-knob tradeoff table & 48 kHz vs. 16 kHz numerics → Shipping scorecard & DeepFilterNet contract → Worked examples: Config A vs. Config B sweep and splitting a 40 ms budget → Explanation: 3 steps preventing the “two-clock confusion” in design reviews → Pitfalls, Mini-lab, Exercises & Videos.
 
 ---
 
-## Background Knowledge Map: Systems Engineering of Real-Time Audio Pipelines
+## Key ideas: Systems Engineering of Real-Time Audio Pipelines
 
 ### 1. Two Independent Clocks — Delay $$D_{\mathrm{alg}}$$ vs. Throughput $$\mathrm{RTF}$$
 - **Algorithmic latency $$D_{\mathrm{alg}}$$** is dictated by the signal graph (window buffering $$L/f_s$$ + model look-ahead + resampler group delay). Buying a faster CPU **never** reduces $$D_{\mathrm{alg}}$$!
@@ -154,7 +154,7 @@ A 40 ms algorithmic budget that already spends 20 ms on the window cannot also a
 
 ---
 
-### Deep-Dive Explanation: Keeping the Two Clocks Separate in Design Reviews (Read Slowly)
+### Explanation: Keeping the Two Clocks Separate in Design Reviews
 
 #### Step 1: Compute $$D_{\mathrm{alg}}$$ purely from the signal graph
 Sum every structural delay: $$T_{\text{win}} = L/f_s$$ (20 ms for DeepFilterNet 960 @ 48 kHz) + $$l_{\text{look-ahead}} \cdot T_{\text{hop}}$$ (e.g., 20 ms for 2 frames) + resampler group delay (0 ms if already at 48 kHz). Notice that wall-clock CPU time does **not** even appear in this sum!

@@ -19,11 +19,11 @@ Whether you run classical Wiener filtering or **DeepFilterNet3** at 48 kHz full-
 
 *Figure. Each colored frame is one STFT column; ISTFT overlap-adds the inverse frames, and the bottom sum must be constant or the sine wave on top comes back with a hop-rate envelope.*
 
-**Lesson roadmap:** Background Knowledge Map (the STFT time–frequency grid, magnitude masks vs. complex deep filtering, offline centered vs. causal streaming STFT) → Forward STFT & Inverse ISTFT equations → Published DeepFilterNet 48 kHz grid → Worked examples: computing exact tensor shapes for 16 kHz / 512 and 48 kHz / 960 (481 bins) and phase-reuse limits → Deep-Dive Explanation (Read Slowly): 3 steps verifying perfect reconstruction before adding a model → Pitfalls, Mini-lab, Exercises & Videos.
+**Lesson roadmap:** Key ideas (the STFT time–frequency grid, magnitude masks vs. complex deep filtering, offline centered vs. causal streaming STFT) → Forward STFT & Inverse ISTFT equations → Published DeepFilterNet 48 kHz grid → Worked examples: computing exact tensor shapes for 16 kHz / 512 and 48 kHz / 960 (481 bins) and phase-reuse limits → Explanation: 3 steps verifying perfect reconstruction before adding a model → Pitfalls, Mini-lab, Exercises & Videos.
 
 ---
 
-## Background Knowledge Map: Time–Frequency Grids and Speech Enhancement Front-Ends
+## Key ideas: Time–Frequency Grids and Speech Enhancement Front-Ends
 
 ### 1. The STFT as a 2D Complex Matrix $$X(\ell, k)$$
 Sliding a length-$$L$$ analysis window across a waveform in steps of $$R$$ and taking an $$N$$-point `rfft` produces a complex matrix of shape $$[N/2 + 1,\; T_{\text{frames}}]$$. Each column $$\ell$$ is a snapshot of the local spectrum; each row $$k$$ tracks how one frequency bin evolves over time.
@@ -140,7 +140,7 @@ Low-SNR bin: noisy phase ≈ random. Magnitude mask cleans energy but residual s
 
 ---
 
-### Deep-Dive Explanation: The 3-Step STFT/ISTFT Contract for Neural Speech Enhancement (Read Slowly)
+### Explanation: The 3-Step STFT/ISTFT Contract for Neural Speech Enhancement
 
 #### Step 1: Lock the five grid numbers from the model card
 Before writing a single line of inference code, copy $$(f_s,\; L,\; N,\; R,\; w_{\mathrm{ana}}/w_{\mathrm{syn}})$$ verbatim from the training config. For DeepFilterNet full-band: $$f_s = 48{,}000$$, $$L = N = 960$$, $$R = 480$$, giving $$481$$ real-FFT bins spaced by $$50\,\mathrm{Hz}$$ and $$100$$ frames per second.

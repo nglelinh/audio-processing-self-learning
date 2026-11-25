@@ -15,7 +15,7 @@ Năm 2017, giữa làn sóng mạng học sâu hàng chục triệu tham số đ
 
 **RNNoise** (Jean-Marc Valin, arXiv:1709.08243; [xiph/rnnoise](https://github.com/xiph/rnnoise)) kết hợp tầng tiền xử lý theo băng Bark, một bộ lọc lược cao độ (pitch comb filter) và một mạng GRU nhỏ dự đoán 22 hệ số độ lợi. Dù không đạt mức điểm Voicebank+Demand như DeepFilterNet3 (PESQ 3,17 trong arXiv:2305.08227), RNNoise minh họa trọn vẹn cùng một triết lý kiến trúc — ước lượng đường bao thô kết hợp tầng xử lý họa âm — với các con số đủ nhỏ để bạn kiểm chứng trực tiếp bằng tay.
 
-**Mạch bài học:** Triết lý lai DSP + Học sâu của Valin → Bản đồ kiến thức nền (Thang Bark & cửa sổ Vorbis, Bộ lọc lược cao độ, Hàm mất mát nén mũ & làm mượt độ lợi) → 22 băng Bark & 42 đặc trưng đầu vào → Kiến trúc GRU 215 đơn vị & ngân sách 40 Mflop/s → Khung giải thích tính tay trọn vẹn độ lợi $$g_b$$, hệ số lược $$\alpha_b$$, hàm mất mát và 3 bước làm mượt → So sánh DF3, Mini-lab và Bài tập.
+**Mạch bài học:** Triết lý lai DSP + Học sâu của Valin → Kiến thức cần nhớ (Thang Bark & cửa sổ Vorbis, Bộ lọc lược cao độ, Hàm mất mát nén mũ & làm mượt độ lợi) → 22 băng Bark & 42 đặc trưng đầu vào → Kiến trúc GRU 215 đơn vị & ngân sách 40 Mflop/s → Giải thích tính tay trọn vẹn độ lợi $$g_b$$, hệ số lược $$\alpha_b$$, hàm mất mát và 3 bước làm mượt → So sánh DF3, Mini-lab và Bài tập.
 
 ![Đường ERB của DeepFilterNet, dùng để đối chiếu 22 băng Bark và gain GRU của RNNoise]({{ site.imgurl }}/generated/deepfilternet-erb.png)
 
@@ -25,7 +25,7 @@ Năm 2017, giữa làn sóng mạng học sâu hàng chục triệu tham số đ
 
 Sau bài học này, bạn sẽ tính được độ lợi băng tần của RNNoise từ mặt nạ IRM, liệt kê đúng 42 đặc trưng đầu vào cùng kiến trúc GRU 215 đơn vị trong bài báo, đối chiếu pipeline này với 32 băng ERB và bộ lọc phức 5 tap của DeepFilterNet, đồng thời rút ra các thực hành kỹ thuật hệ thống (giao diện khung, làm mượt độ lợi, tối ưu trọng số vừa bộ nhớ đệm) có thể áp dụng cho AudioWorklet ngay cả khi triển khai DF3.
 
-## Bản đồ kiến thức nền: Kiến trúc lai DSP + Học sâu của RNNoise gồm những trụ cột nào?
+## Kiến thức cần nhớ: Kiến trúc lai DSP + Học sâu của RNNoise gồm những trụ cột nào?
 
 ### 1. Biểu diễn theo băng cảm thụ (Bark-scale Bands) và cửa sổ Princen–Bradley
 - **Là gì:** Thay vì dự đoán mặt nạ cho cả 481 bin DFT ở 48 kHz, RNNoise gom phổ thành **22 băng Bark** bằng các bộ lọc tam giác chồng lấp, trên khung 20 ms dùng cửa sổ Vorbis thỏa mãn điều kiện tái tạo hoàn hảo $$w^2(n) + w^2(n + N/2) = 1$$.
@@ -99,7 +99,7 @@ $$
 
 trong đó $$\lambda=0{,}6$$ ở hop 10 ms tương đương thời gian tắt (reverberation time) khoảng **135 ms**. Giảm $$\lambda$$ làm âm thanh nghe khô hơn, còn $$\lambda=1$$ khiến độ lợi không bao giờ hạ xuống. Bộ giữ mức một cực này chính là kỹ thuật chống nhiễu nhạc kế thừa từ tư duy ngưỡng sàn phổ ở Chương 03.
 
-## Khung giải thích: Tính tay trọn vẹn một băng Bark của RNNoise (nên đọc chậm)
+## Giải thích: Tính tay trọn vẹn một băng Bark của RNNoise
 
 Giả sử tại một băng tần hữu thanh (ví dụ băng 300–500 Hz), năng lượng tiếng nói sạch là $$E_s(b) = 16$$ và năng lượng nhiễu không tương quan là $$E_n(b) = 9$$, nên năng lượng tín hiệu hỗn hợp là $$E_x(b) = 16 + 9 = 25$$. Tương quan cao độ đo được ở băng này là $$p_b = 0{,}6$$.
 

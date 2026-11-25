@@ -19,11 +19,11 @@ Where spectral subtraction acts like a blunt hatchet—“subtract the floor, cl
 
 This single formula is the conceptual bridge from 1940s statistical estimation to 2020s neural speech enhancement: an Ideal Ratio Mask (IRM) in deep learning is *mathematically identical* to the Wiener gain, and DeepFilterNet’s ERB gains are its learned, data-driven descendants. This lesson derives $$G = \xi / (\xi + 1)$$, distinguishes a priori SNR $$\xi$$ from a posteriori SNR $$\gamma$$, and walks through Ephraim–Malah’s celebrated decision-directed tracker.
 
-**Lesson roadmap:** Background Knowledge Map (MMSE estimation, a priori vs. a posteriori SNR, decision-directed smoothing) → Wiener formula, Ephraim–Malah recursion & soft-mask bridge → Worked example: evaluating $$G$$ at $$-10, 0, +10\,\mathrm{dB}$$ and tracing one decision-directed frame by hand → Deep-Dive Explanation (Read Slowly): 3 steps deriving $$G = \xi / (\xi + 1)$$ from mean-squared error → Tuning checklist, Pitfalls, Mini-lab, Exercises & Videos.
+**Lesson roadmap:** Key ideas (MMSE estimation, a priori vs. a posteriori SNR, decision-directed smoothing) → Wiener formula, Ephraim–Malah recursion & soft-mask bridge → Worked example: evaluating $$G$$ at $$-10, 0, +10\,\mathrm{dB}$$ and tracing one decision-directed frame by hand → Explanation: 3 steps deriving $$G = \xi / (\xi + 1)$$ from mean-squared error → Tuning checklist, Pitfalls, Mini-lab, Exercises & Videos.
 
 ---
 
-## Background Knowledge Map: Minimum Mean-Square Error (MMSE) Speech Estimation
+## Key ideas: Minimum Mean-Square Error (MMSE) Speech Estimation
 
 ### 1. From Heuristic Subtraction to Optimal MMSE Gain
 Instead of guessing subtraction constants $$\alpha, \beta$$, Norbert Wiener asked a clean optimization question: *which scalar multiplier $$G$$ minimizes the expected squared error $$\mathbb{E}[\vert S - G Y\vert^2]$$?* Under uncorrelated speech and noise, the exact answer is the ratio of speech power to total power: $$G = P_S / (P_S + P_N) = \xi / (\xi + 1)$$.
@@ -134,7 +134,7 @@ for each frame ell:
 
 ---
 
-### Deep-Dive Explanation: Deriving $$G = \xi/(\xi+1)$$ in Three Clean Lines (Read Slowly)
+### Explanation: Deriving $$G = \xi/(\xi+1)$$ in Three Clean Lines
 
 #### Step 1: Expand the mean-squared error for a real gain $$G$$
 We want to minimize $$J(G) = \mathbb{E}[\vert S - G(S+N)\vert^2] = \mathbb{E}[\vert(1-G)S - GN\vert^2]$$. Since clean speech $$S$$ and noise $$N$$ are uncorrelated ($$\mathbb{E}[S N^*] = 0$$), the cross-terms vanish identically:

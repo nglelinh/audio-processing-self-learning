@@ -23,7 +23,7 @@ This lecture turns raw `.onnx` and `.wasm` binaries into disciplined, versioned 
 
 ---
 
-## Background Knowledge Map: Four Engineering Pillars of ML Artifact Packaging
+## Key ideas: Four Engineering Pillars of ML Artifact Packaging
 
 Shipping ML weights reliably to edge devices requires four software-supply-chain practices:
 
@@ -147,7 +147,7 @@ Suppose a 1.2M-parameter streaming denoiser is packaged three ways and downloade
 
 Add a `0.45 MB` Brotli-compressed WASM SIMD runtime, and the entire INT8 package downloads in $$(0.85 + 0.45) / 1.25 = \mathbf{1.04	ext{ s}}$$ on first visit—and **0 ms network wait** on every subsequent call once cached!
 
-### Deep-Dive Explanation: Four Rules for Bulletproof Model Packaging (Read Slowly)
+### Explanation: Four Rules for Bulletproof Model Packaging
 
 1. **Never overwrite a live model URL in place:** Always publish immutable versioned URLs (`v2.1.0/...`) so an in-flight call never downloads half of v2.0 and half of v2.1.
 2. **Validate the manifest schema before calling `InferenceSession.create`:** Verify `sample_rate`, `hop_size`, and `sha256` at load time so corrupted downloads fall back cleanly to passthrough audio instead of crashing the call.

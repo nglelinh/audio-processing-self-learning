@@ -22,7 +22,7 @@ Nếu bạn tải một tập podcast lên phần mềm xử lý âm thanh để
 
 ---
 
-## Bản đồ kiến thức nền: Bốn ràng buộc kỹ thuật tách biệt Thời gian thực với Ngoại tuyến là gì?
+## Kiến thức cần nhớ: Bốn ràng buộc kỹ thuật tách biệt Thời gian thực với Ngoại tuyến là gì?
 
 ### 1. Tính nhân quả (Causality) và Cửa sổ nhìn trước (Look-Ahead)
 Bộ lọc ngoại tuyến dùng **tích chập hai phía** và mạng hai chiều (Bi-LSTM / Transformer toàn cục) nhìn thấy cả quá khứ lẫn tương lai. Bộ lọc thời gian thực phải dùng **tích chập nhân quả** và mạng một chiều (GRU / Uni-LSTM / Causal Conv) với bộ đệm trạng thái ẩn (hidden state) truyền từ khung $$t-1$$ sang khung $$t$$, chỉ được nhìn trước tối đa 1–2 khung (10–20 ms).
@@ -35,7 +35,7 @@ Trong chế độ streaming, thuật toán không được cấp phát bộ nh�
 
 ---
 
-### Khung giải thích: tự tay lập bảng ngân sách độ trễ cho một cuộc gọi WebRTC 150 ms (nên đọc chậm)
+### Giải thích: tự tay lập bảng ngân sách độ trễ cho một cuộc gọi WebRTC 150 ms
 
 Hãy cộng từng thành phần độ trễ trên một đường truyền thoại thực tế (một chiều) để thấy tại sao từng khung 10 ms lại quý giá đến thế:
 

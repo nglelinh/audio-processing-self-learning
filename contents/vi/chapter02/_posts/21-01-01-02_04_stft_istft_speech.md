@@ -18,7 +18,7 @@ Nếu biến đổi Fourier thông thường giống như việc ép cả một 
 
 ---
 
-## Bản đồ kiến thức nền: Cặp biến đổi STFT / ISTFT đứng trên ba trụ cột nào?
+## Kiến thức cần nhớ: Cặp biến đổi STFT / ISTFT đứng trên ba trụ cột nào?
 
 ### 1. Biểu diễn Thời gian – Tần số phức $$X(m, k)$$
 STFT áp dụng cửa sổ phân tích $$w_a[n]$$ rồi chạy FFT trên từng khung trượt cách nhau $$H$$ mẫu:
@@ -37,7 +37,7 @@ Một tinh tế toán học rất quan trọng: không phải mọi ma trận s�
 
 ---
 
-### Khung giải thích: tự tay kiểm tra cửa sổ căn Hann (sqrt-Hann) trong WOLA với $$N = 4,\ H = 2$$ (nên đọc chậm)
+### Giải thích: tự tay kiểm tra cửa sổ căn Hann (sqrt-Hann) trong WOLA với $$N = 4,\ H = 2$$
 
 Giả sử hệ thống dùng **cùng một cửa sổ** $$w_a[n] = w_s[n] = \sqrt{w_{\text{Hann}}[n]}$$ ở cả đầu phân tích STFT và đầu tổng hợp ISTFT (tại $$N = 4,\ H = 2$$):
 

@@ -18,7 +18,7 @@ Muốn lọc bỏ tiếng ù trầm dưới 80 Hz trong một đoạn ghi âm, b
 
 ---
 
-## Bản đồ kiến thức nền: Lọc Miền thời gian và Miền tần số đứng trên ba trụ cột nào?
+## Kiến thức cần nhớ: Lọc Miền thời gian và Miền tần số đứng trên ba trụ cột nào?
 
 ### 1. Hệ thống LTI và Đáp ứng xung (FIR vs. IIR)
 Trong miền thời gian, một bộ lọc tuyến tính bất biến theo thời gian (LTI) được đặc trưng bởi đáp ứng xung $$h[n]$$ qua phép tích chập $$y[n] = \sum_k h[k]\,x[n-k]$$:
@@ -33,7 +33,7 @@ Tiếng nói và nhiễu thay đổi theo từng khung 10 ms, nên hệ thống 
 
 ---
 
-### Khung giải thích: tự tay kiểm tra bộ lọc thông thấp FIR 3 điểm ở cả hai miền (nên đọc chậm)
+### Giải thích: tự tay kiểm tra bộ lọc thông thấp FIR 3 điểm ở cả hai miền
 
 Xét bộ lọc trung bình trượt FIR 3 điểm cực đơn giản:
 

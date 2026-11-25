@@ -15,7 +15,7 @@ Trong thị giác máy tính, lượng tử hóa một mạng phân loại ảnh
 
 **Lượng tử hóa (quantization)** giúp thu nhỏ dung lượng trọng số và thường đẩy nhanh tốc độ suy luận của mô hình tăng cường giọng nói. Điều này ảnh hưởng trực tiếp tới dung lượng tải xuống của bản WASM (WebAssembly — mã nhị phân chạy trong trình duyệt) và hệ số thời gian thực trên CPU. Tuy nhiên, lượng tử hóa không cẩn thận có thể làm méo giọng nói hoặc gây trôi trạng thái hồi tiếp. Rủi ro lớn nhất không nằm ở các trọng số có giá trị lớn mà nằm ở các hệ số khuếch đại (gain) gần 0, vì chúng nhân trực tiếp lên từng bin tần số. Bài học này trình bày lượng tử hóa INT8 ở góc độ kỹ thuật triển khai, cách hiệu chuẩn trên dữ liệu giọng nói thay vì ảnh, kèm một bài lab số học tự kiểm chứng.
 
-**Mạch bài học:** Vì sao tiếng nói nhạy hơn ảnh khi nén xuống INT8 → Bản đồ kiến thức nền (Ánh xạ tuyến tính INT8, Độ nhạy tương đối theo thang dB gần 0, Hiệu chuẩn theo miền giọng nói & giữ lớp nhạy cảm ở `float32`) → Công thức lượng tử hóa đối xứng & bảng 4 chế độ (Dynamic, Static PTQ, QAT, Weight-only) → Khung giải thích tính tay sai số theo dB trên 4 bin gain và so sánh tỉ lệ per-tensor vs. per-channel → Cổng kiểm duyệt phát hành, Mini-lab và Bài tập.
+**Mạch bài học:** Vì sao tiếng nói nhạy hơn ảnh khi nén xuống INT8 → Kiến thức cần nhớ (Ánh xạ tuyến tính INT8, Độ nhạy tương đối theo thang dB gần 0, Hiệu chuẩn theo miền giọng nói & giữ lớp nhạy cảm ở `float32`) → Công thức lượng tử hóa đối xứng & bảng 4 chế độ (Dynamic, Static PTQ, QAT, Weight-only) → Giải thích tính tay sai số theo dB trên 4 bin gain và so sánh tỉ lệ per-tensor vs. per-channel → Cổng kiểm duyệt phát hành, Mini-lab và Bài tập.
 
 ![Trọng số đã lượng tử hóa được đóng vào kho mô hình trước khi trình duyệt tải WASM]({{ site.imgurl }}/generated/onnx-wasm-path.png)
 
@@ -25,7 +25,7 @@ Trong thị giác máy tính, lượng tử hóa một mạng phân loại ảnh
 
 Sau bài học này, bạn sẽ phân biệt được lượng tử hóa INT8 động và tĩnh, tính được hệ số tỉ lệ đối xứng cùng sai số tuyệt đối lớn nhất trên một véctơ gain, giải thích được vì sao các bin có gain gần 0 gây suy giảm chất lượng nghe rõ rệt nhất, và thiết kế được quy trình kiểm duyệt kết hợp nghe thử A/B với SI-SDR trước khi phát hành trọng số lượng tử hóa.
 
-## Bản đồ kiến thức nền: Toán học và cảm thụ âm thanh phía sau lượng tử hóa INT8
+## Kiến thức cần nhớ: Toán học và cảm thụ âm thanh phía sau lượng tử hóa INT8
 
 ### 1. Lượng tử hóa tuyến tính (Uniform Affine / Symmetric Quantization)
 - **Là gì:** Nén số thực 32-bit (`float32`, 4 byte) xuống số nguyên 8-bit (`int8`, 1 byte, 255 mức đối xứng trong $$[-127, 127]$$) bằng phép chia cho bước lượng tử $$s$$ và làm tròn: $$q = \mathrm{clip}(\mathrm{round}(g / s), -128, 127)$$.
@@ -71,7 +71,7 @@ Giả sử giá trị gain lớn nhất bằng $$1$$. Khi đó $$s = 1/127 \appr
 
 Trong khử nhiễu giọng nói, những giá trị gain nhỏ đó đại diện cho các bin bị nhiễu lấn át và các họa âm yếu. Ép một họa âm về mã $$0$$ sẽ khiến nguyên âm nghe mỏng và khô; ngược lại, làm tròn một bin gần im lặng lên 1 mức lượng tử sẽ làm rò rỉ một nền âm đơn điệu (tonal floor) — nguyên nhân phổ biến gây nhiễu nhạc (musical noise). Sai số trọng số trong lớp tích chập còn được các lớp phía sau làm mượt bớt, nhưng sai số ở đầu ra gain lại nhân thẳng vào các bin STFT rồi được cộng dồn ở bước overlap-add. Vì vậy, cần hiệu chuẩn cẩn thận và nghe kiểm tra trực tiếp đầu ra gain, kể cả khi giữ riêng nhánh này ở `float32`.
 
-## Khung giải thích: Tính tay sai số lượng tử hóa theo thang dB và bẫy Per-Tensor (nên đọc chậm)
+## Giải thích: Tính tay sai số lượng tử hóa theo thang dB và bẫy Per-Tensor
 
 ### Phép tính 1: Quy đổi sai số lượng tử hóa INT8 sang decibel trên 4 bin mẫu
 Với $$s = 1/127 \approx 0{,}007874$$, hãy lập bảng kiểm tra từng phần tử của véctơ $$g = [1{,}0,\; 0{,}5,\; 0{,}02,\; 0{,}004]$$ và tính sai số cảm thụ $$\Delta\text{dB} = 20\log_{10}(\hat{g}/g)$$:

@@ -19,11 +19,11 @@ Every WebRTC track and every DeepFilterNet forward pass assumes a specific sampl
 
 *Figure. Sampling repeats the spectrum every $$f_s$$ hertz; overlap of those copies is aliasing, and it is not undone by a neural suppressor.*
 
-**Lesson roadmap:** Background Knowledge Map (impulse-train sampling, spectral replicas & aliasing, normalized digital frequency $$\omega$$) → Nyquist criterion, product rates (8/16/48 kHz), and anti-alias filters → Worked examples: 7 kHz cosine sampled at 8 kHz collapsing identically to 1 kHz, broadband fold, and 20 ms frame sizes across rates → Deep-Dive Explanation (Read Slowly): 3 steps explaining why aliasing is irreversible and how decimation must be ordered → Pitfalls, Mini-lab, Exercises & Videos.
+**Lesson roadmap:** Key ideas (impulse-train sampling, spectral replicas & aliasing, normalized digital frequency $$\omega$$) → Nyquist criterion, product rates (8/16/48 kHz), and anti-alias filters → Worked examples: 7 kHz cosine sampled at 8 kHz collapsing identically to 1 kHz, broadband fold, and 20 ms frame sizes across rates → Explanation: 3 steps explaining why aliasing is irreversible and how decimation must be ordered → Pitfalls, Mini-lab, Exercises & Videos.
 
 ---
 
-## Background Knowledge Map: Sampling Theory and Multirate Audio
+## Key ideas: Sampling Theory and Multirate Audio
 
 ### 1. Multiplying in Time = Replicating in Frequency
 Ideal sampling multiplies a continuous waveform $$x_c(t)$$ by a periodic impulse train spaced by $$T = 1/f_s$$. Because the Fourier transform of a pulse train is another pulse train spaced by $$f_s$$ Hz, sampling **copies the original spectrum every $$f_s$$ Hz** across the entire frequency axis.
@@ -154,7 +154,7 @@ If compute scales roughly with samples/s (FFT + hop rate), jumping 16→48 kHz w
 
 ---
 
-### Deep-Dive Explanation: Why Aliasing Cannot Be Filtered Out After Sampling (Read Slowly)
+### Explanation: Why Aliasing Cannot Be Filtered Out After Sampling
 
 #### Step 1: Check the exact sample values at $$n = 0, 1, 2, 3$$
 Sample both $$x_1(t) = \cos(2\pi \cdot 7000\,t)$$ and $$x_2(t) = \cos(2\pi \cdot 1000\,t)$$ at $$f_s = 8000\,\mathrm{Hz}$$:

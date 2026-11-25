@@ -15,7 +15,7 @@ Nếu chỉ nhìn qua đoạn code 10 dòng trên README — `npm install deepfi
 
 Gói npm `deepfilternet3-noise-filter` **1.3.0** là công cụ đưa DeepFilterNet3 vào các ứng dụng LiveKit và Web Audio, chứ không phải toàn bộ nội dung cốt lõi của khóa học. Bài học này ánh xạ từng phương thức công khai của gói về đúng các khái niệm nền tảng như khung xử lý (frame), hệ số khuếch đại (gain), WASM, CDN và TrackProcessor của LiveKit, để dự án cuối khóa (capstone) tập trung cải tiến một kỹ thuật đo đạc được mà không cần can thiệp sửa đổi kho mã nguồn sản phẩm.
 
-**Mạch bài học:** Nhìn xuyên qua lớp wrapper npm → Bản đồ kiến thức nền (Kiến trúc 3 tầng Core/Processor/Assets, Phân biệt Tham số sản phẩm vs. Đại lượng DSP, Quyết định Cấu hình vs. Bọc ngoài vs. Fork) → Giao diện API công khai & bảng ánh xạ kiến thức Chương 02–06 → Khung giải thích theo dõi luồng gọi hàm qua 4 thao tác người dùng và phân tích thang `noiseReductionLevel` 0–100 → Hướng mở rộng capstone, Mini-lab và Bài tập.
+**Mạch bài học:** Nhìn xuyên qua lớp wrapper npm → Kiến thức cần nhớ (Kiến trúc 3 tầng Core/Processor/Assets, Phân biệt Tham số sản phẩm vs. Đại lượng DSP, Quyết định Cấu hình vs. Bọc ngoài vs. Fork) → Giao diện API công khai & bảng ánh xạ kiến thức Chương 02–06 → Giải thích theo dõi luồng gọi hàm qua 4 thao tác người dùng và phân tích thang `noiseReductionLevel` 0–100 → Hướng mở rộng capstone, Mini-lab và Bài tập.
 
 ![API processor công khai đứng trước đường publish TrackProcessor của LiveKit]({{ site.imgurl }}/generated/livekit-trackprocessor.png)
 
@@ -25,7 +25,7 @@ Gói npm `deepfilternet3-noise-filter` **1.3.0** là công cụ đưa DeepFilter
 
 Sau bài học này, bạn sẽ ánh xạ được từng lời gọi API công khai với kiến thức tương ứng trong khóa học, quyết định được khi nào chỉ cần cấu hình và khi nào bắt buộc phải fork kèm lập luận bảo trì rõ ràng, đồng thời xác định được các hướng mở rộng mà không cần chỉnh sửa mã nguồn gốc của gói.
 
-## Bản đồ kiến thức nền: Giải phẫu kiến trúc ba tầng của một gói khử nhiễu web
+## Kiến thức cần nhớ: Giải phẫu kiến trúc ba tầng của một gói khử nhiễu web
 
 ### 1. Kiến trúc phân tầng: Core (`DeepFilterNet3Core`) vs. Adapter (`DeepFilterNoiseFilterProcessor`) vs. Assets
 - **Là gì:** Tầng lõi `DeepFilterNet3Core` quản lý trực tiếp `AudioContext`, `WebAssembly.compile` và `AudioWorkletNode`; tầng adapter `DeepFilterNoiseFilterProcessor` bọc lớp lõi đó theo đúng giao diện `TrackProcessor` của LiveKit; còn tầng tài nguyên (`df_bg.wasm`, `DeepFilterNet3_onnx.tar.gz`) nằm tách biệt trên CDN.
@@ -110,7 +110,7 @@ Gói không cung cấp phương thức công khai để đổi tên tensor đầ
 
 Ngoài ra, phần mở rộng tùy chọn phía native sử dụng API xử lý khung bằng Rust (`df-core`) sẽ được giới thiệu ở Chương 09; không để phần mở rộng này cản trở tiến độ dự án cuối khóa trên trình duyệt.
 
-## Khung giải thích: Dò luồng gọi hàm qua 4 thao tác người dùng và ý nghĩa toán học của mức khử 0–100 (nên đọc chậm)
+## Giải thích: Dò luồng gọi hàm qua 4 thao tác người dùng và ý nghĩa toán học của mức khử 0–100
 
 ### Phép dò 1: Ai gọi ai trong 4 sự kiện phòng họp?
 Hãy theo dõi chính xác chuỗi cuộc gọi đi qua ba lớp (`LiveKit` → `Processor` → `Core` → `AudioWorklet`) để thấy vì sao không cần phát hành lại track khi điều chỉnh thông số:

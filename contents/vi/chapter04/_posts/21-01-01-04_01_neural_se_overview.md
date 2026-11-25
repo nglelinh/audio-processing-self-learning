@@ -19,7 +19,7 @@ Tăng cường tiếng nói bằng mạng nơ-ron thay thế các công thức �
 
 Sau ba chương đi từ biến đổi Fourier đến trừ phổ, Wiener và Kalman, ta nhận ra một giới hạn chung của trường phái cổ điển: chúng đều phải đặt ra các giả định thống kê đơn giản (nhiễu dừng, phân bố Gauss, pha nhiễu giữ nguyên) để viết được công thức đóng. Nhưng thế giới thực lại đầy rẫy tiếng gõ phím cơ, tiếng chó sủa, tiếng xe cộ biến đổi từng phần trăm giây — những thứ không vừa với bất kỳ phương trình giải tích gọn gàng nào. **Tăng cường tiếng nói bằng mạng nơ-ron (Neural Speech Enhancement)** lật ngược cách tiếp cận: thay vì tự viết công thức độ lợi, ta cho mạng nơ-ron nghe hàng nghìn giờ cặp âm thanh *nhiễu – sạch* để nó tự học cấu trúc họa âm phức tạp của giọng người và tách nhiễu ngay cả trong những tình huống phi dừng khắc nghiệt nhất.
 
-## Bản đồ kiến thức nền: Ba hệ hình học sâu cho âm thanh và bài toán pha
+## Kiến thức cần nhớ: Ba hệ hình học sâu cho âm thanh và bài toán pha
 
 ### 1. Masking, Mapping và Generative — ba cách đặt đầu ra của mạng
 - **Masking (Tạo mặt nạ):** mạng dự đoán một tỷ lệ (thực như IRM hoặc phức như CRM) rồi nhân với tín hiệu đầu vào $$Y$$. Vì mặt nạ bị chặn trong phạm vi nhỏ và tận dụng sẵn cấu trúc của $$Y$$, mô hình học nhanh, nhẹ và ít bị "bịa" giọng lạ.
@@ -32,7 +32,7 @@ Nếu huấn luyện mạng chỉ bằng sai số bình phương (MSE) trên bi�
 ### 3. Mặt nạ thực (IRM) bất lực trước sai số pha — lý do mặt nạ phức (CRM) ra đời
 Ở SNR cao, pha nhiễu $$\angle Y$$ gần với pha sạch $$\angle S$$. Nhưng khi nhiễu mạnh bằng hoặc lớn hơn tiếng nói ($$\text{SNR} \le 0\text{ dB}$$), vector nhiễu $$N$$ kéo lệch góc pha của $$Y = S + N$$ đi hàng chục độ. Một mặt nạ thực chỉ có thể kéo dài hoặc rút ngắn vector $$Y$$ dọc theo đúng hướng sai đó, không bao giờ xoay nó trở về đúng góc của $$S$$ được!
 
-### Khung giải thích: Cầm tay so sánh Mặt nạ thực (IRM) và Mặt nạ phức (CRM) trên một bin STFT nhiễu (nên đọc chậm)
+### Giải thích: Cầm tay so sánh Mặt nạ thực (IRM) và Mặt nạ phức (CRM) trên một bin STFT nhiễu
 
 Xét đúng một ô thời gian–tần số STFT nơi tiếng nói sạch và nhiễu là hai số phức:
 - Tiếng nói sạch: $$S = 3 + 4j$$ (biên độ $$\vert S \vert = \sqrt{3^2 + 4^2} = 5$$, pha $$\approx 53{,}1^\circ$$).

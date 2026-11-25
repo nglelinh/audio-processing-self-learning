@@ -23,7 +23,7 @@ This lecture traces the exact pointer arithmetic of a power-of-two ring buffer, 
 
 ---
 
-## Background Knowledge Map: Lock-Free SPSC Queues and Jitter Absorption
+## Key ideas: Lock-Free SPSC Queues and Jitter Absorption
 
 Four systems principles govern audio ring buffers:
 
@@ -181,7 +181,7 @@ Now scale up to our **48 kHz AudioWorklet + 480-sample Worker**:
 - Input ring buffer collects 128-sample chunks until `avail >= 480` (takes up to 4 callbacks = 512 samples).
 - Output ring buffer should be pre-filled with at least `480` samples (10 ms) so that while the Worker takes up to 10 ms to denoise the frame, the `AudioWorklet` never sees `avail < 128`! Choosing buffer capacity $$C = 2048$$ samples (42.7 ms) leaves generous room against transient OS jitter.
 
-### Deep-Dive Explanation: Four Rules for Bulletproof Audio Ring Buffers (Read Slowly)
+### Explanation: Four Rules for Bulletproof Audio Ring Buffers
 
 1. **Always check `avail` / `free` *before* touching memory:** Never partially overwrite or read uninitialized slots; either push/pop the whole chunk or record an explicit overrun/underrun counter for telemetry.
 2. **Use `Atomics.store` AFTER writing samples, and `Atomics.load` BEFORE reading samples:** This acquire–release pair guarantees the consumer never reads half-written float samples due to CPU instruction reordering.

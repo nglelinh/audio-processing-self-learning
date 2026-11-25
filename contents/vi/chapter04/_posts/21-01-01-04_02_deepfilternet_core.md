@@ -19,7 +19,7 @@ draft: false
 
 Nếu bạn muốn chạy tăng cường tiếng nói toàn băng $$48\text{ kHz}$$ theo thời gian thực ngay trên một nhân CPU laptop hay bên trong trình duyệt, bài toán khó nhất không phải là "làm sao đạt điểm chất lượng cao nhất", mà là **phân bổ ngân sách phép tính vào đúng chỗ tai người cần nhất**. Áp một mạng nơ-ron phức dày đặc lên toàn bộ $$481$$ bin tần số vừa tốn kém vừa lãng phí — bởi trên $$5\text{ kHz}$$, giọng người chủ yếu là nhiễu xát không tuần hoàn (như chữ "s", "f"), nơi tai người chỉ quan tâm đến đường bao năng lượng thô chứ không phân biệt nổi từng họa âm chi tiết. **DeepFilterNet** (Schröter và cộng sự, ICASSP 2022) tỏa sáng chính nhờ một thiết kế hai tầng bám sát sinh lý học thính giác: rẻ và thô cho toàn băng, sâu và phức cho vùng họa âm tần số thấp.
 
-## Bản đồ kiến thức nền: Thang thính giác ERB và bộ lọc phức đa khung (Deep Filtering)
+## Kiến thức cần nhớ: Thang thính giác ERB và bộ lọc phức đa khung (Deep Filtering)
 
 ### 1. Thang ERB (Equivalent Rectangular Bandwidth) — nén 481 bin về 32 băng thính giác
 Ốc tai người không phân chia tần số đều nhau theo tuyến tính (Hz), mà có độ phân giải mịn ở tần số thấp và thô dần theo kiểu logarit ở tần số cao. Thang **ERB** mô hình hóa chính xác độ rộng bộ lọc thính giác đó: thay vì dự đoán $$481$$ độ lợi riêng lẻ, tầng 1 của DeepFilterNet chỉ dự đoán đúng **32 độ lợi thực** trên 32 băng ERB, sau đó nội suy ngược lên toàn bộ 481 bin. Chỉ riêng bước này đã dọn sạch phần lớn nhiễu băng rộng với chi phí tính toán cực nhỏ.
@@ -32,7 +32,7 @@ với $$l$$ là số khung nhìn trước (*look-ahead*, bằng $$2$$ khung tron
 ### 3. Tính nhân quả và nguồn gốc chính xác của độ trễ thuật toán 40 ms
 Trong xử lý thời gian thực, độ trễ thuật toán không phải là thời gian chạy CPU (RTF), mà là thời gian chờ tối thiểu do cấu trúc cửa sổ và nhìn trước quy định. Với STFT cửa sổ $$20\text{ ms}$$ ($$960$$ mẫu ở $$48\text{ kHz}$$), bước nhảy hop $$10\text{ ms}$$ ($$480$$ mẫu), và $$2$$ khung nhìn trước ($$2 \times 10\text{ ms} = 20\text{ ms}$$), tổng độ trễ thuật toán tối thiểu đúng bằng $$20 + 20 = 40\text{ ms}$$ — hoàn toàn nằm gọn trong ngân sách $$150\text{ ms}$$ của VoIP.
 
-### Khung giải thích: Cầm tay đếm số tham số đầu ra và tính thử 1 bước Deep Filter phức 2 tap (nên đọc chậm)
+### Giải thích: Cầm tay đếm số tham số đầu ra và tính thử 1 bước Deep Filter phức 2 tap
 
 **Phần A — Vì sao tách 2 tầng tiết kiệm gấp gần 5 lần đầu ra?**
 Với STFT $$48\text{ kHz}$$, $$N_{\text{FFT}} = 960 \implies 481$$ bin tần số (mỗi bin rộng $$50\text{ Hz}$$):

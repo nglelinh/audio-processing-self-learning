@@ -15,7 +15,7 @@ Hãy thử bấm nút "Bật khử nhiễu" ngay giữa một câu nói trong cu
 
 Một bộ tăng cường giọng nói chạy theo luồng (streaming) là hàm của cả hop hiện tại lẫn toàn bộ trạng thái (state) được giữ lại từ hop trước đó: đuôi chồng lấp của STFT (short-time Fourier transform, biến đổi Fourier thời gian ngắn), véctơ trạng thái của GRU (gated recurrent unit, đơn vị hồi tiếp có cổng), lịch sử khung của bộ lọc sâu (deep filter) và các mẫu chưa đọc trong ring buffer. Nếu xóa trắng cụm trạng thái này giữa cuộc gọi, hop kế tiếp sẽ không còn khớp với phần đuôi trước đó, khiến người nghe nghe thấy tiếng tách (click) hoặc một chùm nhiễu kéo dài bằng một hop.
 
-**Mạch bài học:** Tiếng tách khi bấm nút dù RTF rất thấp → Bản đồ kiến thức nền (Hàm có trạng thái trong DSP/RNN, Tái tạo liên tục OLA, Crossfade không gián đoạn) → Bảng kiểm kê 7 thành phần trạng thái ở 48 kHz → Chính sách xử lý 5 sự kiện (khởi động lạnh, bật/tắt, đổi thiết bị, underrun) → Khung giải thích tính tay bước nhảy gián đoạn khi xóa đuôi OLA và công thức crossfade 480 mẫu → Cuộc gọi dài, Mini-lab và Bài tập.
+**Mạch bài học:** Tiếng tách khi bấm nút dù RTF rất thấp → Kiến thức cần nhớ (Hàm có trạng thái trong DSP/RNN, Tái tạo liên tục OLA, Crossfade không gián đoạn) → Bảng kiểm kê 7 thành phần trạng thái ở 48 kHz → Chính sách xử lý 5 sự kiện (khởi động lạnh, bật/tắt, đổi thiết bị, underrun) → Giải thích tính tay bước nhảy gián đoạn khi xóa đuôi OLA và công thức crossfade 480 mẫu → Cuộc gọi dài, Mini-lab và Bài tập.
 
 ![Ring buffer mà các mẫu chưa đọc là state phải sống qua hop kế]({{ site.imgurl }}/generated/ring-buffer.png)
 
@@ -25,7 +25,7 @@ Một bộ tăng cường giọng nói chạy theo luồng (streaming) là hàm 
 
 Sau bài học này, bạn sẽ liệt kê được đầy đủ các trạng thái mà một hop kiểu DeepFilterNet phải truyền ngược lại cho bước tiếp theo, tính được độ dài đuôi chồng lấp ở cấu hình cửa sổ 20 ms / hop 10 ms đã công bố, và áp dụng kỹ thuật chuyển mờ chéo (crossfade) khi tắt/bật tiếng (mute) thay vì xóa trắng phần đuôi đó.
 
-## Bản đồ kiến thức nền: Vì sao bộ khử nhiễu streaming là một máy trạng thái (stateful machine)?
+## Kiến thức cần nhớ: Vì sao bộ khử nhiễu streaming là một máy trạng thái (stateful machine)?
 
 ### 1. Hệ thống có nhớ (Stateful System) trong DSP và Mạng hồi tiếp
 - **Là gì:** Một bộ khử nhiễu streaming không phải hàm thuần $$y_t = f(x_t)$$, mà là một cặp ánh xạ $$(y_t, s_t) = f(x_t, s_{t-1})$$, trong đó $$s_{t-1}$$ gói gọn toàn bộ lịch sử từ ring buffer, đuôi STFT, bộ lọc 5 tap, bộ chuẩn hóa mức tín hiệu đến vector ẩn GRU.
@@ -71,7 +71,7 @@ Trong khi đó, xóa trạng thái GRU thường gây ra một chùm nhiễu ng�
 
 Do đó, xóa cứng bộ đệm là cách xử lý mute sai. Cách đúng là thực hiện chuyển mờ chéo (crossfade) từ tín hiệu đã xử lý (wet) sang tín hiệu gốc (dry) trong khoảng một hop (480 mẫu, tương ứng khoảng 3,75 quantum 128 mẫu). Nếu GRU vẫn được giữ ấm trong lúc bypass, chỉ cần áp dụng fade trên các mẫu trong ring buffer chứ không can thiệp vào trạng thái ẩn của mạng.
 
-## Khung giải thích: Tự tính tay cú rơi biên độ khi xóa đuôi OLA và đường cong crossfade (nên đọc chậm)
+## Giải thích: Tự tính tay cú rơi biên độ khi xóa đuôi OLA và đường cong crossfade
 
 ### Phép tính 1: Chuyện gì xảy ra khi xóa đuôi OLA trên tín hiệu hằng $$x[n] = 1{,}0$$?
 Xét cặp cửa sổ phân tích và tổng hợp hình sin (cùng bản chất Princen–Bradley với Vorbis) độ dài $$N = 960$$, chồng lấp 50% ($$H = 480$$):

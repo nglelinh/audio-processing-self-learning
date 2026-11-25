@@ -15,7 +15,7 @@ Hãy thử tưởng tượng một buổi họp duyệt phát hành sản phẩm
 
 Chỉ dựa vào một con số trung bình SI-SDR là cách nhiều bài báo được trích dẫn nhưng cũng là lý do khiến sản phẩm thực tế gặp sự cố ngoài dự kiến. Cuộc thi Microsoft DNS Challenge ([microsoft/DNS-Challenge](https://github.com/microsoft/DNS-Challenge)) cung cấp khuôn mẫu đánh giá công khai mà khóa học mô phỏng lại ở quy mô gọn nhẹ: gồm cặp dữ liệu tổng hợp (nơi các chỉ số xâm nhập có hiệu lực), bản ghi thực tế (nơi chỉ số xâm nhập không áp dụng được), lát cắt kiểm thử lắng nghe và cột hiệu năng hệ thống để chi phí thời gian thực không bị che khuất sau bảng chất lượng âm thanh. Do mỗi năm cuộc thi lại điều chỉnh danh mục chỉ số, bạn cần ghi rõ năm hoặc bài báo đang tham chiếu, và không tuyên bố “đạt chuẩn DNS Challenge” nếu chưa chạy đúng tập kiểm thử mù và quy trình của năm đó.
 
-**Mạch bài học:** Cái bẫy ra quyết định bằng một con số duy nhất → Bản đồ kiến thức nền (Đánh giá đa nhánh kiểu DNS Challenge, Kỷ luật trung thực `n/a` & Tái lập thực nghiệm, Tương tác với hệ thống hạ nguồn ASR & Cổng kiểm duyệt RTF) → 5 hạng mục đánh giá & Tổ chức thư mục `eval/` → Khung giải thích phân tích bảng đối chiếu 2 bản dựng thực chiến (vì sao bản SI-SDR cao hơn vẫn bị loại) → Khung báo cáo, Mini-lab và Bài tập.
+**Mạch bài học:** Cái bẫy ra quyết định bằng một con số duy nhất → Kiến thức cần nhớ (Đánh giá đa nhánh kiểu DNS Challenge, Kỷ luật trung thực `n/a` & Tái lập thực nghiệm, Tương tác với hệ thống hạ nguồn ASR & Cổng kiểm duyệt RTF) → 5 hạng mục đánh giá & Tổ chức thư mục `eval/` → Giải thích phân tích bảng đối chiếu 2 bản dựng thực chiến (vì sao bản SI-SDR cao hơn vẫn bị loại) → Khung báo cáo, Mini-lab và Bài tập.
 
 ![Bản đồ đánh giá cho cả bộ metric]({{ site.imgurl }}/generated/eval-metric-map.png)
 
@@ -25,7 +25,7 @@ Chỉ dựa vào một con số trung bình SI-SDR là cách nhiều bài báo �
 
 Sau bài học này, bạn sẽ xây dựng được bảng báo cáo 6 cột (mỗi hàng một đoạn âm thanh), chạy script kiểm tra tự động để bắt lỗi thiếu cột, giải thích chính xác ô nào bắt buộc ghi `n/a`, và phân biệt rõ ngưỡng sai số hồi quy nội bộ (epsilon) của phòng lab với các con số xuất hiện trong bài báo.
 
-## Bản đồ kiến thức nền: Thiết kế hệ thống đánh giá toàn diện (Evaluation Harness)
+## Kiến thức cần nhớ: Thiết kế hệ thống đánh giá toàn diện (Evaluation Harness)
 
 ### 1. Kiến trúc đa nhánh kiểu DNS Challenge (Synthetic + Real + Listening + Systems)
 - **Là gì:** Khuôn khổ đánh giá kết hợp bốn góc nhìn không thể thay thế lẫn nhau: dữ liệu tổng hợp (đo SI-SDR/$$\Delta$$SI-SDR), dữ liệu thu thực tế (đo DNSMOS), nghe mù của con người (AB) và chi phí vận hành thời gian thực (RTF p95, thời gian khởi động lạnh).
@@ -51,7 +51,7 @@ Sau bài học này, bạn sẽ xây dựng được bảng báo cáo 6 cột (m
 
 Dữ liệu tổng hợp mang lại khả năng điều chỉnh SNR linh hoạt và có tín hiệu tham chiếu chính xác, nhưng dễ tạo ảo giác lạc quan khi kho nhiễu quá “sạch” so với môi trường thật. Ngược lại, bản ghi thực tế phản ánh đúng sản phẩm nhưng không thể tính SI-SDR. Nguyên tắc cốt lõi là không tối ưu mô hình chỉ dựa trên một cột duy nhất, đồng thời đóng băng riêng một tập nghe thử cuối cùng mà bạn không mở ra trong lúc tinh chỉnh tham số.
 
-## Khung giải thích: Đọc bảng quyết định phát hành giữa hai bản dựng thực chiến (nên đọc chậm)
+## Giải thích: Đọc bảng quyết định phát hành giữa hai bản dựng thực chiến
 
 Giả sử nhóm của bạn đang cân nhắc giữa **Bản A (mặc định hiện tại, `level = 60`)** và **Bản B (ứng viên mới, `level = 85` + mô hình nặng hơn chút)**. Dưới đây là kết quả gom đủ 5 trục (số liệu minh họa):
 
